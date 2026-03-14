@@ -1,0 +1,20 @@
+{
+  "name": "codeapp-js",
+  "version": "0.1.0",
+  "private": true,
+  "description": "JavaScript library with samples and starter app for Power Apps Code Apps.",
+  "scripts": {
+    "build": "npm run build:sdk",
+    "build:sdk": "node ./scripts/build-power-sdk.mjs",
+    "postinstall": "npm run build:sdk",
+    "start": "http-server . -p 4173 -c-1",
+    "start:codeapp": "http-server . -p 4173 -c-1 -o /codeApp/dist/"
+  },
+  "dependencies": {
+    "@microsoft/power-apps": "1.0.4"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.1",
+    "http-server": "14.1.1"
+  }
+}

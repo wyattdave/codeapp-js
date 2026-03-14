@@ -1,0 +1,815 @@
+/* ═══════════════════════════════════════════
+   Planning Poker — Neo-Brutalist Theme
+   Off-white + Black + Electric Lime
+   Space Mono + Work Sans
+   ═══════════════════════════════════════════ */
+
+
+:root {
+  --bg: #f5f0e8;
+  --bg-alt: #ebe5d9;
+  --black: #111111;
+  --lime: #b8f72e;
+  --lime-dark: #8ec41a;
+  --red: #ff3b30;
+  --white: #ffffff;
+  --border: 3px solid var(--black);
+  --shadow: 5px 5px 0 var(--black);
+  --shadow-sm: 3px 3px 0 var(--black);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Work Sans', sans-serif;
+  background: var(--bg);
+  color: var(--black);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Grid Background ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(17,17,17,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17,17,17,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Error Toast ── */
+.error-toast {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--red);
+  color: var(--white);
+  padding: 0.75rem 1.5rem;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+  z-index: 1000;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0); opacity: 1; }
+}
+
+/* ── Header ── */
+.app-header {
+  display: flex;
+  align-items: stretch;
+  border-bottom: var(--border);
+  position: relative;
+  z-index: 2;
+  background: var(--white);
+}
+
+.brand-block {
+  background: var(--black);
+  color: var(--lime);
+  padding: 0.8rem 1.5rem;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.session-info {
+  flex: 1;
+  padding: 0.8rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-right: var(--border);
+}
+
+.session-badge {
+  background: var(--lime);
+  padding: 0.2rem 0.6rem;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  border: 2px solid var(--black);
+  white-space: nowrap;
+}
+
+.session-name-text {
+  font-weight: 600;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.participants-count {
+  padding: 0.8rem 1.25rem;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-leave {
+  background: var(--red);
+  color: var(--white);
+  border: none;
+  border-left: var(--border);
+  padding: 0.8rem 1.25rem;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-leave:hover {
+  background: #cc2f26;
+}
+
+/* ── Main Layout ── */
+.app-main {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* ── Footer ── */
+.app-footer {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 1rem 2rem;
+  border-top: 2px dashed var(--black);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+}
+
+/* ═══════════════════════════════════════════
+   WELCOME VIEW
+   ═══════════════════════════════════════════ */
+
+.welcome-hero {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.welcome-hero h2 {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 2.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.welcome-hero p {
+  font-size: 1rem;
+  color: #555;
+}
+
+.welcome-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+/* ── Panel (shared) ── */
+.panel {
+  background: var(--white);
+  border: var(--border);
+  box-shadow: var(--shadow);
+  padding: 1.5rem 2rem;
+}
+
+.panel-title {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.panel-title::before {
+  content: '//';
+  color: var(--lime-dark);
+}
+
+/* ── Forms ── */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.4rem;
+  color: #444;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  font-family: 'Work Sans', sans-serif;
+  font-size: 0.9rem;
+  border: var(--border);
+  background: var(--bg);
+  color: var(--black);
+  outline: none;
+  transition: box-shadow 0.15s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  box-shadow: var(--shadow-sm);
+  background: var(--white);
+}
+
+.form-group input::placeholder {
+  color: #999;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-group-grow {
+  flex: 1;
+}
+
+/* ── Buttons ── */
+.btn-brutal {
+  padding: 0.85rem 2.5rem;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-block;
+}
+
+.btn-brutal-primary {
+  background: var(--lime);
+  color: var(--black);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-brutal-primary:hover {
+  box-shadow: 6px 6px 0 var(--black);
+  transform: translate(-1px, -1px);
+}
+
+.btn-brutal-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-brutal-share {
+  background: var(--white);
+  color: var(--black);
+  box-shadow: var(--shadow-sm);
+  padding: 0.5rem 1.2rem;
+  font-size: 0.75rem;
+}
+
+.btn-brutal-share:hover {
+  box-shadow: 6px 6px 0 var(--black);
+  transform: translate(-1px, -1px);
+}
+
+.btn-brutal-danger {
+  background: var(--red);
+  color: var(--white);
+  box-shadow: var(--shadow-sm);
+  padding: 0.5rem 1.2rem;
+  font-size: 0.75rem;
+}
+
+.btn-brutal-danger:hover {
+  box-shadow: 6px 6px 0 var(--black);
+  transform: translate(-1px, -1px);
+}
+
+.btn-brutal-secondary {
+  background: var(--white);
+  color: var(--black);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-brutal-secondary:hover {
+  background: var(--bg-alt);
+}
+
+.btn-disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-disabled:hover {
+  background: var(--white);
+}
+
+/* ═══════════════════════════════════════════
+   SESSION VIEW
+   ═══════════════════════════════════════════ */
+
+/* ── Waiting Message ── */
+.waiting-message {
+  text-align: center;
+  padding: 2rem;
+}
+
+.waiting-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.waiting-message h3 {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.waiting-message p {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* ── Story / Round Panel ── */
+.story-panel {
+  background: var(--white);
+  border: var(--border);
+  box-shadow: var(--shadow);
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+}
+
+.story-panel h2 {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.story-badge {
+  background: var(--lime);
+  padding: 0.2rem 0.6rem;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  border: 2px solid var(--black);
+  white-space: nowrap;
+}
+
+.story-panel p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* ── Participants Strip ── */
+.participants-strip {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.participant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.participant-avatar {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--black);
+  background: var(--bg-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.9rem;
+  position: relative;
+}
+
+.participant-avatar.voted::after {
+  content: '\2713';
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  background: var(--lime);
+  border: 2px solid var(--black);
+  font-size: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.participant-avatar.waiting {
+  border-style: dashed;
+}
+
+.participant-avatar.owner {
+  border-color: var(--lime-dark);
+}
+
+.participant-name {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Card Hand ── */
+.card-hand-section {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.card-hand-label {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 1.25rem;
+  display: inline-block;
+  background: var(--black);
+  color: var(--lime);
+  padding: 0.4rem 1rem;
+}
+
+.card-hand {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 1rem 0;
+}
+
+.poker-card {
+  width: 72px;
+  height: 104px;
+  background: var(--white);
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  user-select: none;
+}
+
+.poker-card::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border: 1px solid var(--bg-alt);
+  pointer-events: none;
+}
+
+.poker-card:hover {
+  transform: translateY(-12px);
+  box-shadow: 5px 12px 0 var(--black);
+  background: var(--lime);
+}
+
+.poker-card.selected {
+  background: var(--lime);
+  transform: translateY(-16px) scale(1.05);
+  box-shadow: 6px 14px 0 var(--black);
+}
+
+.poker-card.special {
+  font-size: 1rem;
+}
+
+/* ── Vote Actions ── */
+.vote-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+/* ── Voted Confirmation ── */
+.voted-message {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 1rem;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--lime);
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Card Slam Animation ── */
+@keyframes slamIn {
+  0%   { opacity: 0; transform: translateY(30px) rotate(-2deg); }
+  60%  { transform: translateY(-3px) rotate(0.5deg); }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+
+.poker-card { animation: slamIn 0.3s ease-out both; }
+.poker-card:nth-child(1)  { animation-delay: 0.05s; }
+.poker-card:nth-child(2)  { animation-delay: 0.08s; }
+.poker-card:nth-child(3)  { animation-delay: 0.11s; }
+.poker-card:nth-child(4)  { animation-delay: 0.14s; }
+.poker-card:nth-child(5)  { animation-delay: 0.17s; }
+.poker-card:nth-child(6)  { animation-delay: 0.20s; }
+.poker-card:nth-child(7)  { animation-delay: 0.23s; }
+.poker-card:nth-child(8)  { animation-delay: 0.26s; }
+.poker-card:nth-child(9)  { animation-delay: 0.29s; }
+.poker-card:nth-child(10) { animation-delay: 0.32s; }
+.poker-card:nth-child(11) { animation-delay: 0.35s; }
+.poker-card:nth-child(12) { animation-delay: 0.38s; }
+
+/* ═══════════════════════════════════════════
+   RESULTS VIEW
+   ═══════════════════════════════════════════ */
+
+.results-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.results-header h2 {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 1.4rem;
+  text-transform: uppercase;
+  margin-top: 0.75rem;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.stat-card {
+  background: var(--white);
+  border: var(--border);
+  box-shadow: var(--shadow);
+  padding: 1.5rem 2.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-value {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 2.5rem;
+  color: var(--black);
+}
+
+.stat-label {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #666;
+}
+
+.votes-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.vote-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--white);
+  border: var(--border);
+  box-shadow: var(--shadow-sm);
+  min-width: 160px;
+  opacity: 0;
+  animation: cardReveal 0.4s ease-out forwards;
+}
+
+.vote-card:nth-child(1) { animation-delay: 0.1s; }
+.vote-card:nth-child(2) { animation-delay: 0.2s; }
+.vote-card:nth-child(3) { animation-delay: 0.3s; }
+.vote-card:nth-child(4) { animation-delay: 0.4s; }
+.vote-card:nth-child(5) { animation-delay: 0.5s; }
+.vote-card:nth-child(6) { animation-delay: 0.6s; }
+.vote-card:nth-child(7) { animation-delay: 0.7s; }
+.vote-card:nth-child(8) { animation-delay: 0.8s; }
+
+@keyframes cardReveal {
+  from { opacity: 0; transform: rotateY(90deg) scale(0.8); }
+  to   { opacity: 1; transform: rotateY(0) scale(1); }
+}
+
+.vote-card-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--black);
+  color: var(--lime);
+  border: 2px solid var(--black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.vote-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.vote-card-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.vote-card-value {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--lime-dark);
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════
+   PREVIOUS ROUNDS TABLE
+   ═══════════════════════════════════════════ */
+
+.previous-rounds-panel {
+  margin-top: 2rem;
+}
+
+.previous-rounds-table-wrap {
+  overflow-x: auto;
+}
+
+.previous-rounds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.previous-rounds-table th,
+.previous-rounds-table td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 2px solid var(--black);
+}
+
+.previous-rounds-table th {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--bg-alt);
+  white-space: nowrap;
+}
+
+.previous-rounds-table tbody tr:hover {
+  background: var(--bg-alt);
+}
+
+.previous-rounds-table td:nth-child(4),
+.previous-rounds-table td:nth-child(5),
+.previous-rounds-table th:nth-child(4),
+.previous-rounds-table th:nth-child(5) {
+  text-align: right;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+}
+
+.sort-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.55rem;
+  padding: 0 0.25rem;
+  vertical-align: middle;
+  color: #999;
+  transition: color 0.15s;
+}
+
+.sort-btn:hover {
+  color: var(--black);
+}
+
+.sort-btn.asc,
+.sort-btn.desc {
+  color: var(--lime-dark);
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    flex-wrap: wrap;
+  }
+  .session-info {
+    border-right: none;
+    border-bottom: var(--border);
+    flex: 1 1 100%;
+    order: 2;
+  }
+  .welcome-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  .poker-card {
+    width: 60px;
+    height: 88px;
+    font-size: 1.1rem;
+  }
+  .card-hand {
+    gap: 0.5rem;
+  }
+  .stats-row {
+    gap: 1rem;
+  }
+  .stat-card {
+    padding: 1rem 1.5rem;
+  }
+  .stat-value {
+    font-size: 2rem;
+  }
+}

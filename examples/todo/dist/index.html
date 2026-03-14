@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Power Devbox • Notes</title>
+  <link rel="icon" href="icon192.png"/>
+
+  <script type="importmap">
+    { "imports": { "@microsoft/power-apps/data": "./power-apps-data.js" } }
+  </script>
+  <link rel="stylesheet" href="./styles.css" />
+  <meta name="theme-color" content="#f5f0eb" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="icon192.png">
+</head>
+<body>
+  <header class="app-bar">
+    <div class="left">
+      <img src="icon192.png" class="app-bar-logo"/>
+      <h1>Power DevBox • Notes</h1>
+      <span id="sync-status" title="Sync status">Idle</span>
+    </div>
+    <div class="right">
+      <button id="btn-sync" class="tonal">Sync</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <aside class="sidebar">
+      <div class="search">
+        <input id="search" type="search" placeholder="Search notes or #tags" />
+        <button id="btn-new" title="New Note" aria-label="New Note"></button>
+      </div>
+      <div class="tags" id="tag-list">
+        <!-- dynamic tags -->
+      </div>
+      <ol id="note-list" class="note-list" aria-label="Notes (drag to reorder)"></ol>
+    </aside>
+
+    <section class="editor">
+      <div class="toolbar" role="toolbar" aria-label="Markdown toolbar">
+        <button data-md="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button data-md="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button data-md="h1" title="Heading 1">H1</button>
+        <button data-md="h2" title="Heading 2">H2</button>
+        <button data-md="ul" title="Bullet list">• List</button>
+        <button data-md="ol" title="Numbered list">1. List</button>
+        <button data-md="task" title="Task checkbox">[ ]</button>
+        <button data-md="code" title="Inline code">{;}</button>
+        <button data-md="quote" title="> Quote">“”</button>
+        <button data-md="link" title="Link">🔗</button>
+        <button data-md="tag" title="Add tag">#</button>
+        <span class="spacer"></span>
+        <button id="btn-preview" class="tonal" title="Toggle preview">Prev</button>
+      </div>
+      <input id="title" class="title" placeholder="Title" />
+      <textarea id="content" class="content" placeholder="Write in Markdown..."></textarea>
+      <article id="preview" class="preview" hidden></article>
+    </section>
+  </main>
+
+
+
+  <footer class="status-bar">
+    <span id="status">Ready</span>
+  </footer>
+
+  <script src="./renderer.js" type="module"></script>
+  <script src="./index.js" type="module"></script>
+</body>
+</html>

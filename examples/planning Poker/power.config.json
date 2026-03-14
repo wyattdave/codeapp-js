@@ -1,0 +1,51 @@
+{
+  "appid": "79c7de41-4082-4268-95af-b951e5b43b64",
+  "appDisplayName": "Planning Poker",
+  "description": "An agile planning poker app for sprint estimation sessions with team collaboration.",
+  "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "default",
+  "localAppUrl": "http://localhost:3000",
+  "region": "prod",
+  "connectionReferences": {
+    "dataverse": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+      "displayName": "Microsoft Dataverse",
+      "dataSources": [
+        "commondataserviceforapps"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": null,
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {
+    "default.cds": {
+      "databaseDetails": null,
+      "dataSources": {
+        "wd_pokersessions": {
+          "entitySetName": "wd_pokersessions",
+          "logicalName": "wd_pokersession",
+          "isHidden": false
+        },
+        "wd_pokerparticipants": {
+          "entitySetName": "wd_pokerparticipants",
+          "logicalName": "wd_pokerparticipant",
+          "isHidden": false
+        },
+        "wd_pokerrounds": {
+          "entitySetName": "wd_pokerrounds",
+          "logicalName": "wd_pokerround",
+          "isHidden": false
+        },
+        "wd_pokervotes": {
+          "entitySetName": "wd_pokervotes",
+          "logicalName": "wd_pokervote",
+          "isHidden": false
+        }
+      },
+      "actions": null
+    }
+  }
+}

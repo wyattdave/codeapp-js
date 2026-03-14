@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup 02 — Dark Rail</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #121923;
+      --card: #18212d;
+      --line: rgba(201,210,224,0.1);
+      --text: #f5f7fb;
+      --muted: #8ea0b7;
+      --cyan: #59d9ff;
+      --lime: #b7ff72;
+      --rose: #ff7f9f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", sans-serif;
+      background:
+        linear-gradient(180deg, rgba(89,217,255,0.06), transparent 22%),
+        linear-gradient(90deg, rgba(183,255,114,0.05), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }
+    .shell {
+      max-width: 1500px;
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      overflow: hidden;
+      background: rgba(9,13,19,0.68);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      padding: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 2.9rem;
+      letter-spacing: -0.04em;
+    }
+    .chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .chip {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: rgba(255,255,255,0.02);
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(220px, 1fr));
+      gap: 16px;
+      padding: 20px;
+    }
+    .lane {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      min-height: 560px;
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .lane::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--cyan), transparent 80%);
+    }
+    .lane h2 {
+      margin: 0 0 14px;
+      font-size: 0.82rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+    .card h3 { margin: 0 0 8px; font-size: 1rem; }
+    .meter {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .meter span {
+      display: block;
+      height: 100%;
+      width: 64%;
+      background: linear-gradient(90deg, var(--cyan), var(--lime));
+    }
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="header">
+      <div>
+        <h1>Dark Rail</h1>
+        <div class="chips">
+          <div class="chip">Precision workflow</div>
+          <div class="chip">Keyboard-friendly</div>
+          <div class="chip">Low-glare focus</div>
+        </div>
+      </div>
+      <div class="chip">Minimal / technical / contrast-led</div>
+    </div>
+    <section class="board">
+      <div class="lane"><h2>Backlog</h2><div class="card"><h3>Refactor reporting filters</h3><div class="meter"><span></span></div><div class="meta"><span>P1</span><span>12 pts</span></div></div></div>
+      <div class="lane"><h2>Ready</h2><div class="card"><h3>Finalize launch checklist</h3><div class="meter"><span style="width:42%"></span></div><div class="meta"><span>P2</span><span>Tomorrow</span></div></div></div>
+      <div class="lane"><h2>In Progress</h2><div class="card"><h3>Build workload insights panel</h3><div class="meter"><span style="width:76%"></span></div><div class="meta"><span>Owner: Sam</span><span>4 subtasks</span></div></div></div>
+      <div class="lane"><h2>Complete</h2><div class="card"><h3>Publish sprint review notes</h3><div class="meter"><span style="width:100%"></span></div><div class="meta"><span>Done</span><span>Approved</span></div></div></div>
+      <div class="lane"><h2>Rejected</h2><div class="card"><h3>Add duplicate analytics tab</h3><div class="meter"><span style="width:10%; background: var(--rose);"></span></div><div class="meta"><span>Declined</span><span>Low impact</span></div></div></div>
+    </section>
+  </div>
+</body>
+</html>

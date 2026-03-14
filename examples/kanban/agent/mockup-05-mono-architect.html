@@ -1,0 +1,119 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup 05 — Mono Architect</title>
+  <style>
+    :root {
+      --bg: #fcfcfa;
+      --text: #101010;
+      --muted: #6f6f6a;
+      --line: #d9d9d1;
+      --card: #ffffff;
+      --black: #171717;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Consolas, "Courier New", monospace;
+      color: var(--text);
+      background: var(--bg);
+      padding: 20px;
+    }
+    .layout {
+      max-width: 1480px;
+      margin: 0 auto;
+      border: 2px solid var(--black);
+      background: white;
+    }
+    .top {
+      padding: 24px;
+      border-bottom: 2px solid var(--black);
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+    }
+    .top h1 {
+      margin: 0;
+      font-size: 2.6rem;
+      letter-spacing: -0.06em;
+    }
+    .top p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 680px;
+      line-height: 1.6;
+    }
+    .legend {
+      min-width: 280px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .legend div {
+      border: 1px solid var(--black);
+      padding: 12px;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(220px, 1fr));
+    }
+    .lane {
+      min-height: 580px;
+      border-right: 1px solid var(--black);
+      padding: 14px;
+    }
+    .lane:last-child { border-right: 0; }
+    .lane h2 {
+      margin: 0 0 16px;
+      font-size: 0.84rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+    .card {
+      border: 1px solid var(--black);
+      background: var(--card);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 0.98rem;
+      line-height: 1.4;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.76rem;
+      display: grid;
+      gap: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <div class="top">
+      <div>
+        <h1>Mono Architect</h1>
+        <p>Strict grid, monochrome logic, and almost tool-like utility. Minimalism pushed toward a system diagram aesthetic.</p>
+      </div>
+      <div class="legend">
+        <div>FOCUS / HIGH</div>
+        <div>DUE / TODAY</div>
+        <div>OWNER / SELF</div>
+        <div>MODE / DEEP</div>
+      </div>
+    </div>
+    <div class="board">
+      <div class="lane"><h2>Backlog</h2><div class="card"><h3>[01] Update weekly intake logic</h3><div class="meta"><span>P1</span><span>est: 2h</span></div></div></div>
+      <div class="lane"><h2>Ready</h2><div class="card"><h3>[02] Prepare stakeholder notes</h3><div class="meta"><span>P2</span><span>due: Wed</span></div></div></div>
+      <div class="lane"><h2>Inprogress</h2><div class="card"><h3>[03] Build work tracker interactions</h3><div class="meta"><span>active</span><span>2 subtasks left</span></div></div></div>
+      <div class="lane"><h2>Complete</h2><div class="card"><h3>[04] Publish planning summary</h3><div class="meta"><span>done</span></div></div></div>
+      <div class="lane"><h2>Rejected</h2><div class="card"><h3>[05] Add duplicate report mode</h3><div class="meta"><span>rejected</span></div></div></div>
+    </div>
+  </div>
+</body>
+</html>

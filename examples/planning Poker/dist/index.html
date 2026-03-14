@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Planning Poker</title>
+      <script type="importmap">
+      {
+        "imports": {
+          "@microsoft/power-apps/data": "./power-apps-data.js"
+        }
+      }
+    </script>
+  <link rel="stylesheet" href="./styles.css" />
+  <meta name="theme-color" content="#f5f0e8" />
+</head>
+<body>
+
+  <!-- Error Toast -->
+  <div class="error-toast" id="error-message" style="display:none"></div>
+
+  <header class="app-header">
+    <div class="brand-block">&#9824; POKER</div>
+    <div class="session-info" id="session-info" style="display:none">
+      <span class="session-badge" id="session-badge"></span>
+      <span class="session-name-text" id="session-name-text"></span>
+    </div>
+    <div class="participants-count" id="participants-count" style="display:none">
+      <span>&#9679;</span> <span id="vote-status">0/0</span>
+    </div>
+    <button class="btn-brutal btn-brutal-share" id="btn-share" style="display:none" title="Copy invite link">&#128279; Share</button>
+    <button class="btn-brutal btn-brutal-danger" id="btn-end-session" style="display:none" title="End Session">End Session</button>
+    <button class="btn-leave" id="btn-leave" style="display:none" title="Leave Session">&#10005;</button>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ═══ WELCOME VIEW ═══ -->
+    <div id="view-welcome" class="view">
+      <div class="welcome-hero">
+        <h2>Planning Poker</h2>
+        <p>Create a new estimation session or join an existing one</p>
+      </div>
+
+      <div class="welcome-grid">
+        <!-- Create Session -->
+        <div class="panel">
+          <h3 class="panel-title">Create Session</h3>
+          <div class="form-group">
+            <label for="inp-session-name">Session Name</label>
+            <input id="inp-session-name" type="text" placeholder="Sprint 42 Planning" />
+          </div>
+          <div class="form-group">
+            <label for="inp-session-code">Session Code</label>
+            <input id="inp-session-code" type="text" placeholder="XK7-M2P" maxlength="10" />
+          </div>
+          <div class="form-group">
+            <label for="inp-create-name">Your Name</label>
+            <input id="inp-create-name" type="text" placeholder="Sarah Mitchell" />
+          </div>
+          <button class="btn-brutal btn-brutal-primary" id="btn-create">
+            &#9824; Create Session
+          </button>
+        </div>
+
+        <!-- Join Session -->
+        <div class="panel">
+          <h3 class="panel-title">Join Session</h3>
+          <div class="form-group">
+            <label for="inp-join-code">Session Code</label>
+            <input id="inp-join-code" type="text" placeholder="Enter code" maxlength="10" />
+          </div>
+          <div class="form-group">
+            <label for="inp-join-name">Your Name</label>
+            <input id="inp-join-name" type="text" placeholder="Your display name" />
+          </div>
+          <button class="btn-brutal btn-brutal-primary" id="btn-join">
+            Join Session
+          </button>
+        </div>
+      </div>
+
+      <!-- Previous Rounds Table -->
+      <div class="panel previous-rounds-panel" id="previous-rounds-panel" style="display:none">
+        <h3 class="panel-title">Previous Rounds</h3>
+        <div class="previous-rounds-table-wrap">
+          <table class="previous-rounds-table" id="previous-rounds-table">
+            <thead>
+              <tr>
+                <th>Session <button class="sort-btn" data-col="session" data-dir="">&#9650;&#9660;</button></th>
+                <th>Round Name <button class="sort-btn" data-col="roundName" data-dir="">&#9650;&#9660;</button></th>
+                <th>Description <button class="sort-btn" data-col="description" data-dir="">&#9650;&#9660;</button></th>
+                <th>Avg Pts <button class="sort-btn" data-col="average" data-dir="">&#9650;&#9660;</button></th>
+                <th>Median Pts <button class="sort-btn" data-col="median" data-dir="">&#9650;&#9660;</button></th>
+              </tr>
+            </thead>
+            <tbody id="previous-rounds-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SESSION VIEW ═══ -->
+    <div id="view-session" class="view" style="display:none">
+
+      <!-- Owner: Start New Round -->
+      <div id="new-round-panel" class="panel" style="display:none">
+        <h3 class="panel-title">Start New Round</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="inp-round-id">Round ID</label>
+            <input id="inp-round-id" type="text" placeholder="JIRA-123" />
+          </div>
+          <div class="form-group form-group-grow">
+            <label for="inp-round-desc">Description</label>
+            <input id="inp-round-desc" type="text" placeholder="Story description" />
+          </div>
+        </div>
+        <button class="btn-brutal btn-brutal-primary" id="btn-start-round">
+          Start Round
+        </button>
+      </div>
+
+      <!-- Non-owner: Waiting -->
+      <div id="waiting-panel" class="panel" style="display:none">
+        <div class="waiting-message">
+          <span class="waiting-icon">&#9203;</span>
+          <h3>Waiting for Next Round</h3>
+          <p>The session owner will start the next voting round</p>
+        </div>
+      </div>
+
+      <!-- Participants (always visible in session) -->
+      <div class="participants-strip" id="participants-strip"></div>
+
+      <!-- Active Round -->
+      <div id="active-round-panel" style="display:none">
+        <div class="story-panel">
+          <h2><span class="story-badge" id="round-badge"></span> <span id="round-title"></span></h2>
+          <p id="round-description"></p>
+        </div>
+
+        <!-- Card Hand -->
+        <div class="card-hand-section" id="card-section">
+          <div class="card-hand-label">Select Your Estimate</div>
+          <div class="card-hand" id="card-hand"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="vote-actions" id="vote-actions">
+          <button class="btn-brutal btn-brutal-primary" id="btn-submit" disabled>Submit Vote</button>
+          <button class="btn-brutal btn-brutal-secondary" id="btn-reveal" style="display:none">Reveal Cards</button>
+        </div>
+
+        <!-- Voted confirmation -->
+        <div class="voted-message" id="voted-message" style="display:none">
+          <span>&#10003;</span> Vote submitted &mdash; waiting for others
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ RESULTS VIEW ═══ -->
+    <div id="view-results" class="view" style="display:none">
+      <div class="results-header">
+        <span class="story-badge" id="results-badge"></span>
+        <h2 id="results-title"></h2>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <span class="stat-value" id="stat-average">&mdash;</span>
+          <span class="stat-label">Average</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="stat-median">&mdash;</span>
+          <span class="stat-label">Median</span>
+        </div>
+      </div>
+
+      <div class="votes-grid" id="votes-grid"></div>
+
+      <div class="vote-actions">
+        <button class="btn-brutal btn-brutal-primary" id="btn-new-round" style="display:none">New Round</button>
+        <div class="btn-brutal btn-brutal-secondary btn-disabled" id="btn-waiting-next" style="display:none">Waiting for Next Round&hellip;</div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="app-footer">
+    <span id="footer-info">Planning Poker &mdash; Agile Estimation Tool</span>
+  </footer>
+
+  <script src="./index.js" type="module"></script>
+</body>
+</html>

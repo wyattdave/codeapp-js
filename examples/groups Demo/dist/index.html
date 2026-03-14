@@ -1,0 +1,25 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Groups</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "@microsoft/power-apps/data": "./power-apps-data.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <h1>My Groups</h1>
+      <p id="groupsStatus">Loading groups...</p>
+      <button id="groupsRefresh" type="button">Refresh groups</button>
+      <ul id="groupsList"></ul>
+    </div>
+    <script type="module" src="index.js"></script>
+  </body>
+</html>

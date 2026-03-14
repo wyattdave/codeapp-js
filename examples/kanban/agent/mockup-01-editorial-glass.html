@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup 01 — Editorial Glass</title>
+  <style>
+    :root {
+      --bg: #f3f0ea;
+      --panel: rgba(255,255,255,0.72);
+      --line: rgba(23,30,44,0.12);
+      --text: #1a2233;
+      --muted: #667085;
+      --accent: #2b59ff;
+      --accent-soft: rgba(43,89,255,0.12);
+      --shadow: 0 22px 50px rgba(26,34,51,0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(43,89,255,0.12), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(16,185,129,0.14), transparent 24%),
+        var(--bg);
+      padding: 32px;
+    }
+    .frame {
+      max-width: 1460px;
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.46);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+      border-radius: 28px;
+      overflow: hidden;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 24px;
+      padding: 36px;
+      border-bottom: 1px solid var(--line);
+    }
+    .hero h1 {
+      font-size: 4rem;
+      line-height: 0.92;
+      margin: 0 0 14px;
+      font-weight: 600;
+      letter-spacing: -0.05em;
+    }
+    .hero p {
+      margin: 0;
+      max-width: 620px;
+      color: var(--muted);
+      font-family: "Trebuchet MS", sans-serif;
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+    }
+    .stat b {
+      display: block;
+      font-size: 2rem;
+      margin-bottom: 6px;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(220px, 1fr));
+      gap: 18px;
+      padding: 24px;
+    }
+    .lane {
+      min-height: 520px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+    }
+    .lane h2 {
+      margin: 0 0 14px;
+      font-size: 0.84rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-family: "Trebuchet MS", sans-serif;
+    }
+    .card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .eyebrow {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: "Trebuchet MS", sans-serif;
+      margin-bottom: 10px;
+    }
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-family: "Trebuchet MS", sans-serif;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <section class="hero">
+      <div>
+        <h1>Work, arranged with calm precision.</h1>
+        <p>An editorial board with translucent lanes, soft contrast, and serif-led hierarchy. The mood is premium, quiet, and highly legible.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><b>18</b><span>Open tasks</span></div>
+        <div class="stat"><b>7</b><span>In progress</span></div>
+        <div class="stat"><b>92%</b><span>Weekly focus score</span></div>
+        <div class="stat"><b>4</b><span>Blocked items</span></div>
+      </div>
+    </section>
+    <section class="board">
+      <div class="lane">
+        <h2>Backlog</h2>
+        <div class="card"><div class="eyebrow">Research</div><h3>Audit account handoff flow</h3><div class="meta"><span>P1</span><span>Due Thu</span><span>Owner: Alex</span></div></div>
+        <div class="card"><div class="eyebrow">Ops</div><h3>Define monthly review agenda</h3><div class="meta"><span>P3</span><span>3 subtasks</span></div></div>
+      </div>
+      <div class="lane"><h2>Ready</h2><div class="card"><div class="eyebrow">Design</div><h3>Prepare dashboard empty state</h3><div class="meta"><span>P2</span><span>8 pts</span></div></div></div>
+      <div class="lane"><h2>In Progress</h2><div class="card"><div class="eyebrow">Build</div><h3>Implement drag and drop sorting</h3><div class="meta"><span>P1</span><span>Today</span><span>UI</span></div></div></div>
+      <div class="lane"><h2>Complete</h2><div class="card"><div class="eyebrow">Done</div><h3>Ship weekly status summary</h3><div class="meta"><span>Approved</span></div></div></div>
+      <div class="lane"><h2>Rejected</h2><div class="card"><div class="eyebrow">Archive</div><h3>Remove time estimate field</h3><div class="meta"><span>No value</span></div></div></div>
+    </section>
+  </div>
+</body>
+</html>

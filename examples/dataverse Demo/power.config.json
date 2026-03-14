@@ -1,0 +1,35 @@
+{
+  "appDisplayName": "Dataverse Demo",
+  "description": "A simple demo showing CRUD operations against the Dataverse task table.",
+  "environmentId": "<ENVIRONMENT ID>",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "default",
+  "localAppUrl": "http://localhost:3000",
+  "region": "prod",
+  "connectionReferences": {
+    "dataverse": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+      "displayName": "Microsoft Dataverse",
+      "dataSources": [
+        "commondataserviceforapps"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": null,
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {
+    "default.cds": {
+      "databaseDetails": null,
+      "dataSources": {
+        "tasks": {
+          "entitySetName": "tasks",
+          "logicalName": "task",
+          "isHidden": false
+        }
+      },
+      "actions": null
+    }
+  }
+}

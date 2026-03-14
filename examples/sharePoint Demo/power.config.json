@@ -1,0 +1,23 @@
+{
+  "appDisplayName": "SharePoint Demo App",
+  "description": "",
+  "environmentId": "<ENVIRONMENT_ID>",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "default",
+  "localAppUrl": "http://localhost:3000",
+  "region": "prod",
+  "connectionReferences": {
+    "sharepointonline": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+      "displayName": "SharePoint",
+      "dataSources": [
+        "sharepointonline"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": null,
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {}
+}

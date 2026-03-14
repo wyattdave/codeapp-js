@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup 04 — Neon Minimal</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --text: #111827;
+      --muted: #667085;
+      --line: #dde3ec;
+      --card: #ffffff;
+      --electric: #7856ff;
+      --mint: #28d8a1;
+      --amber: #ffb648;
+      --rose: #ff6a88;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(120,86,255,0.12), transparent 24%),
+        radial-gradient(circle at 80% 20%, rgba(40,216,161,0.12), transparent 24%),
+        radial-gradient(circle at 60% 90%, rgba(255,106,136,0.10), transparent 18%),
+        var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+    .header {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+      margin-bottom: 18px;
+    }
+    .headline, .focus {
+      background: rgba(255,255,255,0.74);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+    }
+    .headline h1 {
+      margin: 0 0 10px;
+      font-size: 3rem;
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+    }
+    .focus-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .focus-grid div {
+      background: white;
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid var(--line);
+    }
+    .focus-grid b { font-size: 1.7rem; display: block; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .lane {
+      background: rgba(255,255,255,0.7);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      min-height: 540px;
+      padding: 14px;
+      backdrop-filter: blur(10px);
+    }
+    .lane h2 {
+      margin: 0 0 12px;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 14px 28px rgba(17,24,39,0.05);
+    }
+    .tag {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .purple { background: rgba(120,86,255,0.12); color: var(--electric); }
+    .green { background: rgba(40,216,161,0.12); color: #0f9b73; }
+    .orange { background: rgba(255,182,72,0.16); color: #b96900; }
+    .pink { background: rgba(255,106,136,0.12); color: #d52d61; }
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="headline">
+        <h1>Neon Minimal</h1>
+        <p>Soft glass cards with controlled electric accents. Clean, energetic, and product-like.</p>
+      </div>
+      <div class="focus">
+        <div class="focus-grid">
+          <div><b>14</b><span>Open</span></div>
+          <div><b>5</b><span>Active</span></div>
+          <div><b>2</b><span>Blocked</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="board">
+      <div class="lane"><h2>Backlog</h2><div class="card"><div class="tag purple">Strategy</div><strong>Draft next quarter objectives</strong><div class="meta"><span>P1</span><span>Fri</span></div></div></div>
+      <div class="lane"><h2>Ready</h2><div class="card"><div class="tag green">Ready</div><strong>Polish status digest layout</strong><div class="meta"><span>6 pts</span><span>Owner: Priya</span></div></div></div>
+      <div class="lane"><h2>In Progress</h2><div class="card"><div class="tag orange">Building</div><strong>Create weekly workload chart</strong><div class="meta"><span>3/5 subtasks</span></div></div></div>
+      <div class="lane"><h2>Complete</h2><div class="card"><div class="tag green">Done</div><strong>Send retro summary</strong><div class="meta"><span>Approved</span></div></div></div>
+      <div class="lane"><h2>Rejected</h2><div class="card"><div class="tag pink">Stopped</div><strong>Duplicate dashboard card</strong><div class="meta"><span>No longer needed</span></div></div></div>
+    </div>
+  </div>
+</body>
+</html>

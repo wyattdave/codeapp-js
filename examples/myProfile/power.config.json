@@ -1,0 +1,23 @@
+{
+  "appDisplayName": "My Profile",
+  "description": "Displays the logged-in user's profile, manager, and direct reports using the Office 365 Users connector.",
+  "environmentId": "<ENVIRONMENT ID>",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "office-240.png",
+  "localAppUrl": "http://localhost:3000",
+  "region": "prod",
+  "connectionReferences": {
+    "office365users": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365users",
+      "displayName": "Office 365 Users",
+      "dataSources": [
+        "office365users"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": null,
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {}
+}

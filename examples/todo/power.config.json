@@ -1,0 +1,35 @@
+{
+  "appDisplayName": "Todo",
+  "description": "A task management app backed by the Dataverse task table.",
+  "environmentId": "<ENVIRONMENT_ID>",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "icon192.png",
+  "localAppUrl": "http://localhost:3000",
+  "region": "prod",
+  "connectionReferences": {
+    "dataverse": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+      "displayName": "Microsoft Dataverse",
+      "dataSources": [
+        "commondataserviceforapps"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": null,
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {
+    "default.cds": {
+      "databaseDetails": null,
+      "dataSources": {
+        "tasks": {
+          "entitySetName": "tasks",
+          "logicalName": "task",
+          "isHidden": false
+        }
+      },
+      "actions": null
+    }
+  }
+}

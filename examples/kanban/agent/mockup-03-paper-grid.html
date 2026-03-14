@@ -1,0 +1,114 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup 03 — Paper Grid</title>
+  <style>
+    :root {
+      --bg: #faf7f2;
+      --text: #231f20;
+      --muted: #726a6b;
+      --line: #d9d1c4;
+      --card: #fffdf8;
+      --yellow: #ffdc78;
+      --sage: #bfd3c1;
+      --ink: #2f4f4f;
+      --clay: #d89a7e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Palatino Linotype", serif;
+      color: var(--text);
+      background:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px),
+        var(--bg);
+      background-size: 26px 26px;
+      padding: 28px;
+    }
+    .top {
+      max-width: 1480px;
+      margin: 0 auto 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 18px;
+    }
+    .title h1 {
+      margin: 0 0 8px;
+      font-size: 3.4rem;
+      letter-spacing: -0.05em;
+    }
+    .title p {
+      margin: 0;
+      color: var(--muted);
+      font-family: "Segoe UI", sans-serif;
+    }
+    .note {
+      background: var(--yellow);
+      padding: 14px 18px;
+      border: 1px solid rgba(35,31,32,0.12);
+      box-shadow: 6px 6px 0 rgba(35,31,32,0.08);
+      transform: rotate(-2deg);
+    }
+    .board {
+      max-width: 1480px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .lane {
+      background: rgba(255,253,248,0.88);
+      border: 1px solid var(--line);
+      min-height: 540px;
+      padding: 14px;
+    }
+    .lane h2 {
+      margin: 0 0 14px;
+      font-size: 0.82rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-family: "Segoe UI", sans-serif;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 14px;
+      margin-bottom: 12px;
+      border-left: 6px solid var(--ink);
+    }
+    .card.sage { border-left-color: var(--sage); }
+    .card.clay { border-left-color: var(--clay); }
+    .card h3 { margin: 0 0 8px; font-size: 1.02rem; }
+    .meta {
+      color: var(--muted);
+      font-family: "Segoe UI", sans-serif;
+      font-size: 0.8rem;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="title">
+      <h1>Paper Grid</h1>
+      <p>Warm, tactile, and notebook-like. Minimal, but less corporate.</p>
+    </div>
+    <div class="note">Best for calm personal planning.</div>
+  </div>
+  <section class="board">
+    <div class="lane"><h2>Backlog</h2><div class="card"><h3>Prepare Q3 capacity notes</h3><div class="meta"><span>P2</span><span>Notes</span></div></div></div>
+    <div class="lane"><h2>Ready</h2><div class="card sage"><h3>Clarify reporting metric owners</h3><div class="meta"><span>Ready</span><span>2 blockers cleared</span></div></div></div>
+    <div class="lane"><h2>In Progress</h2><div class="card clay"><h3>Review support trend themes</h3><div class="meta"><span>Today</span><span>4/6 done</span></div></div></div>
+    <div class="lane"><h2>Complete</h2><div class="card sage"><h3>Publish roadmap note</h3><div class="meta"><span>Complete</span></div></div></div>
+    <div class="lane"><h2>Rejected</h2><div class="card"><h3>Re-open retired intake form</h3><div class="meta"><span>Archived</span></div></div></div>
+  </section>
+</body>
+</html>

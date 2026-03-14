@@ -1,0 +1,44 @@
+{
+  "appId": "a20ddd7a-7c7b-4224-8255-e3ba85f6c9ff",
+  "appDisplayName": "Multi Demo2",
+  "description": "",
+  "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "",
+  "localAppUrl": "http://localhost:3000",
+  "region": "prod",
+  "connectionReferences": {
+    "Office365Outlook": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
+      "displayName": "Office 365 Outlook",
+      "dataSources": [
+        "office365"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": "b950ec12b23a417cb9819cb39417e105",
+      "dataSets": {}
+    },
+    "office365users": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365users",
+      "displayName": "Office 365 Users",
+      "dataSources": [
+        "office365users"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": "c668989c8535495aaf2672d13d21b815",
+      "dataSets": {}
+    },
+    "office365groups": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365groups",
+      "displayName": "Office 365 Groups",
+      "dataSources": [
+        "office365groups"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": "7a17eee561f64d779ce5feb92b1d0db0",
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {}
+}
