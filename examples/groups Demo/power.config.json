@@ -1,8 +1,7 @@
 {
-  "appId": "afb6517a-1b6d-4890-ae9f-3375fa875a0f",
   "appDisplayName": "test groups please work",
   "description": "",
-  "environmentId": "6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
+  "environmentId": "<ENVIRONMENT ID>",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "",
@@ -16,7 +15,7 @@
         "office365groups"
       ],
       "authenticationType": null,
-      "sharedConnectionId": "7a17eee561f64d779ce5feb92b1d0db0",
+      "sharedConnectionId": null,
       "dataSets": {}
     }
   },

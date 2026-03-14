@@ -1,8 +1,7 @@
 {
-  "appId": "a20ddd7a-7c7b-4224-8255-e3ba85f6c9ff",
   "appDisplayName": "Multi Demo2",
   "description": "",
-  "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
+  "environmentId": "<ENVIRONMENT ID>",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "",
@@ -16,7 +15,7 @@
         "office365"
       ],
       "authenticationType": null,
-      "sharedConnectionId": "b950ec12b23a417cb9819cb39417e105",
+      "sharedConnectionId": null,
       "dataSets": {}
     },
     "office365users": {
@@ -26,7 +25,7 @@
         "office365users"
       ],
       "authenticationType": null,
-      "sharedConnectionId": "c668989c8535495aaf2672d13d21b815",
+      "sharedConnectionId": null,
       "dataSets": {}
     },
     "office365groups": {
@@ -36,7 +35,7 @@
         "office365groups"
       ],
       "authenticationType": null,
-      "sharedConnectionId": "7a17eee561f64d779ce5feb92b1d0db0",
+      "sharedConnectionId": null,
       "dataSets": {}
     }
   },

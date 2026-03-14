@@ -1,8 +1,7 @@
 {
-  "appid": "79c7de41-4082-4268-95af-b951e5b43b64",
   "appDisplayName": "Planning Poker",
   "description": "An agile planning poker app for sprint estimation sessions with team collaboration.",
-  "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
+  "environmentId": "<ENVIRONMENT ID>",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "default",
