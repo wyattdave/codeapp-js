@@ -1,7 +1,8 @@
 {
-  "appDisplayName": "test groups please work",
+  "appId": "afb6517a-1b6d-4890-ae9f-3375fa875a0f",
+  "appDisplayName": "test groups app",
   "description": "",
-  "environmentId": "<ENVIRONMENT ID>",
+  "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "",

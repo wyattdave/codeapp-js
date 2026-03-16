@@ -74,6 +74,14 @@ export function registerTable(sTableName, sPrimaryKey) {
   oSharedClient = null;
 }
 
+// ── Ensure value is an array (accepts array or comma-separated string)
+function ensureArray(value) {
+  if (!value) return value;
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') return value.split(',').map(function (s) { return s.trim(); });
+  return value;
+}
+
 // ── Unwrap SDK response ────────────────────────────────────────
 function unwrapResult(result) {
   if (result && result.success === false) {
@@ -93,6 +101,7 @@ export async function createItem(tableName, primaryKey, record) {
 // ── Read (single) ──────────────────────────────────────────────
 export async function getItem(tableName, primaryKey, id, select) {
   const client = getSharedClient();
+  select = ensureArray(select);
   const options = select ? { select } : undefined;
   const result = await client.retrieveRecordAsync(tableName, id, options);
   return unwrapResult(result);
@@ -101,6 +110,8 @@ export async function getItem(tableName, primaryKey, id, select) {
 // ── List (multiple) ────────────────────────────────────────────
 export async function listItems(tableName, primaryKey, { filter, select, orderBy, top, skip } = {}) {
   const client = getSharedClient();
+  select = ensureArray(select);
+  orderBy = ensureArray(orderBy);
   const result = await client.retrieveMultipleRecordsAsync(tableName, {
     filter,
     select,

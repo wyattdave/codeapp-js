@@ -4,7 +4,7 @@
   "environmentId": "<ENVIRONMENT ID>",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
-  "logoPath": "<ICON IMAGE PATH>",
+  "logoPath": "./dist/icon-512.png",
   "localAppUrl": "http://localhost:3000",
   "region": "prod",
   "connectionReferences": {},
