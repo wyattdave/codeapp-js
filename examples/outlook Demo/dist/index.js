@@ -1,12 +1,12 @@
-import { listEmails } from "./outlook.js";
+import { listEmails } from './codeapp.js';
 
-const eLoading = document.getElementById("loading");
-const eTable = document.getElementById("emailTable");
-const eBody = document.getElementById("emailBody");
-const eError = document.getElementById("error");
+let eLoading = document.getElementById('loading');
+let eTable = document.getElementById('emailTable');
+let eBody = document.getElementById('emailBody');
+let eError = document.getElementById('error');
 
 function parseJsonIfNeeded(oValue) {
-  if (typeof oValue !== "string") return oValue;
+  if (typeof oValue !== 'string') return oValue;
 
   try {
     return JSON.parse(oValue);
@@ -16,7 +16,7 @@ function parseJsonIfNeeded(oValue) {
 }
 
 function isPlainObject(oValue) {
-  return oValue != null && typeof oValue === "object" && Array.isArray(oValue) === false;
+  return oValue != null && typeof oValue === 'object' && Array.isArray(oValue) === false;
 }
 
 function looksLikeEmailRecord(oValue) {
@@ -67,20 +67,20 @@ function extractEmails(oResult) {
 }
 
 function getSenderText(oEmail) {
-  if (!oEmail) return "";
-  if (typeof oEmail.From === "string") return oEmail.From;
-  if (oEmail.From && typeof oEmail.From === "object") {
-    return oEmail.From.Email || oEmail.From.Address || oEmail.From.Name || "";
+  if (!oEmail) return '';
+  if (typeof oEmail.From === 'string') return oEmail.From;
+  if (oEmail.From && typeof oEmail.From === 'object') {
+    return oEmail.From.Email || oEmail.From.Address || oEmail.From.Name || '';
   }
-  return oEmail.from || "";
+  return oEmail.from || '';
 }
 
 function getSubjectText(oEmail) {
-  return oEmail.Subject || oEmail.subject || "(No Subject)";
+  return oEmail.Subject || oEmail.subject || '(No Subject)';
 }
 
 function getReceivedDate(oEmail) {
-  return oEmail.DateTimeReceived || oEmail.ReceivedTime || oEmail.receivedDateTime || "";
+  return oEmail.DateTimeReceived || oEmail.ReceivedTime || oEmail.receivedDateTime || '';
 }
 
 function isEmailRead(oEmail) {
@@ -96,20 +96,24 @@ function formatDiagnostic(oResult) {
 }
 
 function formatDate(sDate) {
-  if (!sDate) return "";
+  if (!sDate) return '';
   var oDate = new Date(sDate);
-  return oDate.toLocaleDateString() + " " + oDate.toLocaleTimeString();
+  return oDate.toLocaleDateString() + ' ' + oDate.toLocaleTimeString();
 }
 
 function escapeHtml(sText) {
-  if (!sText) return "";
-  var eDiv = document.createElement("div");
-  eDiv.textContent = sText;
-  return eDiv.innerHTML;
+  if (!sText) return '';
+  let sStr = String(sText);
+  return sStr
+    .replace(new RegExp('&', 'g'), '&amp;')
+    .replace(new RegExp('<', 'g'), '&lt;')
+    .replace(new RegExp('>', 'g'), '&gt;')
+    .replace(new RegExp('"', 'g'), '&quot;')
+    .replace(new RegExp("'", 'g'), '&#39;');
 }
 
 function renderEmails(aEmails) {
-  eBody.innerHTML = "";
+  eBody.innerHTML = '';
 
   if (aEmails.length === 0) {
     eBody.innerHTML = '<tr><td colspan="4">No emails found.</td></tr>';
@@ -120,27 +124,27 @@ function renderEmails(aEmails) {
     var sSubject = escapeHtml(getSubjectText(oEmail));
     var sReceived = formatDate(getReceivedDate(oEmail));
     var bRead = isEmailRead(oEmail);
-    var sRow = "<tr>" +
-      "<td>" + sFrom + "</td>" +
-      "<td>" + sSubject + "</td>" +
-      "<td>" + sReceived + "</td>" +
-      "<td>" + (bRead ? "Yes" : "No") + "</td>" +
-      "</tr>";
+    var sRow = '<tr>' +
+      '<td>' + sFrom + '</td>' +
+      '<td>' + sSubject + '</td>' +
+      '<td>' + sReceived + '</td>' +
+      '<td>' + (bRead ? 'Yes' : 'No') + '</td>' +
+      '</tr>';
     eBody.innerHTML += sRow;
   });
-  eLoading.style.display = "none";
-  eTable.style.display = "table";
+  eLoading.style.display = 'none';
+  eTable.style.display = 'table';
 }
 
 function showError(sMessage) {
-  eLoading.style.display = "none";
-  eError.style.display = "block";
-  eError.textContent = "Error: " + sMessage;
+  eLoading.style.display = 'none';
+  eError.style.display = 'block';
+  eError.textContent = 'Error: ' + sMessage;
 }
 
 async function boot() {
   try {
-    var oResult = await listEmails({ folderId: "Inbox", top: 10 });
+    var oResult = await listEmails({ folderId: 'Inbox', top: 10 });
     var aEmails = extractEmails(oResult);
 
     if (aEmails.length === 0) {
@@ -152,14 +156,14 @@ async function boot() {
         return;
       }
 
-      showError("No emails extracted from Outlook response. Raw response: " + formatDiagnostic(oResult));
+      showError('No emails extracted from Outlook response. Raw response: ' + formatDiagnostic(oResult));
       renderEmails([]);
       return;
     }
 
     renderEmails(aEmails);
   } catch (oErr) {
-    showError("Outlook: " + (oErr.message || oErr));
+    showError('Outlook: ' + (oErr.message || oErr));
   }
 }
 

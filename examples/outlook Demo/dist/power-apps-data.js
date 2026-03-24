@@ -1,8 +1,10 @@
+/* power-apps-data.js - Standalone Power Apps SDK for Code Apps
+   Converted from @microsoft/power-apps v1.0.4
+   Zero dependencies - all code is self-contained */
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-// node_modules/@microsoft/power-apps/lib/internal/plugins/DefaultPowerAppsBridge.js
 var DefaultPowerAppsBridge = class {
   constructor() {
     __publicField(this, "_antiCSRFToken");
@@ -87,7 +89,6 @@ var DefaultPowerAppsBridge = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/plugins/PluginBridge.js
 var bridgePromise;
 async function executePluginAsync(pluginName, pluginAction, params = [], update) {
   const powerAppsBridge = await getBridge();
@@ -108,7 +109,6 @@ async function getBridge() {
   return bridgePromise;
 }
 
-// node_modules/@microsoft/power-apps/lib/app/ContextProvider.js
 var context;
 async function getContext() {
   if (context) {
@@ -118,7 +118,6 @@ async function getContext() {
   return context;
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/plugins/SendMessage/IncompatibleMessageReceiver.js
 var IncompatibleMessageReceiver = class {
   constructor(versionInfo, incompatibilityDescription) {
     __publicField(this, "versionInfo");
@@ -129,7 +128,6 @@ var IncompatibleMessageReceiver = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/plugins/SendMessage/SendMessageOperation.js
 var SendMessageOperation = class {
   constructor(resultPromise, sendUpdate) {
     __publicField(this, "resultPromise");
@@ -145,7 +143,6 @@ var SendMessageOperation = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/plugins/SendMessage/CompatibleMessageReceiver.js
 var CompatibleMessageReceiver = class {
   constructor(_receiverName, versionInfo) {
     __publicField(this, "_receiverName");
@@ -218,7 +215,6 @@ var CompatibleMessageReceiver = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/plugins/SendMessage/SendMessage.js
 var SendMessage = class _SendMessage {
   static createInstanceAsync() {
     return Promise.resolve(new _SendMessage());
@@ -242,7 +238,6 @@ var SendMessage = class _SendMessage {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/telemetry/LoggerManager.js
 var loggerInstance;
 async function initializeLogger(logger) {
   loggerInstance = logger;
@@ -266,7 +261,6 @@ async function initializeLogger(logger) {
   }
 }
 
-// node_modules/@microsoft/power-apps/lib/telemetry/Performance.js
 function getAppLoadedPerformanceData() {
   const performanceApi = new PerformanceApi();
   const perfData = {
@@ -311,17 +305,14 @@ var PerformanceApi = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/telemetry/index.js
 executePluginAsync("AppLifecycle", "notifyAppSdkLoaded", [getAppLoadedPerformanceData()]);
 
-// node_modules/@microsoft/power-apps/lib/app/Config.js
 function setConfig(config) {
   if (config.logger) {
     initializeLogger(config.logger);
   }
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/common/types.js
 var HttpMethod;
 (function(HttpMethod2) {
   HttpMethod2["GET"] = "GET";
@@ -336,7 +327,6 @@ var DataSources;
   DataSources2["Connector"] = "Connector";
 })(DataSources || (DataSources = {}));
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/error/codes.js
 var ErrorCodes;
 (function(ErrorCodes2) {
   ErrorCodes2["InitializationFailed"] = "PDR_INIT_FAILED";
@@ -363,7 +353,6 @@ var ErrorCodes;
   ErrorCodes2["TokenAcquisitionFailed"] = "TOKEN_ACQUISITION_FAILED";
 })(ErrorCodes || (ErrorCodes = {}));
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/error/messages.js
 var UnknownErrorMessage = "An unknown error occurred";
 var ErrorMessages = {
   // PowerDataRuntime specific errors
@@ -412,12 +401,10 @@ var DataOperationErrorMessages;
   DataOperationErrorMessages2["UpdateFailed"] = "Update operation failure";
 })(DataOperationErrorMessages || (DataOperationErrorMessages = {}));
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/types/index.js
 function isOperationResult(result) {
   return result?.success !== void 0;
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/telemetry/log.js
 var ServiceName = "PublishedAppTelemetry";
 var TelemetryActionNames;
 (function(TelemetryActionNames2) {
@@ -526,7 +513,6 @@ var _Log = class _Log {
 __publicField(_Log, "_instance", null);
 var Log = _Log;
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/error/types.js
 var PowerDataRuntimeError = class extends Error {
   /**
    * Creates an instance of PowerDataRuntimeError.
@@ -547,7 +533,6 @@ var PowerDataRuntimeError = class extends Error {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/error/constants.js
 var HeaderNames;
 (function(HeaderNames2) {
   HeaderNames2["RequestId"] = "x-ms-client-request-id";
@@ -569,7 +554,6 @@ var ConnectorOperationName;
   ConnectorOperationName2["RetrieveMultipleRecords"] = "connectorDataOperation.retrieveMultipleRecordsAsync";
 })(ConnectorOperationName || (ConnectorOperationName = {}));
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/error/util.js
 function getErrorMessage(error) {
   if (typeof error === "string") {
     return error;
@@ -619,7 +603,6 @@ function parseHttpPluginError(error) {
   };
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/data/defaultOperationOrchestrator.js
 var DefaultDataOperationOrchestrator = class {
   // Static identifiers for services and actions
   // Used to identify specific services and actions within the PowerApps environment
@@ -807,7 +790,6 @@ var DefaultDataOperationOrchestrator = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/metadata/runtimeMetadataOperations.js
 var RuntimeMetadataOperations = class {
   // Static identifiers for services and actions
   // Used to identify specific services and actions within the PowerApps environment
@@ -835,7 +817,6 @@ var RuntimeMetadataOperations = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/common/utils.js
 function arrayBufferToBase64(buffer) {
   return window.btoa(convertArrayBufferToString(buffer));
 }
@@ -860,7 +841,6 @@ function extractDataverseUrlParts(url) {
   return { baseUrl, encodedPath };
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtimeClient/runtimeDataClient.js
 var _RuntimeDataClient = class _RuntimeDataClient {
   // Constructor for RuntimeDataClient
   // Accepts an IPowerOperationExecutor instance for executing operations
@@ -1270,7 +1250,6 @@ __publicField(_RuntimeDataClient, "ACTIONS", {
 __publicField(_RuntimeDataClient, "REQUEST_SOURCE", "PublishedApp");
 var RuntimeDataClient = _RuntimeDataClient;
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtimeClient/runtimeMetadataClient.js
 var _RuntimeMetadataClient = class _RuntimeMetadataClient {
   // Private member for the PowerOperationExecutor
   // The PowerOperationExecutor is used to execute operations on the clients
@@ -1355,7 +1334,6 @@ __publicField(_RuntimeMetadataClient, "ACTIONS", {
 });
 var RuntimeMetadataClient = _RuntimeMetadataClient;
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtimeClient/runtimeClientProvider.js
 var RuntimeClientProvider = class {
   // Constructor for RuntimeClientProvider
   // Accepts an optional IPowerOperationExecutor instance for executing operations
@@ -1431,7 +1409,6 @@ var RuntimeClientProvider = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/data/executors/shared/stringQueryOptions.js
 function convertOptionsToQueryString(options) {
   if (!options) {
     return "";
@@ -1462,7 +1439,6 @@ function convertOptionsToQueryString(options) {
   return parts.length ? `?${parts.join("&")}` : "";
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/data/executors/dataverseDataOperationExecutor.js
 var ODATA_NEXT_LINK = "@odata.nextLink";
 var DataverseDataOperationExecutor = class {
   constructor(clientProvider) {
@@ -1894,7 +1870,6 @@ function extractSkipToken(nextLink) {
   return match ? decodeURIComponent(match[1]) : void 0;
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/data/executors/connectorDataOperationExecutor.js
 var ConnectorDataOperationExecutor = class {
   // =====================================
   // Constructor
@@ -2395,7 +2370,6 @@ var ConnectorDataOperationExecutor = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/metadata/runtimeDataSourceService.js
 var DataSourceServiceError;
 /* @__PURE__ */ (function(DataSourceServiceError2) {
 })(DataSourceServiceError || (DataSourceServiceError = {}));
@@ -2486,7 +2460,6 @@ var RuntimeDataSourceService = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtime/powerDataRuntime.js
 var PowerDataRuntime = class {
   /**
    * Creates a new instance of PowerDataRuntime
@@ -2572,7 +2545,6 @@ var PowerDataRuntime = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtime/powerDataRuntimeInstance.js
 var powerDataRuntimeInstance;
 function getPowerDataRuntime(powerDataSourcesInfoProvider, powerOperationExecutor) {
   if (!powerDataRuntimeInstance) {
@@ -2584,7 +2556,6 @@ function getPowerDataRuntime(powerDataSourcesInfoProvider, powerOperationExecuto
   return powerDataRuntimeInstance;
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtime/powerDataSourcesInfoProvider.js
 var _PowerDataSourcesInfoProvider = class _PowerDataSourcesInfoProvider {
   /**
    * Private constructor to enforce the singleton pattern.
@@ -2624,7 +2595,6 @@ __publicField(_PowerDataSourcesInfoProvider, "instance", null);
 var PowerDataSourcesInfoProvider = _PowerDataSourcesInfoProvider;
 var powerDataSourcesInfoProvider_default = PowerDataSourcesInfoProvider;
 
-// node_modules/@microsoft/power-apps/lib/internal/data/ConnectionUtils.js
 var connectionsLoaded = false;
 async function loadConnections() {
   if (connectionsLoaded) {
@@ -2641,7 +2611,6 @@ async function resolveCompositeConnectionsAsync() {
   return executePluginAsync("AppPowerAppsClientPlugin", "resolveCompositeConnectionsAsync", []);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/OperationExecutor.js
 var loadConnectionsPromise;
 var OperationExecutor = class {
   /**
@@ -2668,7 +2637,6 @@ var OperationExecutor = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtime/getRuntimeContext.js
 var _executor;
 function getExecutor() {
   if (!_executor) {
@@ -2682,37 +2650,30 @@ async function getPowerSdkInstance(dataSourcesInfo) {
   return getPowerDataRuntime(provider, executor);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/createRecord.js
 async function createRecordAsync(dataSourcesInfo, tableName, record) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.createRecordAsync(tableName, record);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/updateRecord.js
 async function updateRecordAsync(dataSourcesInfo, tableName, recordId, changes) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.updateRecordAsync(tableName, recordId, changes);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/deleteRecord.js
 async function deleteRecordAsync(dataSourcesInfo, tableName, recordId) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.deleteRecordAsync(tableName, recordId);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/retrieveRecord.js
 async function retrieveRecordAsync(dataSourcesInfo, tableName, recordId, options) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.retrieveRecordAsync(tableName, recordId, options);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/retrieveMultipleRecords.js
 async function retrieveMultipleRecordsAsync(dataSourcesInfo, tableName, options) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.retrieveMultipleRecordsAsync(tableName, options);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/execute.js
 async function executeAsync(dataSourcesInfo, operation) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.executeAsync(operation);
 }
 
-// node_modules/@microsoft/power-apps/lib/data/powerAppsData.js
 var _dataOperationExecutor;
 function getDataOperationExecutor() {
   return _dataOperationExecutor;
@@ -2743,7 +2704,6 @@ function getClient(dataSourcesInfo) {
   };
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/data/executors/mockDataOperationExecutor.js
 var MockDataOperationExecutor = class {
   constructor(data) {
     __publicField(this, "_dataStore");
@@ -2816,7 +2776,6 @@ function createMockDataExecutor(data) {
   return new MockDataOperationExecutor(data);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/types/dataverseMetadata.js
 var entityClusterModeEnum = {
   0: "Partitioned",
   1: "Replicated",
