@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mockup 05 — Zen Garden</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&family=Karla:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f5f0;
+      --bg-warm: #efeade;
+      --card: #ffffff;
+      --ink: #2d3328;
+      --muted: #8a8d7e;
+      --stone: #b8b4a4;
+      --sage: #6b7f5e;
+      --sage-soft: rgba(107,127,94,0.08);
+      --sage-mid: rgba(107,127,94,0.18);
+      --terracotta: #c07850;
+      --terra-soft: rgba(192,120,80,0.08);
+      --line: #ddd8ca;
+      --shadow-sm: 0 1px 4px rgba(45,51,40,0.04);
+      --shadow-md: 0 8px 32px rgba(45,51,40,0.06);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: 'Karla', sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      padding: 32px;
+    }
+
+    /* ── Noise texture ───────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      opacity: 0.35;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1320px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ──────────────────────────────── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 36px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .header-left h1 {
+      font-family: 'Crimson Pro', serif;
+      font-weight: 300;
+      font-size: 2.4rem;
+      color: var(--sage);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .header-left .sub {
+      font-size: 0.72rem;
+      font-weight: 300;
+      color: var(--stone);
+      letter-spacing: 0.06em;
+    }
+    .search-zen {
+      width: 280px;
+      font-family: 'Karla', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 300;
+      color: var(--ink);
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 10px 18px;
+      border-radius: 999px;
+      outline: none;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .search-zen::placeholder { color: var(--stone); }
+    .search-zen:focus {
+      border-color: var(--sage);
+      box-shadow: 0 0 0 3px var(--sage-soft), var(--shadow-sm);
+    }
+
+    /* ── Layout ──────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    /* ── Solutions as card tiles ──────────────── */
+    .sol-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .sol-tile {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+      animation: tileUp 0.4s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+    .sol-tile::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 3px;
+      background: linear-gradient(90deg, var(--sage), var(--terracotta));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .sol-tile:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+    .sol-tile:hover::before { opacity: 1; }
+    .sol-tile.active {
+      border-color: var(--sage);
+      box-shadow: 0 0 0 3px var(--sage-soft), var(--shadow-md);
+    }
+    .sol-tile.active::before { opacity: 1; }
+
+    .sol-tile-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .sol-tile-name {
+      font-family: 'Crimson Pro', serif;
+      font-weight: 600;
+      font-size: 1.08rem;
+      line-height: 1.2;
+      color: var(--ink);
+    }
+    .sol-tile-badge {
+      font-size: 0.55rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      padding: 3px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+      margin-left: 10px;
+      flex-shrink: 0;
+    }
+    .sol-tile-badge.managed { background: var(--terra-soft); color: var(--terracotta); }
+    .sol-tile-badge.unmanaged { background: var(--sage-soft); color: var(--sage); }
+    .sol-tile-meta {
+      font-size: 0.68rem;
+      font-weight: 300;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .sol-tile-version {
+      display: inline-block;
+      font-size: 0.62rem;
+      font-weight: 500;
+      color: var(--stone);
+      background: var(--bg-warm);
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+
+    /* ── Detail Overlay / Drawer ─────────────── */
+    .detail-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      background: rgba(45,51,40,0.2);
+      backdrop-filter: blur(4px);
+      animation: fadeIn 0.25s ease;
+    }
+    .detail-overlay.open { display: flex; justify-content: flex-end; }
+
+    .detail-drawer {
+      width: 560px;
+      max-width: 90vw;
+      height: 100vh;
+      background: var(--card);
+      box-shadow: -20px 0 60px rgba(45,51,40,0.1);
+      overflow-y: auto;
+      animation: slideIn 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+      padding: 36px;
+    }
+    .detail-drawer::-webkit-scrollbar { width: 6px; }
+    .detail-drawer::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+
+    .detail-close {
+      display: inline-block;
+      font-family: 'Karla', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--stone);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      padding: 6px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      margin-bottom: 24px;
+      transition: all 0.2s;
+    }
+    .detail-close:hover { color: var(--ink); border-color: var(--sage); }
+
+    .detail-title {
+      font-family: 'Crimson Pro', serif;
+      font-weight: 300;
+      font-size: 2rem;
+      color: var(--sage);
+      margin-bottom: 6px;
+      line-height: 1.1;
+    }
+    .detail-meta {
+      font-size: 0.7rem;
+      font-weight: 300;
+      color: var(--stone);
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+    .detail-desc {
+      font-family: 'Crimson Pro', serif;
+      font-weight: 300;
+      font-style: italic;
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.7;
+      padding: 16px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 28px;
+    }
+
+    /* ── Component Sections ──────────────────── */
+    .comp-label {
+      font-size: 0.62rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--sage);
+      margin-bottom: 10px;
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .comp-label:first-of-type { margin-top: 0; }
+    .comp-label .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sage);
+    }
+    .comp-label .count {
+      font-weight: 400;
+      color: var(--stone);
+    }
+
+    .comp-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .comp-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: var(--bg);
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 400;
+      transition: all 0.2s;
+      animation: itemFade 0.25s ease both;
+    }
+    .comp-item:hover {
+      background: var(--sage-soft);
+      transform: translateX(4px);
+    }
+    .comp-item-id {
+      font-size: 0.6rem;
+      font-weight: 300;
+      color: var(--stone);
+    }
+
+    /* ── Animations ──────────────────────────── */
+    @keyframes tileUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+    @keyframes itemFade {
+      from { opacity: 0; transform: translateX(-6px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="header-left">
+      <h1>Solutions</h1>
+      <div class="sub">Explore your environment's solution inventory</div>
+    </div>
+    <input type="text" class="search-zen" placeholder="Find a solution…" id="searchInput">
+  </div>
+
+  <div class="layout">
+    <div class="sol-grid" id="solGrid"></div>
+  </div>
+</div>
+
+<!-- Detail Drawer -->
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail-drawer" id="detailDrawer"></div>
+</div>
+
+<script>
+  /* ── Mock Data ────────────────────────────── */
+  var aSolutions = [
+    { solutionid: 'a1b2c3d4-0001', friendlyname: 'Core Data Model', uniquename: 'CoreDataModel', version: '3.2.0.1', ismanaged: false, modifiedon: '2026-03-18T14:22:00Z', description: 'Foundation entities, relationships, and business rules for the organisation data model.' },
+    { solutionid: 'a1b2c3d4-0002', friendlyname: 'Customer Portal', uniquename: 'CustomerPortal', version: '1.8.4.0', ismanaged: false, modifiedon: '2026-03-20T09:45:00Z', description: 'Portal components including web resources, forms, and site maps for the customer-facing application.' },
+    { solutionid: 'a1b2c3d4-0003', friendlyname: 'Dynamics 365 Sales', uniquename: 'msdyn_Sales', version: '9.0.24031.1002', ismanaged: true, modifiedon: '2026-01-15T00:00:00Z', description: 'Microsoft Dynamics 365 Sales managed solution.' },
+    { solutionid: 'a1b2c3d4-0004', friendlyname: 'Approval Workflows', uniquename: 'ApprovalWorkflows', version: '2.1.0.0', ismanaged: false, modifiedon: '2026-03-12T11:30:00Z', description: 'Cloud flows and business process flows for multi-stage approval routing.' },
+    { solutionid: 'a1b2c3d4-0005', friendlyname: 'Power BI Dashboards', uniquename: 'PowerBIDashboards', version: '1.0.3.0', ismanaged: true, modifiedon: '2026-02-28T16:00:00Z', description: 'Embedded Power BI dashboards and charts for executive reporting.' },
+    { solutionid: 'a1b2c3d4-0006', friendlyname: 'Security Configuration', uniquename: 'SecurityConfig', version: '4.0.0.2', ismanaged: false, modifiedon: '2026-03-21T08:15:00Z', description: 'Security roles, field-level security profiles, and team templates.' },
+    { solutionid: 'a1b2c3d4-0007', friendlyname: 'Email Templates Pack', uniquename: 'EmailTemplates', version: '1.3.1.0', ismanaged: true, modifiedon: '2025-12-10T10:00:00Z', description: 'Standardised email templates for customer communications.' },
+    { solutionid: 'a1b2c3d4-0008', friendlyname: 'Integration Hub', uniquename: 'IntegrationHub', version: '2.5.0.0', ismanaged: false, modifiedon: '2026-03-19T15:42:00Z', description: 'Custom connectors, plugins, and webhook configurations for third-party integrations.' },
+    { solutionid: 'a1b2c3d4-0009', friendlyname: 'Canvas Apps Collection', uniquename: 'CanvasApps', version: '1.1.0.0', ismanaged: false, modifiedon: '2026-03-17T13:20:00Z', description: 'Suite of canvas apps for field workers and mobile scenarios.' },
+    { solutionid: 'a1b2c3d4-0010', friendlyname: 'Dataverse Accelerator', uniquename: 'DataverseAccelerator', version: '1.0.0.1', ismanaged: true, modifiedon: '2026-01-05T00:00:00Z', description: 'Microsoft accelerator components for rapid Dataverse development.' },
+    { solutionid: 'a1b2c3d4-0011', friendlyname: 'Field Service Extensions', uniquename: 'FSExtensions', version: '2.0.1.0', ismanaged: false, modifiedon: '2026-03-15T10:30:00Z', description: 'Custom entities, forms, and business rules extending Dynamics 365 Field Service.' },
+    { solutionid: 'a1b2c3d4-0012', friendlyname: 'AI Builder Models', uniquename: 'AIBuilderModels', version: '1.2.0.0', ismanaged: true, modifiedon: '2026-02-20T09:00:00Z', description: 'Pre-trained and custom AI Builder models for document processing and prediction.' },
+  ];
+
+  var oComponentMap = {
+    1: 'Entity', 2: 'Attribute', 9: 'Option Set', 10: 'Entity Relationship',
+    20: 'Security Role', 24: 'Workflow', 25: 'Report', 26: 'Connection Role',
+    29: 'Site Map', 31: 'System Form', 36: 'Dashboard', 59: 'Chart',
+    61: 'Web Resource', 62: 'Plugin Type', 63: 'Plugin Assembly',
+    65: 'SDK Message Step', 70: 'Model-driven App', 80: 'Canvas App', 300: 'Cloud Flow'
+  };
+
+  var oSolutionComponents = {
+    'a1b2c3d4-0001': [
+      { componenttype: 1, objectid: 'e001', name: 'account' }, { componenttype: 1, objectid: 'e002', name: 'contact' },
+      { componenttype: 1, objectid: 'e003', name: 'cr8b2_project' }, { componenttype: 1, objectid: 'e004', name: 'cr8b2_milestone' },
+      { componenttype: 2, objectid: 'a001', name: 'cr8b2_project.cr8b2_status' }, { componenttype: 2, objectid: 'a002', name: 'cr8b2_project.cr8b2_startdate' },
+      { componenttype: 10, objectid: 'r001', name: 'cr8b2_project_account' }, { componenttype: 9, objectid: 'o001', name: 'cr8b2_projectstatus' },
+    ],
+    'a1b2c3d4-0002': [
+      { componenttype: 61, objectid: 'w001', name: 'portal_main.js' }, { componenttype: 61, objectid: 'w002', name: 'portal_styles.css' },
+      { componenttype: 61, objectid: 'w003', name: 'portal_home.html' }, { componenttype: 31, objectid: 'f001', name: 'Contact - Portal Main Form' },
+      { componenttype: 31, objectid: 'f002', name: 'Case - Portal Quick Create' }, { componenttype: 29, objectid: 's001', name: 'Portal Site Map' },
+      { componenttype: 70, objectid: 'ap01', name: 'Customer Self-Service' },
+    ],
+    'a1b2c3d4-0003': [
+      { componenttype: 1, objectid: 'e010', name: 'opportunity' }, { componenttype: 1, objectid: 'e011', name: 'quote' },
+      { componenttype: 1, objectid: 'e012', name: 'salesorder' }, { componenttype: 1, objectid: 'e013', name: 'invoice' },
+      { componenttype: 24, objectid: 'wf01', name: 'Opportunity Close Process' }, { componenttype: 36, objectid: 'd001', name: 'Sales Dashboard' },
+      { componenttype: 59, objectid: 'ch01', name: 'Revenue by Quarter' }, { componenttype: 70, objectid: 'ap02', name: 'Sales Hub' },
+    ],
+    'a1b2c3d4-0004': [
+      { componenttype: 300, objectid: 'cf01', name: 'Approval - Manager Sign-off' }, { componenttype: 300, objectid: 'cf02', name: 'Approval - Finance Review' },
+      { componenttype: 300, objectid: 'cf03', name: 'Approval - VP Escalation' }, { componenttype: 24, objectid: 'wf02', name: 'Invoice Approval BPF' },
+      { componenttype: 1, objectid: 'e020', name: 'cr8b2_approvalrequest' },
+    ],
+    'a1b2c3d4-0005': [
+      { componenttype: 36, objectid: 'd010', name: 'Executive Overview' }, { componenttype: 36, objectid: 'd011', name: 'Sales Performance' },
+      { componenttype: 36, objectid: 'd012', name: 'Service Metrics' }, { componenttype: 59, objectid: 'ch10', name: 'Pipeline Funnel' },
+    ],
+    'a1b2c3d4-0006': [
+      { componenttype: 20, objectid: 'sr01', name: 'Sales Manager' }, { componenttype: 20, objectid: 'sr02', name: 'Service Agent' },
+      { componenttype: 20, objectid: 'sr03', name: 'System Administrator' }, { componenttype: 20, objectid: 'sr04', name: 'Read-Only User' },
+      { componenttype: 20, objectid: 'sr05', name: 'Finance Approver' },
+    ],
+    'a1b2c3d4-0007': [
+      { componenttype: 61, objectid: 'w010', name: 'template_welcome.html' }, { componenttype: 61, objectid: 'w011', name: 'template_invoice.html' },
+      { componenttype: 61, objectid: 'w012', name: 'template_reminder.html' },
+    ],
+    'a1b2c3d4-0008': [
+      { componenttype: 63, objectid: 'pa01', name: 'IntegrationHub.Plugins' }, { componenttype: 62, objectid: 'pt01', name: 'SyncContactPlugin' },
+      { componenttype: 62, objectid: 'pt02', name: 'WebhookDispatcher' }, { componenttype: 65, objectid: 'sm01', name: 'PostCreate - SyncContact' },
+      { componenttype: 65, objectid: 'sm02', name: 'PostUpdate - DispatchWebhook' }, { componenttype: 300, objectid: 'cf10', name: 'Sync to ERP Nightly' },
+    ],
+    'a1b2c3d4-0009': [
+      { componenttype: 80, objectid: 'ca01', name: 'Field Inspection App' }, { componenttype: 80, objectid: 'ca02', name: 'Expense Report App' },
+      { componenttype: 80, objectid: 'ca03', name: 'Time Tracker App' },
+    ],
+    'a1b2c3d4-0010': [
+      { componenttype: 1, objectid: 'e030', name: 'cr8b2_acceleratorconfig' }, { componenttype: 61, objectid: 'w020', name: 'accelerator_bundle.js' },
+      { componenttype: 70, objectid: 'ap10', name: 'Accelerator Studio' },
+    ],
+    'a1b2c3d4-0011': [
+      { componenttype: 1, objectid: 'e040', name: 'cr8b2_workorder_ext' }, { componenttype: 2, objectid: 'a010', name: 'cr8b2_workorder_ext.cr8b2_priority' },
+      { componenttype: 31, objectid: 'f010', name: 'Work Order - Extended Form' }, { componenttype: 24, objectid: 'wf10', name: 'Auto-assign Work Order' },
+      { componenttype: 300, objectid: 'cf20', name: 'Notify Technician' },
+    ],
+    'a1b2c3d4-0012': [
+      { componenttype: 61, objectid: 'w030', name: 'ai_invoice_processor' }, { componenttype: 61, objectid: 'w031', name: 'ai_prediction_model' },
+      { componenttype: 300, objectid: 'cf30', name: 'Process Incoming Documents' },
+    ],
+  };
+
+  /* ── Helpers ──────────────────────────────── */
+  function formatDate(sISO) {
+    var d = new Date(sISO);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  /* ── Render Solution Tiles ────────────────── */
+  function renderSolutions(aFiltered) {
+    var eGrid = document.getElementById('solGrid');
+    eGrid.innerHTML = '';
+    aFiltered.forEach(function(sol, i) {
+      var div = document.createElement('div');
+      div.className = 'sol-tile';
+      div.style.animationDelay = (i * 0.05) + 's';
+      div.innerHTML =
+        '<div class="sol-tile-top">' +
+          '<span class="sol-tile-name">' + sol.friendlyname + '</span>' +
+          '<span class="sol-tile-badge ' + (sol.ismanaged ? 'managed' : 'unmanaged') + '">' + (sol.ismanaged ? 'Managed' : 'Unmanaged') + '</span>' +
+        '</div>' +
+        '<div class="sol-tile-meta">' + sol.uniquename + ' &middot; ' + formatDate(sol.modifiedon) + '</div>' +
+        '<span class="sol-tile-version">v' + sol.version + '</span>';
+      div.addEventListener('click', function() {
+        document.querySelectorAll('.sol-tile').forEach(function(el) { el.classList.remove('active'); });
+        div.classList.add('active');
+        openDetail(sol);
+      });
+      eGrid.appendChild(div);
+    });
+  }
+
+  /* ── Open Detail Drawer ───────────────────── */
+  function openDetail(sol) {
+    var eOverlay = document.getElementById('detailOverlay');
+    var eDrawer = document.getElementById('detailDrawer');
+    var aComps = oSolutionComponents[sol.solutionid] || [];
+
+    var oGroups = {};
+    aComps.forEach(function(c) {
+      var sType = oComponentMap[c.componenttype] || ('Type ' + c.componenttype);
+      if (!oGroups[sType]) oGroups[sType] = [];
+      oGroups[sType].push(c);
+    });
+
+    var sHTML =
+      '<button class="detail-close" id="closeBtn">&larr; Back to solutions</button>' +
+      '<div class="detail-title">' + sol.friendlyname + '</div>' +
+      '<div class="detail-meta">' +
+        sol.uniquename + ' &middot; v' + sol.version + '<br>' +
+        (sol.ismanaged ? 'Managed' : 'Unmanaged') + ' &middot; Modified ' + formatDate(sol.modifiedon) +
+      '</div>';
+
+    if (sol.description) {
+      sHTML += '<div class="detail-desc">' + sol.description + '</div>';
+    }
+
+    var iDelay = 0;
+    Object.keys(oGroups).sort().forEach(function(sType) {
+      sHTML +=
+        '<div class="comp-label">' +
+          '<span class="dot"></span>' +
+          sType + ' <span class="count">(' + oGroups[sType].length + ')</span>' +
+        '</div>' +
+        '<div class="comp-list">';
+      oGroups[sType].forEach(function(c) {
+        sHTML +=
+          '<div class="comp-item" style="animation-delay:' + (iDelay * 0.04) + 's">' +
+            '<span>' + c.name + '</span>' +
+            '<span class="comp-item-id">' + c.objectid + '</span>' +
+          '</div>';
+        iDelay++;
+      });
+      sHTML += '</div>';
+    });
+
+    eDrawer.innerHTML = sHTML;
+    eOverlay.classList.add('open');
+
+    document.getElementById('closeBtn').addEventListener('click', function() {
+      eOverlay.classList.remove('open');
+    });
+  }
+
+  /* Close drawer on background click */
+  document.getElementById('detailOverlay').addEventListener('click', function(evt) {
+    if (evt.target === this) {
+      this.classList.remove('open');
+    }
+  });
+
+  /* ── Search ───────────────────────────────── */
+  document.getElementById('searchInput').addEventListener('input', function(evt) {
+    var sQuery = evt.target.value.toLowerCase();
+    var aFiltered = aSolutions.filter(function(s) {
+      return s.friendlyname.toLowerCase().indexOf(sQuery) !== -1 ||
+             s.uniquename.toLowerCase().indexOf(sQuery) !== -1;
+    });
+    renderSolutions(aFiltered);
+  });
+
+  /* ── Init ─────────────────────────────────── */
+  renderSolutions(aSolutions);
+</script>
+</body>
+</html>

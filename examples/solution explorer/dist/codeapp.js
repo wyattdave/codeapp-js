@@ -1,4 +1,4 @@
-import { getClient, getContext, callActionAsync } from "./power-apps-data.js";
+import { getClient, callActionAsync } from "./power-apps-data.js";
 
 // ── Initialize SDK & Client ────────────────────────────────────
 let oSharedClient = null;
@@ -68,7 +68,6 @@ function _dbgWrap(sName, aArgs, fnBody) {
   _dbgRenderEntry(oEntry, false);
   return oResult;
 }
-
 function _dbgClone(oVal) {
   try { return JSON.parse(JSON.stringify(oVal)); }
   catch (oErr) { return String(oVal); }
@@ -309,9 +308,6 @@ export async function deleteItem(tableName, primaryKey, id) {
 }
 
 // ── Unbound Action ─────────────────────────────────────────────
-// Calls an unbound Dataverse action by POSTing to the action endpoint.
-// Do NOT add action names to power.config.json dataSources — they are
-// not entities and will cause deploy errors.
 export async function callUnboundAction(tableName, primaryKey, actionName, params) {
   return _dbgWrap('callUnboundAction', [tableName, primaryKey, actionName, params], async function() {
   var oAllSources = Object.assign({}, oInitialDataSources, oDataSources);
@@ -323,11 +319,10 @@ export async function callUnboundAction(tableName, primaryKey, actionName, param
 // ── WhoAmI ─────────────────────────────────────────────────────
 export async function whoAmI() {
   return _dbgWrap('whoAmI', [], async function() {
-  var oCtx = await getContext();
-  var sId = oCtx.UserId || oCtx.userId || oCtx.systemuserid;
-  if (sId) return sId;
-  if (oCtx.userSettings && oCtx.userSettings.userId) return oCtx.userSettings.userId;
-  return oCtx;
+  var oAllSources = Object.assign({}, oInitialDataSources, oDataSources);
+  var result = await callActionAsync(oAllSources, 'WhoAmI', {});
+  var data = unwrapResult(result);
+  return data.UserId || data.userid || data.systemuserid || data;
   });
 }
 

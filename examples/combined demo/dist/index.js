@@ -1,80 +1,39 @@
 
-import { getClient } from '@microsoft/power-apps/data';
+import { getMyProfile, listEmails, listMyGroups } from './codeapp.js';
+import { getClient } from './power-apps-data.js';
 
-const ALL_DATA_SOURCES = {
-  office365: {
-    tableId: '',
-    version: '',
-    primaryKey: '',
-    dataSourceType: 'Connector',
-    apis: {
-      GetEmailsV3: {
-        path: '/{connectionId}/v3/Mail',
-        method: 'GET',
-        parameters: [
-          { name: 'connectionId', in: 'path', required: true },
-          { name: 'folderPath', in: 'query', required: false },
-          { name: 'to', in: 'query', required: false },
-          { name: 'cc', in: 'query', required: false },
-          { name: 'toOrCc', in: 'query', required: false },
-          { name: 'from', in: 'query', required: false },
-          { name: 'importance', in: 'query', required: false },
-          { name: 'fetchOnlyWithAttachment', in: 'query', required: false },
-          { name: 'subjectFilter', in: 'query', required: false },
-          { name: 'fetchOnlyUnread', in: 'query', required: false },
-          { name: 'fetchOnlyFlagged', in: 'query', required: false },
-          { name: 'mailboxAddress', in: 'query', required: false },
-          { name: 'includeAttachments', in: 'query', required: false },
-          { name: 'searchQuery', in: 'query', required: false },
-          { name: 'top', in: 'query', required: false }
-        ]
-      },
-      SendEmailV2: {
-        path: '/{connectionId}/v2/Mail',
-        method: 'POST',
-        parameters: [
-          { name: 'connectionId', in: 'path', required: true },
-          { name: 'emailMessage', in: 'body', required: true }
-        ]
-      }
-    }
-  },
-  office365users: {
-    tableId: '',
-    version: '',
-    primaryKey: '',
-    dataSourceType: 'Connector',
-    apis: {
-      MyProfile_V2: {
-        path: '/{connectionId}/codeless/v1.0/me',
-        method: 'GET',
-        parameters: [
-          { name: 'connectionId', in: 'path', required: true },
-          { name: '$select', in: 'query', required: false }
-        ]
-      }
-    }
-  },
-  office365groups: {
-    tableId: '',
-    version: '',
-    primaryKey: '',
-    dataSourceType: 'Connector',
-    apis: {
-      ListOwnedGroups_V3: {
-        path: '/{connectionId}/v2/v1.0/me/memberOf/$/microsoft.graph.group',
-        method: 'GET',
-        parameters: [
-          { name: 'connectionId', in: 'path', required: true },
-          { name: 'extractSensitivityLabel', in: 'query', required: false },
-          { name: 'fetchSensitivityLabelMetadata', in: 'query', required: false }
-        ]
-      }
-    }
+// ── SendEmailV2 connector (not yet in codeapp.js) ─────────────
+const SEND_EMAIL_CANDIDATES = ['office365outlook', 'Office365Outlook', 'office365'];
+const SEND_EMAIL_APIS = {
+  SendEmailV2: {
+    path: '/{connectionId}/v2/Mail',
+    method: 'POST',
+    parameters: [
+      { name: 'connectionId', in: 'path', required: true },
+      { name: 'emailMessage', in: 'body', required: true }
+    ]
   }
 };
 
-let oClient = null;
+let oSendClient = null;
+
+function getSendClient() {
+  if (!oSendClient) {
+    let oSources = {};
+    SEND_EMAIL_CANDIDATES.forEach((sName) => {
+      oSources[sName] = {
+        tableId: '',
+        version: '',
+        primaryKey: '',
+        dataSourceType: 'Connector',
+        apis: SEND_EMAIL_APIS
+      };
+    });
+    oSendClient = getClient(oSources);
+  }
+  return oSendClient;
+}
+
 let eStatusMessage = null;
 let eProfileCard = null;
 let eProfileStatus = null;
@@ -93,13 +52,6 @@ let eSendButton = null;
 let oProfile = null;
 let aEmails = [];
 let aGroups = [];
-
-function getSharedClient() {
-  if (!oClient) {
-    oClient = getClient(ALL_DATA_SOURCES);
-  }
-  return oClient;
-}
 
 function getElement(sId) {
   return document.getElementById(sId);
@@ -120,25 +72,6 @@ function cacheDomElements() {
   eComposeSubject = getElement('composeSubject');
   eComposeBody = getElement('composeBody');
   eSendButton = getElement('sendButton');
-}
-
-function unwrapResult(oResult) {
-  if (oResult && oResult.success === false) {
-    throw new Error(oResult.error ? (oResult.error.message || JSON.stringify(oResult.error)) : 'Operation failed');
-  }
-  return oResult && Object.prototype.hasOwnProperty.call(oResult, 'data') ? oResult.data : oResult;
-}
-
-async function execConnector(sTableName, sOperationName, oParameters = {}) {
-  const client = getSharedClient();
-  const oResult = await client.executeAsync({
-    connectorOperation: {
-      tableName: sTableName,
-      operationName: sOperationName,
-      parameters: oParameters
-    }
-  });
-  return unwrapResult(oResult);
 }
 
 function escapeHtml(sValue) {
@@ -369,33 +302,56 @@ function renderGroups() {
 }
 
 async function loadProfile() {
-  oProfile = getProfileFromPayload(await execConnector('office365users', 'MyProfile_V2', {}));
+  oProfile = getProfileFromPayload(await getMyProfile());
   renderProfile();
 }
 
 async function loadEmails() {
-  aEmails = getArrayFromPayload(await execConnector('office365', 'GetEmailsV3', {
-    folderPath: 'Inbox',
-    top: 15
-  }));
+  aEmails = getArrayFromPayload(await listEmails({ folderId: 'Inbox', top: 15 }));
   renderEmails();
 }
 
 async function loadGroups() {
-  aGroups = getArrayFromPayload(await execConnector('office365groups', 'ListOwnedGroups_V3', {}));
+  aGroups = getArrayFromPayload(await listMyGroups());
   renderGroups();
 }
 
 async function sendEmailMessage(sTo, sSubject, sBody) {
-  return execConnector('office365', 'SendEmailV2', {
-    emailMessage: {
-      To: sTo,
-      Subject: sSubject,
-      Body: sBody,
-      Importance: 'Normal',
-      IsHtml: true
+  let client = getSendClient();
+  let aErrors = [];
+
+  for (let iIndex = 0; iIndex < SEND_EMAIL_CANDIDATES.length; iIndex += 1) {
+    let sName = SEND_EMAIL_CANDIDATES[iIndex];
+    try {
+      let oResult = await client.executeAsync({
+        connectorOperation: {
+          tableName: sName,
+          operationName: 'SendEmailV2',
+          parameters: {
+            emailMessage: {
+              To: sTo,
+              Subject: sSubject,
+              Body: sBody,
+              Importance: 'Normal',
+              IsHtml: true
+            }
+          }
+        }
+      });
+      if (oResult && oResult.success === false) {
+        throw new Error(oResult.error ? (oResult.error.message || JSON.stringify(oResult.error)) : 'Send failed');
+      }
+      return oResult && Object.prototype.hasOwnProperty.call(oResult, 'data') ? oResult.data : oResult;
+    } catch (oErr) {
+      let sMessage = oErr.message || String(oErr);
+      aErrors.push(sName + ': ' + sMessage);
+      if (sMessage.indexOf('Connection reference not found') === -1) {
+        throw oErr;
+      }
     }
-  });
+  }
+
+  throw new Error('No Outlook connection reference matched. Tried: ' + aErrors.join(' || '));
 }
 
 async function loadDashboard() {
@@ -501,7 +457,6 @@ async function boot() {
   renderGroups();
 
   try {
-    getSharedClient();
     await loadDashboard();
   } catch (oErr) {
     setStatus('App failed to start: ' + (oErr.message || oErr), 'error');
