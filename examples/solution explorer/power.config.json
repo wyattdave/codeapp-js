@@ -133,6 +133,16 @@
           "entitySetName": "webresourceset",
           "logicalName": "webresource",
           "isHidden": false
+        },
+        "teams": {
+          "entitySetName": "teams",
+          "logicalName": "team",
+          "isHidden": false
+        },
+        "systemusers": {
+          "entitySetName": "systemusers",
+          "logicalName": "systemuser",
+          "isHidden": false
         }
       },
       "actions": null

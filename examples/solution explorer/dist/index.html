@@ -44,6 +44,37 @@
       </div>
     </div>
 </div>
+    <!-- Share Component Modal -->
+    <div class="share-backdrop" id="shareBackdrop">
+      <div class="share-modal">
+        <div class="share-modal-header">
+          <h3 id="shareModalTitle">Share Component</h3>
+          <button class="share-close-btn" id="shareCloseBtn">&times;</button>
+        </div>
+        <div class="share-tabs">
+          <button class="share-tab active" data-tab="user">User</button>
+          <button class="share-tab" data-tab="team">Team</button>
+        </div>
+        <div class="share-body">
+          <div class="share-search-row">
+            <input type="text" class="share-search-input" id="shareSearchInput" placeholder="Search users…" />
+          </div>
+          <div class="share-results" id="shareResults">
+            <div class="share-empty-msg">Type to search</div>
+          </div>
+          <div class="share-selected-section" id="shareSelectedSection" style="display:none;">
+            <div class="share-selected-label">Sharing with:</div>
+            <div class="share-selected-list" id="shareSelectedList"></div>
+          </div>
+        </div>
+        <div class="share-footer">
+          <button class="share-cancel-btn" id="shareCancelBtn">Cancel</button>
+          <button class="share-confirm-btn" id="shareConfirmBtn" disabled>Share</button>
+        </div>
+      </div>
+    </div>
+
+
     <script type="module" src="index.js"></script>
   </body>
 </html>

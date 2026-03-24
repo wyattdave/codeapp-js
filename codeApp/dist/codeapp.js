@@ -1,4 +1,4 @@
-import { getClient } from "./power-apps-data.js";
+import { getClient, getContext, callActionAsync } from "./power-apps-data.js";
 
 // ── Initialize SDK & Client ────────────────────────────────────
 let oSharedClient = null;
@@ -100,10 +100,23 @@ function _dbgRenderEntry(oEntry, bPending) {
   }
   let sStatus = bPending ? '\u23F3' : (oEntry.oError ? '\u274C' : '\u2705');
   let sDuration = bPending ? '\u2026' : oEntry.iDuration + 'ms';
-  eRow.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">'
-    + '<span><strong>' + sStatus + ' ' + _dbgEscapeHtml(oEntry.sName) + '</strong></span>'
-    + '<span style="color:#888;font-size:11px;">' + _dbgFormatTime(oEntry.iTime) + ' | ' + sDuration + '</span>'
+  eRow.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">'
+    + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;"><strong>' + sStatus + ' ' + _dbgEscapeHtml(oEntry.sName) + '</strong></span>'
+    + '<span style="color:#888;font-size:11px;white-space:nowrap;">' + _dbgFormatTime(oEntry.iTime) + ' | ' + sDuration + '</span>'
+    + '<button class="dbg-copy" style="background:#333;color:#e0e0e0;border:1px solid #555;border-radius:3px;padding:1px 6px;cursor:pointer;font-size:11px;white-space:nowrap;" title="Copy to clipboard">⎘</button>'
     + '</div>';
+  eRow.querySelector('.dbg-copy').onclick = function(e) {
+    e.stopPropagation();
+    let oData = { name: oEntry.sName, args: oEntry.aArgs, time: _dbgFormatTime(oEntry.iTime) };
+    if (oEntry.oError) { oData.error = oEntry.oError; }
+    else if (oEntry.oResult !== undefined) { oData.result = oEntry.oResult; }
+    if (oEntry.iDuration !== undefined) { oData.duration = oEntry.iDuration + 'ms'; }
+    navigator.clipboard.writeText(JSON.stringify(oData, null, 2)).then(function() {
+      let eBtn = eRow.querySelector('.dbg-copy');
+      eBtn.textContent = '\u2713';
+      setTimeout(function() { eBtn.textContent = '\u2398'; }, 1000);
+    });
+  };
   eRow.onclick = function() {
     let eDetail = eRow.querySelector('.dbg-detail');
     if (eDetail) { eDetail.remove(); return; }
@@ -131,7 +144,7 @@ function _dbgInjectUI() {
   _eDebugIcon.id = 'codeapp-debug-icon';
   _eDebugIcon.innerHTML = '<span style="font-size:18px;">\uD83D\uDC1B</span>'
     + '<span class="dbg-badge" style="position:absolute;top:-4px;right:-4px;background:#ff6b6b;color:#fff;font-size:10px;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;">0</span>';
-  _eDebugIcon.style.cssText = 'position:fixed;top:10px;right:10px;z-index:999999;width:36px;height:36px;background:#1e1e2e;border:1px solid #444;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.4);user-select:none;';
+  _eDebugIcon.style.cssText = 'position:fixed;top:10px;right:70px;z-index:999999;width:36px;height:36px;background:#1e1e2e;border:1px solid #444;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.4);user-select:none;';
   _eDebugIcon.onclick = function() {
     _eDebugPanel.style.display = _eDebugPanel.style.display === 'none' ? 'flex' : 'none';
   };
@@ -168,6 +181,7 @@ function _dbgInjectUI() {
 }
 
 export function enableDebugger() {
+  console.warn("Debug mode enabled: all API calls will be logged in the debug panel. Call enableDebugger() only in development environments.");
   if (_bDebugActive) return;
   _bDebugActive = true;
   if (document.body) {
@@ -295,10 +309,13 @@ export async function deleteItem(tableName, primaryKey, id) {
 }
 
 // ── Unbound Action ─────────────────────────────────────────────
+// Calls an unbound Dataverse action by POSTing to the action endpoint.
+// Do NOT add action names to power.config.json dataSources — they are
+// not entities and will cause deploy errors.
 export async function callUnboundAction(tableName, primaryKey, actionName, params) {
   return _dbgWrap('callUnboundAction', [tableName, primaryKey, actionName, params], async function() {
-  const client = getSharedClient();
-  const result = await client.invokeActionAsync(tableName, actionName, params);
+  var oAllSources = Object.assign({}, oInitialDataSources, oDataSources);
+  var result = await callActionAsync(oAllSources, actionName, params || {});
   return unwrapResult(result);
   });
 }
@@ -306,10 +323,11 @@ export async function callUnboundAction(tableName, primaryKey, actionName, param
 // ── WhoAmI ─────────────────────────────────────────────────────
 export async function whoAmI() {
   return _dbgWrap('whoAmI', [], async function() {
-  const client = getSharedClient();
-  const result = await client.invokeActionAsync('', 'WhoAmI', {});
-  var data = unwrapResult(result);
-  return data.UserId || data.userid || data.systemuserid || data;
+  var oCtx = await getContext();
+  var sId = oCtx.UserId || oCtx.userId || oCtx.systemuserid;
+  if (sId) return sId;
+  if (oCtx.userSettings && oCtx.userSettings.userId) return oCtx.userSettings.userId;
+  return oCtx;
   });
 }
 

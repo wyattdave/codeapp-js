@@ -2674,6 +2674,45 @@ async function executeAsync(dataSourcesInfo, operation) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.executeAsync(operation);
 }
 
+async function callActionAsync(dataSourcesInfo, actionName, params) {
+  var sdkInstance = await getPowerSdkInstance(dataSourcesInfo);
+  var orchestrator = sdkInstance.Data;
+  var dvExecutor = orchestrator._dataverseOperation;
+  var dataClient = await dvExecutor._getDataClient();
+  var dbRefs = await dvExecutor.getDatabaseReferences();
+  var sInstanceUrl = null;
+  var sDatasetName = null;
+  for (var sDbKey of Object.keys(dbRefs)) {
+    var oDb = dbRefs[sDbKey];
+    if (oDb.databaseDetails && oDb.databaseDetails.linkedEnvironmentMetadata) {
+      sInstanceUrl = oDb.databaseDetails.linkedEnvironmentMetadata.instanceUrl;
+      sDatasetName = oDb.databaseDetails.environmentName;
+      break;
+    }
+  }
+  if (!sInstanceUrl) {
+    throw new Error("Cannot call unbound action: no Dataverse instance URL found. At least one Dataverse table must be registered.");
+  }
+  var sBaseUrl = sInstanceUrl.endsWith("/") ? sInstanceUrl : sInstanceUrl + "/";
+  var sRequestUrl = sBaseUrl + "api/data/v9.0/" + actionName;
+  var oResponse = await dataClient.createDataAsync(
+    sRequestUrl,
+    DataSources.Dataverse,
+    actionName,
+    params || {},
+    {
+      operationName: DataverseOperationName.CreateRecord,
+      datasetName: sDatasetName,
+      isDataVerseOperation: true
+    }
+  );
+  return {
+    success: oResponse.success,
+    data: oResponse.data,
+    error: oResponse.error
+  };
+}
+
 var _dataOperationExecutor;
 function getDataOperationExecutor() {
   return _dataOperationExecutor;
@@ -2893,6 +2932,7 @@ function getCascadeTypeName(value) {
   return cascadeTypeEnum[value];
 }
 export {
+  callActionAsync,
   createMockDataExecutor,
   getAssociatedMenuBehaviorName,
   getAssociatedMenuGroupName,

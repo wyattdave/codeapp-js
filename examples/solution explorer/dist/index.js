@@ -1,4 +1,7 @@
-import { initDataSources, registerTable, listItems, getItem } from './codeapp.js';
+
+import { initDataSources, registerTable, listItems, getItem,  callUnboundAction, enableDebugger } from './codeapp.js';
+
+enableDebugger();
 
 /* ── Data Sources (tables used by this app) ─────────────────── */
 function dsEntry(sPrimaryKey) {
@@ -26,7 +29,9 @@ initDataSources({
   connectionreferences:           dsEntry('connectionreferenceid'),
   environmentvariabledefinitions: dsEntry('environmentvariabledefinitionid'),
   environmentvariablevalues:      dsEntry('environmentvariablevalueid'),
-  fxexpressions:                  dsEntry('fxexpressionid')
+  fxexpressions:                  dsEntry('fxexpressionid'),
+  systemusers:                    dsEntry('systemuserid'),
+  teams:                          dsEntry('teamid')
 });
 
 /* ── Well-known Component Types (hardcoded table mappings) ─── */
@@ -73,6 +78,9 @@ function registerCoreTables() {
   registerTable('solutions', 'solutionid');
   registerTable('solutioncomponents', 'solutioncomponentid');
   registerTable('entities', 'entityid');
+
+  registerTable('systemusers', 'systemuserid');
+  registerTable('teams', 'teamid');
 
   /* Register well-known component tables */
   var oRegistered = {};
@@ -308,8 +316,9 @@ async function showDetail(oSol) {
         '<div class="comp-group" style="animation-delay:' + (iGroupIdx * 0.08) + 's">' +
           '<div class="comp-group-title">' + sType + ' (' + oGroups[sType].length + ')</div>';
       oGroups[sType].forEach(function(oComp) {
+        var sEscName = oComp.sName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
         sCompHTML +=
-          '<div class="comp-row">' +
+          '<div class="comp-row" onclick="window._openShareModal(\'' + sEscName + '\', \'' + oComp.sObjectId + '\', ' + oComp.iType + ')">' +
             '<span class="comp-row-name">' + oComp.sName + '</span>' +
             '<span class="comp-row-id">' + oComp.sObjectId + '</span>' +
           '</div>';
@@ -371,3 +380,356 @@ async function boot() {
 }
 
 boot();
+
+/* ══════════════════════════════════════════════════════════════
+   Share Component Modal
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Share Modal State ──────────────────────────────────────── */
+let oShareContext = { sComponentName: '', sObjectId: '', iType: 0 };
+let sShareTab = 'user';
+let aShareSelected = []; // { sId, sName, sType ('user'|'team'), sDetail }
+let iShareSearchTimer = 0;
+
+/* ── Share Modal DOM References ─────────────────────────────── */
+const eShareBackdrop = document.getElementById('shareBackdrop');
+const eShareModalTitle = document.getElementById('shareModalTitle');
+const eShareCloseBtn = document.getElementById('shareCloseBtn');
+const eShareSearchInput = document.getElementById('shareSearchInput');
+const eShareResults = document.getElementById('shareResults');
+const eShareSelectedSection = document.getElementById('shareSelectedSection');
+const eShareSelectedList = document.getElementById('shareSelectedList');
+const eShareCancelBtn = document.getElementById('shareCancelBtn');
+const eShareConfirmBtn = document.getElementById('shareConfirmBtn');
+const aShareTabs = document.querySelectorAll('.share-tab');
+
+/* ── Open Share Modal ───────────────────────────────────────── */
+function openShareModal(sComponentName, sObjectId, iType) {
+  oShareContext = { sComponentName, sObjectId, iType };
+  aShareSelected = [];
+  sShareTab = 'user';
+
+  eShareModalTitle.textContent = 'Share — ' + sComponentName;
+  eShareSearchInput.value = '';
+  eShareSearchInput.placeholder = 'Search users…';
+  eShareResults.innerHTML = '<div class="share-empty-msg">Type to search</div>';
+  renderShareSelected();
+  updateShareTabs();
+
+  eShareBackdrop.classList.add('open');
+  setTimeout(() => eShareSearchInput.focus(), 100);
+}
+
+/* ── Close Share Modal ──────────────────────────────────────── */
+function closeShareModal() {
+  eShareBackdrop.classList.remove('open');
+  oShareContext = { sComponentName: '', sObjectId: '', iType: 0 };
+  aShareSelected = [];
+}
+
+/* ── Tab Switching ──────────────────────────────────────────── */
+function updateShareTabs() {
+  aShareTabs.forEach((eTab) => {
+    if (eTab.dataset.tab === sShareTab) {
+      eTab.classList.add('active');
+    } else {
+      eTab.classList.remove('active');
+    }
+  });
+}
+
+aShareTabs.forEach((eTab) => {
+  eTab.addEventListener('click', () => {
+    sShareTab = eTab.dataset.tab;
+    updateShareTabs();
+    eShareSearchInput.value = '';
+    eShareSearchInput.placeholder = sShareTab === 'user' ? 'Search users…' : 'Search teams…';
+    eShareResults.innerHTML = '<div class="share-empty-msg">Type to search</div>';
+    eShareSearchInput.focus();
+  });
+});
+
+/* ── Search Users (Dataverse systemusers) ───────────────────── */
+async function searchUsers(sQuery) {
+  try {
+    const oResult = await listItems('systemusers', 'systemuserid', {
+      filter: "contains(fullname,'" + sQuery.replace(/'/g, "''") + "') and isdisabled eq false",
+      select: ['systemuserid', 'fullname', 'internalemailaddress', 'jobtitle'],
+      orderBy: ['fullname asc'],
+      top: 20
+    });
+    return (oResult.entities || []).map((oUser) => ({
+      sId: oUser.systemuserid,
+      sName: oUser.fullname || 'Unknown',
+      sDetail: oUser.internalemailaddress || oUser.jobtitle || '',
+      sType: 'user'
+    }));
+  } catch (oErr) {
+    console.error('User search failed:', oErr);
+    return [];
+  }
+}
+
+/* ── Search Teams (Dataverse teams) ─────────────────────────── */
+async function searchTeams(sQuery) {
+  try {
+    const oResult = await listItems('teams', 'teamid', {
+      filter: "contains(name,'" + sQuery.replace(/'/g, "''") + "')",
+      select: ['teamid', 'name', 'description', 'teamtype'],
+      orderBy: ['name asc'],
+      top: 20
+    });
+    const aTeamTypeLabels = { 0: 'Owner', 1: 'Access', 2: 'AAD Security', 3: 'AAD Office' };
+    return (oResult.entities || []).map((oTeam) => ({
+      sId: oTeam.teamid,
+      sName: oTeam.name || 'Unknown',
+      sDetail: aTeamTypeLabels[oTeam.teamtype] || ('Type ' + oTeam.teamtype),
+      sType: 'team'
+    }));
+  } catch (oErr) {
+    console.error('Team search failed:', oErr);
+    return [];
+  }
+}
+
+/* ── Render Search Results ──────────────────────────────────── */
+function renderShareResults(aResults) {
+  if (!aResults || aResults.length === 0) {
+    eShareResults.innerHTML = '<div class="share-empty-msg">No results found</div>';
+    return;
+  }
+
+  eShareResults.innerHTML = '';
+  aResults.forEach((oItem) => {
+    const bSelected = aShareSelected.some((s) => s.sId === oItem.sId);
+    const eRow = document.createElement('div');
+    eRow.className = 'share-result-item' + (bSelected ? ' selected' : '');
+
+    const sInitials = getInitials(oItem.sName);
+    const sAvatarClass = oItem.sType === 'team' ? 'share-result-avatar team-avatar' : 'share-result-avatar';
+
+    eRow.innerHTML =
+      '<div class="' + sAvatarClass + '">' + sInitials + '</div>' +
+      '<div class="share-result-info">' +
+        '<div class="share-result-name">' + escapeHtml(oItem.sName) + '</div>' +
+        '<div class="share-result-detail">' + escapeHtml(oItem.sDetail) + '</div>' +
+      '</div>' +
+      '<div class="share-result-check">' + (bSelected ? '&#10003;' : '') + '</div>';
+
+    eRow.addEventListener('click', () => {
+      toggleShareSelection(oItem);
+      renderShareResults(aResults);
+    });
+
+    eShareResults.appendChild(eRow);
+  });
+}
+
+/* ── Toggle Selection ───────────────────────────────────────── */
+function toggleShareSelection(oItem) {
+  const iIdx = aShareSelected.findIndex((s) => s.sId === oItem.sId);
+  if (iIdx >= 0) {
+    aShareSelected.splice(iIdx, 1);
+  } else {
+    aShareSelected.push(oItem);
+  }
+  renderShareSelected();
+}
+
+/* ── Render Selected Chips ──────────────────────────────────── */
+function renderShareSelected() {
+  if (aShareSelected.length === 0) {
+    eShareSelectedSection.style.display = 'none';
+    eShareConfirmBtn.disabled = true;
+    return;
+  }
+
+  eShareSelectedSection.style.display = '';
+  eShareConfirmBtn.disabled = false;
+
+  eShareSelectedList.innerHTML = '';
+  aShareSelected.forEach((oItem) => {
+    const eChip = document.createElement('span');
+    eChip.className = 'share-selected-chip';
+    eChip.innerHTML =
+      escapeHtml(oItem.sName) +
+      '<span class="share-chip-remove" data-id="' + oItem.sId + '">&times;</span>';
+    eShareSelectedList.appendChild(eChip);
+  });
+
+  eShareSelectedList.querySelectorAll('.share-chip-remove').forEach((eBtn) => {
+    eBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const sRemoveId = eBtn.dataset.id;
+      aShareSelected = aShareSelected.filter((s) => s.sId !== sRemoveId);
+      renderShareSelected();
+      /* Re-render results if visible */
+      const aCurrentRows = eShareResults.querySelectorAll('.share-result-item');
+      if (aCurrentRows.length > 0) {
+        const sCurrentQuery = eShareSearchInput.value.trim();
+        if (sCurrentQuery.length >= 2) {
+          doShareSearch(sCurrentQuery);
+        }
+      }
+    });
+  });
+}
+
+/* ── Debounced Search ───────────────────────────────────────── */
+eShareSearchInput.addEventListener('input', () => {
+  clearTimeout(iShareSearchTimer);
+  const sQuery = eShareSearchInput.value.trim();
+  if (sQuery.length < 2) {
+    eShareResults.innerHTML = '<div class="share-empty-msg">Type to search</div>';
+    return;
+  }
+  eShareResults.innerHTML = '<div class="share-loading">Searching</div>';
+  iShareSearchTimer = setTimeout(() => doShareSearch(sQuery), 350);
+});
+
+async function doShareSearch(sQuery) {
+  let aResults = [];
+  if (sShareTab === 'user') {
+    aResults = await searchUsers(sQuery);
+  } else {
+    aResults = await searchTeams(sQuery);
+  }
+  renderShareResults(aResults);
+}
+
+/* ── Resolve entity logical name from component type ────────── */
+const oTypeToLogicalName = {
+  1:   'entity',
+  20:  'role',
+  24:  'systemform',
+  26:  'savedquery',
+  29:  'workflow',
+  31:  'report',
+  59:  'savedqueryvisualization',
+  60:  'systemform',
+  61:  'webresource',
+  62:  'sitemap',
+  63:  'connectionrole',
+  66:  'customcontrol',
+  70:  'appmodule',
+  71:  'plugintype',
+  72:  'pluginassembly',
+  80:  'appmodule',
+  91:  'sdkmessageprocessingstep',
+  300: 'canvasapp'
+};
+
+function getLogicalNameForType(iType) {
+  if (oTypeToLogicalName[iType]) return oTypeToLogicalName[iType];
+  /* Try the entity cache for dynamically discovered types */
+  if (oEntityCache[iType] && oEntityCache[iType].sTable) {
+    /* logicalname is singular; sTable is the collection name */
+    const sDef = oEntityCache[iType];
+    /* sPrimaryKey is usually "<logicalname>id", so strip "id" */
+    if (sDef.sPrimaryKey && sDef.sPrimaryKey.endsWith('id')) {
+      return sDef.sPrimaryKey.slice(0, -2);
+    }
+    return sDef.sTable;
+  }
+  return null;
+}
+
+/* ── Call GrantAccess for one principal ──────────────────────── */
+async function grantAccess(sTargetLogicalName, sTargetId, sPrincipalType, sPrincipalId) {
+  const sPrincipalLogical = sPrincipalType === 'user' ? 'systemuser' : 'team';
+  const sPrincipalKeyField = sPrincipalType === 'user' ? 'systemuserid' : 'teamid';
+
+  const oParams = {
+    Target: {
+      [sTargetLogicalName + 'id']: sTargetId,
+      '@odata.type': 'Microsoft.Dynamics.CRM.' + sTargetLogicalName
+    },
+    PrincipalAccess: {
+      Principal: {
+        [sPrincipalKeyField]: sPrincipalId,
+        '@odata.type': 'Microsoft.Dynamics.CRM.' + sPrincipalLogical
+      },
+      AccessMask: 'ReadAccess,WriteAccess,AppendAccess,AppendToAccess,ShareAccess,AssignAccess'
+    }
+  };
+
+  return await callUnboundAction('', '', 'GrantAccess', oParams);
+}
+
+/* ── Confirm Share ──────────────────────────────────────────── */
+eShareConfirmBtn.addEventListener('click', async () => {
+  if (aShareSelected.length === 0) return;
+
+  const sLogicalName = getLogicalNameForType(oShareContext.iType);
+  if (!sLogicalName) {
+    showShareToast('Error: Cannot share this component type (type ' + oShareContext.iType + ')');
+    return;
+  }
+
+  /* Disable button while processing */
+  eShareConfirmBtn.disabled = true;
+  eShareConfirmBtn.textContent = 'Sharing…';
+
+  const aResults = await Promise.allSettled(
+    aShareSelected.map((oItem) =>
+      grantAccess(sLogicalName, oShareContext.sObjectId, oItem.sType, oItem.sId)
+    )
+  );
+
+  const aFailed = aResults.filter((r) => r.status === 'rejected');
+  const aSucceeded = aResults.filter((r) => r.status === 'fulfilled');
+
+  if (aFailed.length === 0) {
+    const sNames = aShareSelected.map((s) => s.sName).join(', ');
+    showShareToast('Shared "' + oShareContext.sComponentName + '" with ' + sNames);
+  } else if (aSucceeded.length > 0) {
+    showShareToast(
+      aSucceeded.length + ' shared OK, ' + aFailed.length + ' failed: ' +
+      (aFailed[0].reason?.message || 'Unknown error')
+    );
+  } else {
+    showShareToast('Share failed: ' + (aFailed[0].reason?.message || 'Unknown error'));
+  }
+
+  eShareConfirmBtn.textContent = 'Share';
+  eShareConfirmBtn.disabled = false;
+  closeShareModal();
+});
+
+/* ── Close Handlers ─────────────────────────────────────────── */
+eShareCloseBtn.addEventListener('click', closeShareModal);
+eShareCancelBtn.addEventListener('click', closeShareModal);
+eShareBackdrop.addEventListener('click', (e) => {
+  if (e.target === eShareBackdrop) closeShareModal();
+});
+
+/* ── Toast Notification ─────────────────────────────────────── */
+function showShareToast(sMessage) {
+  let eToast = document.querySelector('.share-toast');
+  if (!eToast) {
+    eToast = document.createElement('div');
+    eToast.className = 'share-toast';
+    document.body.appendChild(eToast);
+  }
+  eToast.textContent = sMessage;
+  eToast.classList.remove('show');
+  void eToast.offsetWidth; /* force reflow */
+  eToast.classList.add('show');
+  setTimeout(() => eToast.classList.remove('show'), 3000);
+}
+
+/* ── Utilities ──────────────────────────────────────────────── */
+function getInitials(sName) {
+  if (!sName) return '?';
+  const aParts = sName.trim().split(/\s+/);
+  if (aParts.length >= 2) return (aParts[0][0] + aParts[aParts.length - 1][0]).toUpperCase();
+  return sName.substring(0, 2).toUpperCase();
+}
+
+function escapeHtml(sStr) {
+  if (typeof sStr !== 'string') return '';
+  return sStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ── Expose openShareModal to the detail panel ──────────────── */
+window._openShareModal = openShareModal;

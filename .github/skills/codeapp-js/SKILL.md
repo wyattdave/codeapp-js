@@ -167,15 +167,53 @@ await deleteItem('accounts', 'accountid', sAccountId);
 
 ### callUnboundAction(tableName, primaryKey, actionName, params)
 
-Calls an unbound Dataverse action.
+Calls any unbound Dataverse action — including standard Dataverse actions (e.g. `GrantAccess`, `RevokeAccess`, `WhoAmI`, `RetrieveVersion`) and custom low-code plug-ins. Bypasses the SDK's data source lookup and POSTs directly to `{instanceUrl}/api/data/v9.0/{actionName}` using the authenticated data client. Requires at least one Dataverse table to be registered (to resolve the instance URL).
+
+**Important:** Do NOT add action names (e.g. `GrantAccess`, `WhoAmI`, `new_CalculateSum`) to `power.config.json` `dataSources`. They are not entities — adding them causes deploy errors like `The dependent component Entity (Id=grantaccess) does not exist`. The function handles action calls internally without a config entry.
+
+**Low-code plug-ins** use simple parameter types:
 
 ```js
-var oResult = await callUnboundAction('', '', 'WhoAmI', {});
+var oSum = await callUnboundAction('', '', 'new_CalculateSum', { X: 5, Y: 10 });
+```
+
+**Standard Dataverse actions** require `@odata.type` annotations for complex-typed parameters:
+
+```js
+// GrantAccess — share a record with another user
+var oResult = await callUnboundAction('', '', 'GrantAccess', {
+  Target: {
+    accountid: sAccountId,
+    '@odata.type': 'Microsoft.Dynamics.CRM.account'
+  },
+  PrincipalAccess: {
+    Principal: {
+      systemuserid: sUserId,
+      '@odata.type': 'Microsoft.Dynamics.CRM.systemuser'
+    },
+    AccessMask: 'ReadAccess,WriteAccess'
+  }
+});
+
+// RevokeAccess — remove a user's access to a record
+await callUnboundAction('', '', 'RevokeAccess', {
+  Target: {
+    accountid: sAccountId,
+    '@odata.type': 'Microsoft.Dynamics.CRM.account'
+  },
+  Revokee: {
+    systemuserid: sUserId,
+    '@odata.type': 'Microsoft.Dynamics.CRM.systemuser'
+  }
+});
+
+// WhoAmI — get current user info
+var oWhoAmI = await callUnboundAction('', '', 'WhoAmI', {});
 ```
 
 ### whoAmI()
 
-Returns the current user's system user ID.
+Returns the current user's system user ID via the Power Apps context (no Dataverse call required).
 
 ```js
 var sUserId = await whoAmI();
@@ -248,3 +286,5 @@ var oResult = await sendHttpRequest({
 - **The `entitySetName` in power.config.json is the plural OData collection name** (e.g. `webresourceset` not `webresources`).
 - **select/orderBy accept arrays or comma-separated strings.** Both `['name', 'accountid']` and `'name,accountid'` work.
 - **Environment variables require two tables** in your data sources: `environmentvariabledefinitions` and `environmentvariablevalues`.
+- **Do NOT add unbound actions to power.config.json dataSources.** Action names like `GrantAccess`, `WhoAmI`, or custom plug-ins are not entities — adding them causes deploy errors. `callUnboundAction` bypasses data source lookup and POSTs directly to the Dataverse action endpoint. Standard actions require `@odata.type` annotations on complex parameters; low-code plug-ins use simple parameter types.
+- **callUnboundAction requires at least one real Dataverse table registered** (in both power.config.json and initDataSources). It uses an existing table's database reference to resolve the Dataverse instance URL.

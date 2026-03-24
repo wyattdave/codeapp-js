@@ -1,3 +1,4 @@
+
 # Solution Explorer — Design Decision Log
 
 ## App Purpose
@@ -17,34 +18,10 @@ Browse all Dataverse solutions in a Power Apps environment and drill into their 
 | 4 | mockup-04-neon-noir.html | Cyberpunk/terminal | Pure black + cyan/magenta neon | Terminal search + list + accordion detail | JetBrains Mono + Syne |
 | 5 | mockup-05-zen-garden.html | Organic/natural zen | Warm whites + sage/terracotta | Card tile grid + slide-out drawer | Karla + Crimson Pro |
 
-## Key Differentiators
-
-### Mockup 01 — Swiss Grid
-- Rigid two-column master/detail with 3px black borders
-- Red accent dot per solution (red = unmanaged, grey = managed)
-- Components grouped with red section headers and tabular rows
-- Minimal animation — focus on typography and grid precision
-
-### Mockup 02 — Dark Glass
-- Ambient radial gradient blobs (purple + cyan + pink)
-- Frosted glass cards with `backdrop-filter: blur`
-- Gradient text headers, stats dashboard row
-- Components as floating chip pills with hover effects
-
-### Mockup 03 — Paper Console
-- Lined paper background (repeating-linear-gradient)
-- Dashed borders, developer-feel filter buttons (All / Unmanaged / Managed)
-- Description wrapped in `/* comment */` style
-- Collapsible tree view with `▸` arrows and left border lines
-
-### Mockup 04 — Neon Noir
-- CRT scanline overlay across entire viewport
-- Drifting cyan glow blob animation
-- Left-edge gradient stripe on active solution
-- Blinking cursor in empty state, accordion sections with glow on focus
-
-### Mockup 05 — Zen Garden
-- SVG noise texture overlay for organic feel
-- Responsive card tile grid (auto-fill, minmax)
-- Slide-in drawer from right with backdrop blur
-- Gradient top-stripe reveal on tile hover, soft rounded shapes
+## Share Feature
+- Share modal: click any component row to share with User (systemusers) or Team (teams) via Dataverse search
+- Share uses `callUnboundAction` from `codeapp.js` with `GrantAccess` registered in power.config.json
+- `GrantAccess` declared in `databaseReferences.default.cds.dataSources`, `initDataSources`, and `registerCoreTables`
+- Access mask grants Read, Write, Append, AppendTo, Share, Assign rights
+- Component type → entity logical name mapping used for Target entity reference
+- Previous raw `getRawClient` workaround replaced with proper `callUnboundAction('', '', 'GrantAccess', params)` pattern per updated skill

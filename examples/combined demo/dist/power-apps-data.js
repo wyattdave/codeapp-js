@@ -2674,6 +2674,100 @@ async function executeAsync(dataSourcesInfo, operation) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.executeAsync(operation);
 }
 
+async function callActionAsync(dataSourcesInfo, actionName, params) {
+  var sdkInstance = await getPowerSdkInstance(dataSourcesInfo);
+  var dvExecutor = sdkInstance.Data._dataverseOperation;
+  var dataClient = await dvExecutor._getDataClient();
+  var dbRefs = await dvExecutor.getDatabaseReferences();
+  var sInstanceUrl = null;
+  var sDatasetName = null;
+  for (var sDbKey of Object.keys(dbRefs)) {
+    var oDb = dbRefs[sDbKey];
+    if (oDb.databaseDetails && oDb.databaseDetails.linkedEnvironmentMetadata) {
+      sInstanceUrl = oDb.databaseDetails.linkedEnvironmentMetadata.instanceUrl;
+      sDatasetName = oDb.databaseDetails.environmentName;
+      break;
+    }
+  }
+  if (!sInstanceUrl) {
+    throw new Error("Cannot call unbound action: no Dataverse instance URL found. Ensure at least one Dataverse table is registered.");
+  }
+  var sBaseUrl = sInstanceUrl.endsWith("/") ? sInstanceUrl : sInstanceUrl + "/";
+  var sRequestUrl = sBaseUrl + "api/data/v9.0/" + actionName;
+  var oContext = {
+    operationName: DataverseOperationName.CreateRecord,
+    datasetName: sDatasetName,
+    isDataVerseOperation: true
+  };
+  var sToken = await dataClient._getAccessToken(DataSources.Dataverse, sDatasetName);
+  var oHeaders = dataClient._createHeaders(sToken, {
+    url: sRequestUrl,
+    method: HttpMethod.POST,
+    apiId: DataSources.Dataverse,
+    tableName: actionName,
+    body: JSON.stringify(params || {})
+  }, oContext);
+  var oRequestBody = new Blob([JSON.stringify(params || {})], { type: "application/json" });
+  var oRawResult;
+  try {
+    oRawResult = await dataClient._powerOperationExecutor.execute(
+      "AppHttpClientPlugin", "sendHttpAsync",
+      [
+        {
+          url: sRequestUrl,
+          method: HttpMethod.POST,
+          requestSource: "PublishedApp",
+          allowSessionStorage: true,
+          returnDirectResponse: true,
+          headers: oHeaders
+        },
+        oRequestBody,
+        "arraybuffer"
+      ]
+    );
+  } catch (oErr) {
+    return { success: false, data: null, error: oErr };
+  }
+  var aResponseData = oRawResult.data;
+  var oRespHeaders = aResponseData[0] ? aResponseData[0].headers || {} : {};
+  var iStatus = aResponseData[0] ? aResponseData[0].status : 0;
+  var sContentType = oRespHeaders["Content-Type"] || "";
+  // HTTP 2xx with no body or no parseable content = success (void actions like GrantAccess)
+  if (iStatus >= 200 && iStatus < 300 && (!sContentType || !aResponseData[1])) {
+    return { success: true, data: null, error: null };
+  }
+  // Try to parse JSON response
+  if (sContentType.indexOf("application/json") !== -1 && aResponseData[1]) {
+    try {
+      var sText = "";
+      if (aResponseData[1] instanceof ArrayBuffer) {
+        sText = new TextDecoder().decode(aResponseData[1]);
+      } else if (typeof aResponseData[1] === "string") {
+        sText = aResponseData[1];
+      }
+      if (!sText) sText = "{}";
+      var oParsed = JSON.parse(sText);
+      if (iStatus >= 200 && iStatus < 300) {
+        return { success: true, data: oParsed, error: null };
+      }
+      // Error response from server
+      var sErrMsg = oParsed.error ? (oParsed.error.message || JSON.stringify(oParsed.error)) : JSON.stringify(oParsed);
+      return { success: false, data: null, error: { message: sErrMsg } };
+    } catch (oParseErr) {
+      if (iStatus >= 200 && iStatus < 300) {
+        return { success: true, data: null, error: null };
+      }
+      return { success: false, data: null, error: { message: "Failed to parse action response" } };
+    }
+  }
+  // Any other 2xx = success
+  if (iStatus >= 200 && iStatus < 300) {
+    return { success: true, data: null, error: null };
+  }
+  // Non-2xx with non-JSON body
+  return { success: false, data: null, error: { message: "Action failed with status " + iStatus } };
+}
+
 var _dataOperationExecutor;
 function getDataOperationExecutor() {
   return _dataOperationExecutor;
@@ -2893,6 +2987,7 @@ function getCascadeTypeName(value) {
   return cascadeTypeEnum[value];
 }
 export {
+  callActionAsync,
   createMockDataExecutor,
   getAssociatedMenuBehaviorName,
   getAssociatedMenuGroupName,
