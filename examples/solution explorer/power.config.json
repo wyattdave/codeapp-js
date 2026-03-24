@@ -1,0 +1,141 @@
+{
+  "appId": "b0c723f1-a97f-4f8a-bdeb-e6af7c6a841d",
+  "appDisplayName": "Solution Explorer",
+  "description": "Browse Dataverse solutions and their components",
+  "environmentId": "9b45eff8-d905-e28a-918f-2e315619890d",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "./dist/icon-512.png",
+  "localAppUrl": "http://localhost:3000",
+  "region": "prod",
+  "connectionReferences": {
+    "dataverse": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+      "displayName": "Microsoft Dataverse",
+      "dataSources": [
+        "commondataserviceforapps"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": null,
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {
+    "default.cds": {
+      "databaseDetails": null,
+      "dataSources": {
+        "solutions": {
+          "entitySetName": "solutions",
+          "logicalName": "solution",
+          "isHidden": false
+        },
+        "solutioncomponents": {
+          "entitySetName": "solutioncomponents",
+          "logicalName": "solutioncomponent",
+          "isHidden": false
+        },
+        "workflows": {
+          "entitySetName": "workflows",
+          "logicalName": "workflow",
+          "isHidden": false
+        },
+        "roles": {
+          "entitySetName": "roles",
+          "logicalName": "role",
+          "isHidden": false
+        },
+        "systemforms": {
+          "entitySetName": "systemforms",
+          "logicalName": "systemform",
+          "isHidden": false
+        },
+        "webresources": {
+          "entitySetName": "webresources",
+          "logicalName": "webresource",
+          "isHidden": false
+        },
+        "savedqueryvisualizations": {
+          "entitySetName": "savedqueryvisualizations",
+          "logicalName": "savedqueryvisualization",
+          "isHidden": false
+        },
+        "pluginassemblies": {
+          "entitySetName": "pluginassemblies",
+          "logicalName": "pluginassembly",
+          "isHidden": false
+        },
+        "plugintypes": {
+          "entitySetName": "plugintypes",
+          "logicalName": "plugintype",
+          "isHidden": false
+        },
+        "sdkmessageprocessingsteps": {
+          "entitySetName": "sdkmessageprocessingsteps",
+          "logicalName": "sdkmessageprocessingstep",
+          "isHidden": false
+        },
+        "appmodules": {
+          "entitySetName": "appmodules",
+          "logicalName": "appmodule",
+          "isHidden": false
+        },
+        "canvasapps": {
+          "entitySetName": "canvasapps",
+          "logicalName": "canvasapp",
+          "isHidden": false
+        },
+        "reports": {
+          "entitySetName": "reports",
+          "logicalName": "report",
+          "isHidden": false
+        },
+        "connectionroles": {
+          "entitySetName": "connectionroles",
+          "logicalName": "connectionrole",
+          "isHidden": false
+        },
+        "sitemaps": {
+          "entitySetName": "sitemaps",
+          "logicalName": "sitemap",
+          "isHidden": false
+        },
+        "entities": {
+          "entitySetName": "entities",
+          "logicalName": "entity",
+          "isHidden": false
+        },
+        "savedqueries": {
+          "entitySetName": "savedqueries",
+          "logicalName": "savedquery",
+          "isHidden": false
+        },
+        "customcontrols": {
+          "entitySetName": "customcontrols",
+          "logicalName": "customcontrol",
+          "isHidden": false
+        },
+        "connectionreferences": {
+          "entitySetName": "connectionreferences",
+          "logicalName": "connectionreference",
+          "isHidden": false
+        },
+        "environmentvariabledefinitions": {
+          "entitySetName": "environmentvariabledefinitions",
+          "logicalName": "environmentvariabledefinition",
+          "isHidden": false
+        },
+        "fxexpressions": {
+          "entitySetName": "fxexpressions",
+          "logicalName": "fxexpression",
+          "isHidden": false
+        },
+        "webresourceset": {
+          "entitySetName": "webresourceset",
+          "logicalName": "webresource",
+          "isHidden": false
+        }
+      },
+      "actions": null
+    }
+  }
+}
