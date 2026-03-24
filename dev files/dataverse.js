@@ -1,4 +1,4 @@
-import { getClient, getContext } from "@microsoft/power-apps/data";
+import { getClient, getContext } from "./power-apps-data.js";
 
 // ── Table Registry (populated at runtime via registerTable) ────
 let oDataSources = {};

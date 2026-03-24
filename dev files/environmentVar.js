@@ -1,4 +1,4 @@
-import { getClient } from "@microsoft/power-apps/data";
+import { getClient } from "./power-apps-data.js";
 
 // ── All Table Definitions ──────────────────────────────────────
 const ALL_DATA_SOURCES = {
