@@ -1,4 +1,4 @@
-import { getClient } from "@microsoft/power-apps/data";
+import { getClient, getContext } from "./power-apps-data.js";
 
 // ── Table Registry (populated at runtime via registerTable) ────
 let oDataSources = {};
@@ -90,16 +90,31 @@ export async function deleteItem(tableName, primaryKey, id) {
 }
 
 // ── Unbound Action ─────────────────────────────────────────────
+// Calls an unbound Dataverse action by POSTing to the action endpoint.
+// The actionName must be declared in power.config.json under
+// databaseReferences.default.cds.dataSources, e.g.:
+//   "WhoAmI": { "entitySetName": "WhoAmI", "logicalName": "whoami", "isHidden": false }
 export async function callUnboundAction(tableName, primaryKey, actionName, params) {
-  const client = getSharedClient();
-  const result = await client.invokeActionAsync(tableName, actionName, params);
+  if (!oDataSources[actionName]) {
+    oDataSources[actionName] = {
+      tableId: '',
+      version: '',
+      primaryKey: '',
+      dataSourceType: 'Dataverse',
+      apis: {}
+    };
+    oSharedClient = null;
+  }
+  var client = getSharedClient();
+  var result = await client.createRecordAsync(actionName, params || {});
   return unwrapResult(result);
 }
 
 // ── WhoAmI ─────────────────────────────────────────────────────
 export async function whoAmI() {
-  const client = getSharedClient();
-  const result = await client.invokeActionAsync('', 'WhoAmI', {});
-  var data = unwrapResult(result);
-  return data.UserId || data.userid || data.systemuserid || data;
+  var oCtx = await getContext();
+  var sId = oCtx.UserId || oCtx.userId || oCtx.systemuserid;
+  if (sId) return sId;
+  if (oCtx.userSettings && oCtx.userSettings.userId) return oCtx.userSettings.userId;
+  return oCtx;
 }

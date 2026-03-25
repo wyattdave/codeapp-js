@@ -1066,6 +1066,7 @@ export async function deleteEvent(sEventId, sCalendarId) {
     id: sEventId,
   });
   });
+  });
 }
 
 // ────────────────────────────────────────────────────────────────────────────
