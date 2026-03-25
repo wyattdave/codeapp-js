@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="./icon-512.png" />
+    <title>Solution Explorer</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "@microsoft/power-apps/data": "./power-apps-data.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root">
+    <div class="topbar">
+      <h1>Solution Explorer</h1>
+      <span class="env-badge" id="envBadge"></span>
+    </div>
+
+    <div class="shell">
+      <div class="sol-panel">
+        <div class="sol-header">
+          Solutions <span class="sol-count" id="solCount">0</span>
+        </div>
+        <div class="sol-search">
+          <input type="text" placeholder="Filter solutions…" id="searchInput" />
+          <select id="managedFilter">
+            <option value="all">All</option>
+            <option value="unmanaged">Unmanaged</option>
+            <option value="managed">Managed</option>
+          </select>
+        </div>
+        <div id="solList">
+          <div class="loading-msg">Loading solutions…</div>
+        </div>
+      </div>
+
+      <div class="detail-panel" id="detailPanel">
+        <div class="detail-empty">&larr; Select a solution</div>
+      </div>
+    </div>
+</div>
+    <!-- Share Component Modal -->
+    <div class="share-backdrop" id="shareBackdrop">
+      <div class="share-modal">
+        <div class="share-modal-header">
+          <h3 id="shareModalTitle">Share Component</h3>
+          <button class="share-close-btn" id="shareCloseBtn">&times;</button>
+        </div>
+        <div class="share-tabs">
+          <button class="share-tab active" data-tab="user">User</button>
+          <button class="share-tab" data-tab="team">Team</button>
+        </div>
+        <div class="share-body">
+          <div class="share-search-row">
+            <input type="text" class="share-search-input" id="shareSearchInput" placeholder="Search users…" />
+          </div>
+          <div class="share-results" id="shareResults">
+            <div class="share-empty-msg">Type to search</div>
+          </div>
+          <div class="share-selected-section" id="shareSelectedSection" style="display:none;">
+            <div class="share-selected-label">Sharing with:</div>
+            <div class="share-selected-list" id="shareSelectedList"></div>
+          </div>
+        </div>
+        <div class="share-footer">
+          <button class="share-cancel-btn" id="shareCancelBtn">Cancel</button>
+          <button class="share-confirm-btn" id="shareConfirmBtn" disabled>Share</button>
+        </div>
+      </div>
+    </div>
+
+
+    <script type="module" src="index.js"></script>
+  </body>
+</html>

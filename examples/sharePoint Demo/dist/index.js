@@ -1,16 +1,16 @@
 
-import { getItemsByName, getItems, listTables } from './sharepoint.js';
+import { getItemsByName, getItems, listTables } from './codeapp.js';
 
-const sSiteUrl = '<SITE_URL>';
-const sListName = '<LIST_NAME>';
-const iTopRows = 20;
+let sSiteUrl = '<SITE_URL>';
+let sListName = '<LIST_NAME>';
+let iTopRows = 20;
 
 function getElementById(sId) {
   return document.getElementById(sId);
 }
 
 function setStatus(sMessage, bIsError = false) {
-  const eStatusBar = getElementById('statusBar');
+  let eStatusBar = getElementById('statusBar');
 
   if (!eStatusBar) {
     return;
@@ -22,7 +22,7 @@ function setStatus(sMessage, bIsError = false) {
 }
 
 function hideStatus() {
-  const eStatusBar = getElementById('statusBar');
+  let eStatusBar = getElementById('statusBar');
 
   if (!eStatusBar) {
     return;
@@ -32,20 +32,20 @@ function hideStatus() {
 }
 
 function setMetaLabels(iRowCount) {
-  const eSiteLabel = getElementById('siteLabel');
-  const eListLabel = getElementById('listLabel');
-  const eCountLabel = getElementById('countLabel');
+  let eSiteLabel = getElementById('siteLabel');
+  let eListLabel = getElementById('listLabel');
+  let eCountLabel = getElementById('countLabel');
 
   if (eSiteLabel) {
-    eSiteLabel.textContent = `Site: ${sSiteUrl}`;
+    eSiteLabel.textContent = 'Site: ' + sSiteUrl;
   }
 
   if (eListLabel) {
-    eListLabel.textContent = `List: ${sListName}`;
+    eListLabel.textContent = 'List: ' + sListName;
   }
 
   if (eCountLabel) {
-    eCountLabel.textContent = `Rows: ${iRowCount}`;
+    eCountLabel.textContent = 'Rows: ' + iRowCount;
   }
 }
 
@@ -74,7 +74,7 @@ function isRenderableValue(value) {
 }
 
 function getVisibleColumns(aRows) {
-  const aIgnoredColumns = [
+  let aIgnoredColumns = [
     '@odata.etag',
     'Attachments',
     'ContentTypeId',
@@ -83,11 +83,11 @@ function getVisibleColumns(aRows) {
     'odata.editLink'
   ];
 
-  const aColumns = [];
+  let aColumns = [];
 
   aRows.forEach((oRow) => {
     Object.keys(oRow || {}).forEach((sKey) => {
-      const bIgnored =
+      let bIgnored =
         aIgnoredColumns.includes(sKey) ||
         sKey.indexOf('@odata') === 0 ||
         sKey.indexOf('_') === 0;
@@ -107,7 +107,7 @@ function getVisibleColumns(aRows) {
 
 function formatCellValue(value) {
   if (value === null || value === undefined || value === '') {
-    return '—';
+    return '\u2014';
   }
 
   if (typeof value === 'boolean') {
@@ -118,10 +118,10 @@ function formatCellValue(value) {
 }
 
 function renderTable(aRows) {
-  const eTable = getElementById('listTable');
-  const eTableHead = getElementById('tableHead');
-  const eTableBody = getElementById('tableBody');
-  const eEmptyState = getElementById('emptyState');
+  let eTable = getElementById('listTable');
+  let eTableHead = getElementById('tableHead');
+  let eTableBody = getElementById('tableBody');
+  let eEmptyState = getElementById('emptyState');
 
   if (!eTable || !eTableHead || !eTableBody || !eEmptyState) {
     return;
@@ -136,7 +136,7 @@ function renderTable(aRows) {
     return;
   }
 
-  const aColumns = getVisibleColumns(aRows);
+  let aColumns = getVisibleColumns(aRows);
 
   if (!aColumns.length) {
     eTable.hidden = true;
@@ -145,10 +145,10 @@ function renderTable(aRows) {
     return;
   }
 
-  const eHeaderRow = document.createElement('tr');
+  let eHeaderRow = document.createElement('tr');
 
   aColumns.forEach((sColumn) => {
-    const eHeaderCell = document.createElement('th');
+    let eHeaderCell = document.createElement('th');
     eHeaderCell.textContent = sColumn;
     eHeaderRow.appendChild(eHeaderCell);
   });
@@ -156,10 +156,10 @@ function renderTable(aRows) {
   eTableHead.appendChild(eHeaderRow);
 
   aRows.forEach((oRow) => {
-    const eBodyRow = document.createElement('tr');
+    let eBodyRow = document.createElement('tr');
 
     aColumns.forEach((sColumn) => {
-      const eBodyCell = document.createElement('td');
+      let eBodyCell = document.createElement('td');
       eBodyCell.textContent = formatCellValue(oRow[sColumn]);
       eBodyRow.appendChild(eBodyCell);
     });
@@ -176,26 +176,19 @@ function normalizeText(value) {
 }
 
 function getListIdentifier(oList) {
-  return (
-    oList?.Name ||
-    oList?.name ||
-    oList?.Id ||
-    oList?.id ||
-    oList?.TableName ||
-    oList?.tableName ||
-    ''
-  );
+  if (!oList) return '';
+  return oList.Name || oList.name || oList.Id || oList.id || oList.TableName || oList.tableName || '';
 }
 
 function matchesListName(oList) {
-  const sTarget = normalizeText(sListName);
-  const aCandidates = [
-    oList?.DisplayName,
-    oList?.displayName,
-    oList?.Title,
-    oList?.title,
-    oList?.Name,
-    oList?.name
+  let sTarget = normalizeText(sListName);
+  let aCandidates = [
+    oList ? oList.DisplayName : null,
+    oList ? oList.displayName : null,
+    oList ? oList.Title : null,
+    oList ? oList.title : null,
+    oList ? oList.Name : null,
+    oList ? oList.name : null
   ]
     .filter(Boolean)
     .map((value) => normalizeText(value));
@@ -204,28 +197,28 @@ function matchesListName(oList) {
 }
 
 async function loadRowsByListName() {
-  const oResult = await getItemsByName(sSiteUrl, sListName, { top: iTopRows });
+  let oResult = await getItemsByName(sSiteUrl, sListName, { top: iTopRows });
   return normalizeResultArray(oResult).slice(0, iTopRows);
 }
 
 async function loadRowsByResolvedListId() {
   setStatus('List name lookup failed. Trying connector table lookup...');
 
-  const oTablesResult = await listTables(sSiteUrl);
-  const aLists = normalizeResultArray(oTablesResult);
-  const oMatchedList = aLists.find((oList) => matchesListName(oList));
-  const sResolvedListId = getListIdentifier(oMatchedList);
+  let oTablesResult = await listTables(sSiteUrl);
+  let aLists = normalizeResultArray(oTablesResult);
+  let oMatchedList = aLists.find((oList) => matchesListName(oList));
+  let sResolvedListId = getListIdentifier(oMatchedList);
 
   if (!sResolvedListId) {
-    throw new Error(`List '${sListName}' was not found in connector metadata.`);
+    throw new Error('List \'' + sListName + '\' was not found in connector metadata.');
   }
 
-  const oItemsResult = await getItems(sSiteUrl, sResolvedListId, { top: iTopRows });
+  let oItemsResult = await getItems(sSiteUrl, sResolvedListId, { top: iTopRows });
   return normalizeResultArray(oItemsResult).slice(0, iTopRows);
 }
 
 function shouldTryFallback(oError) {
-  const sMessage = oError && oError.message ? oError.message : String(oError);
+  let sMessage = oError && oError.message ? oError.message : String(oError);
   return sMessage.indexOf('404') >= 0 || sMessage.indexOf('Resource not found') >= 0;
 }
 
@@ -261,7 +254,7 @@ async function boot() {
   try {
     await loadSharePointRows();
   } catch (oErr) {
-    const sMessage = oErr && oErr.message ? oErr.message : String(oErr);
+    let sMessage = oErr && oErr.message ? oErr.message : String(oErr);
     setStatus('SharePoint: ' + sMessage, true);
   }
 }

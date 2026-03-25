@@ -1,16 +1,16 @@
 
-import { listMyGroups } from "./office365groups.js";
+import { listMyGroups } from './codeapp.js';
 
 function getElements() {
-  const eStatus = document.getElementById("groupsStatus");
-  const eList = document.getElementById("groupsList");
-  const eRefresh = document.getElementById("groupsRefresh");
+  let eStatus = document.getElementById('groupsStatus');
+  let eList = document.getElementById('groupsList');
+  let eRefresh = document.getElementById('groupsRefresh');
 
   return { eStatus, eList, eRefresh };
 }
 
 function setStatus(sMessage) {
-  const { eStatus } = getElements();
+  let { eStatus } = getElements();
   if (eStatus) {
     eStatus.textContent = sMessage;
   }
@@ -37,45 +37,45 @@ function normalizeGroups(oResult) {
 }
 
 function getGroupName(oGroup) {
-  return oGroup.displayName || oGroup.name || oGroup.mailNickname || oGroup.id || "Unnamed group";
+  return oGroup.displayName || oGroup.name || oGroup.mailNickname || oGroup.id || 'Unnamed group';
 }
 
 function getGroupMeta(oGroup) {
-  const aParts = [
-    oGroup.mail || "",
-    oGroup.visibility || "",
-    oGroup.description || ""
+  let aParts = [
+    oGroup.mail || '',
+    oGroup.visibility || '',
+    oGroup.description || ''
   ].filter(Boolean);
 
-  return aParts.join(" — ");
+  return aParts.join(' \u2014 ');
 }
 
 function renderGroups(aGroups) {
-  const { eList } = getElements();
+  let { eList } = getElements();
 
   if (!eList) {
-    throw new Error("Missing groups list element.");
+    throw new Error('Missing groups list element.');
   }
 
-  eList.innerHTML = "";
+  eList.innerHTML = '';
 
   if (!Array.isArray(aGroups) || aGroups.length === 0) {
-    const eItem = document.createElement("li");
-    eItem.textContent = "No groups found.";
+    let eItem = document.createElement('li');
+    eItem.textContent = 'No groups found.';
     eList.appendChild(eItem);
     return;
   }
 
   aGroups.forEach((oGroup) => {
-    const eItem = document.createElement("li");
-    const eTitle = document.createElement("strong");
-    const sMeta = getGroupMeta(oGroup);
+    let eItem = document.createElement('li');
+    let eTitle = document.createElement('strong');
+    let sMeta = getGroupMeta(oGroup);
 
     eTitle.textContent = getGroupName(oGroup);
     eItem.appendChild(eTitle);
 
     if (sMeta) {
-      const eMeta = document.createElement("div");
+      let eMeta = document.createElement('div');
       eMeta.textContent = sMeta;
       eItem.appendChild(eMeta);
     }
@@ -86,23 +86,23 @@ function renderGroups(aGroups) {
 
 async function loadGroups() {
   try {
-    setStatus("Loading groups...");
-    const oResult = await listMyGroups();
-    const aGroups = normalizeGroups(oResult);
+    setStatus('Loading groups...');
+    let oResult = await listMyGroups();
+    let aGroups = normalizeGroups(oResult);
 
     renderGroups(aGroups);
-    setStatus("Loaded " + aGroups.length + " groups.");
+    setStatus('Loaded ' + aGroups.length + ' groups.');
   } catch (oErr) {
     renderGroups([]);
-    setStatus("Failed to load groups: " + (oErr.message || oErr));
+    setStatus('Failed to load groups: ' + (oErr.message || oErr));
   }
 }
 
 async function boot() {
-  const { eRefresh } = getElements();
+  let { eRefresh } = getElements();
 
   if (eRefresh) {
-    eRefresh.addEventListener("click", () => {
+    eRefresh.addEventListener('click', () => {
       loadGroups();
     });
   }
