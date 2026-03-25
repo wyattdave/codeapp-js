@@ -1,8 +1,318 @@
+/* power-apps-data.js - Standalone Power Apps SDK for Code Apps
+   Converted from @microsoft/power-apps v1.0.4
+   Zero dependencies - all code is self-contained */
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/common/types.js
+var DefaultPowerAppsBridge = class {
+  constructor() {
+    __publicField(this, "_antiCSRFToken");
+    __publicField(this, "_callbacks", {});
+    __publicField(this, "_currentCallbackId", 0);
+    __publicField(this, "_instanceId", Date.now().toString());
+    __publicField(this, "_messageChannel", new window.MessageChannel());
+    __publicField(this, "_postMessageQueue", []);
+    __publicField(this, "_postMessageSource");
+    __publicField(this, "_handleMessageEvent", (messageEvent) => {
+      const message = messageEvent.data;
+      if (message && typeof message.isPluginCall === "boolean") {
+        if (message.isPluginCall) {
+          const callbackId = message.callbackId;
+          const status = message.status;
+          const args = message.args;
+          const keepCallback = message.keepCallback;
+          try {
+            const callback = this._callbacks[callbackId];
+            if (keepCallback) {
+              if (callback && callback.onUpdate) {
+                callback.onUpdate(message.args?.[0]);
+              }
+            } else {
+              if (callback) {
+                if (status === 1) {
+                  callback.resolve(args[0]);
+                } else if (status !== 0) {
+                  callback.reject(args);
+                }
+              }
+              if (!keepCallback) {
+                delete this._callbacks[callbackId];
+              }
+            }
+          } catch (error) {
+            console.error(error);
+          }
+        }
+      } else if (message && message.messageType === "initCommunication") {
+        this._antiCSRFToken = message.antiCSRFToken;
+        this._postMessageSource = this._messageChannel.port1;
+        if (this._postMessageSource) {
+          for (let i = 0; i < this._postMessageQueue.length; i++) {
+            this._postMessageQueue[i].antiCSRFToken = this._antiCSRFToken;
+            this._postMessageSource.postMessage(this._postMessageQueue[i]);
+          }
+        }
+      }
+    });
+  }
+  async initialize() {
+    this._messageChannel.port1.onmessage = this._handleMessageEvent;
+    window.parent.postMessage({
+      messageType: "initCommunicationWithPort",
+      instanceId: this._instanceId
+    }, "*", [this._messageChannel.port2]);
+  }
+  async executePluginAsync(pluginName, pluginAction, params = [], onUpdate) {
+    return new Promise((resolve, reject) => {
+      const callbackId = this._getCallbackId(pluginName);
+      this._callbacks[callbackId] = { resolve, reject, onUpdate };
+      this._sendMessage({
+        isPluginCall: true,
+        callbackId,
+        service: pluginName,
+        action: pluginAction,
+        actionArgs: params,
+        antiCSRFToken: this._antiCSRFToken
+      });
+    });
+  }
+  _sendMessage(message) {
+    if (!this._postMessageSource) {
+      this._postMessageQueue.push(message);
+    } else {
+      this._postMessageSource.postMessage(message);
+    }
+  }
+  _getCallbackId(pluginName) {
+    return "instanceId=" + this._instanceId + "_" + pluginName + this._currentCallbackId++;
+  }
+};
+
+var bridgePromise;
+async function executePluginAsync(pluginName, pluginAction, params = [], update) {
+  const powerAppsBridge = await getBridge();
+  return powerAppsBridge.executePluginAsync(pluginName, pluginAction, params, update);
+}
+async function getBridge() {
+  if (!bridgePromise) {
+    bridgePromise = new Promise(async (resolve, reject) => {
+      try {
+        const bridge = window && window.powerAppsBridge ? window.powerAppsBridge : new DefaultPowerAppsBridge();
+        await bridge.initialize();
+        resolve(bridge);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+  return bridgePromise;
+}
+
+var context;
+async function getContext() {
+  if (context) {
+    return context;
+  }
+  context = await executePluginAsync("AppLifecycle", "getContext");
+  return context;
+}
+
+var IncompatibleMessageReceiver = class {
+  constructor(versionInfo, incompatibilityDescription) {
+    __publicField(this, "versionInfo");
+    __publicField(this, "incompatibilityDescription");
+    __publicField(this, "isCompatible", false);
+    this.versionInfo = versionInfo;
+    this.incompatibilityDescription = incompatibilityDescription;
+  }
+};
+
+var SendMessageOperation = class {
+  constructor(resultPromise, sendUpdate) {
+    __publicField(this, "resultPromise");
+    __publicField(this, "sendUpdate");
+    /**
+     * When completed is false onMessageReceived and sendUpdate will be visible.
+     * When completed is true then these are hidden.
+     */
+    __publicField(this, "completed", false);
+    __publicField(this, "onMessageReceived");
+    this.resultPromise = resultPromise;
+    this.sendUpdate = sendUpdate;
+  }
+};
+
+var CompatibleMessageReceiver = class {
+  constructor(_receiverName, versionInfo) {
+    __publicField(this, "_receiverName");
+    __publicField(this, "versionInfo");
+    __publicField(this, "isCompatible", true);
+    this._receiverName = _receiverName;
+    this.versionInfo = versionInfo;
+  }
+  async sendMessage(message, onMessageReceived) {
+    let resolveOperationPromise;
+    let rejectOperationPromise;
+    const operationPromise = new Promise((resolve, reject) => {
+      resolveOperationPromise = resolve;
+      rejectOperationPromise = reject;
+    });
+    const correlationId = crypto.randomUUID();
+    const handleMessage = (compatibleReceiverMessage) => {
+      try {
+        if (sendMessageOperation.completed) {
+          return;
+        }
+        if (compatibleReceiverMessage) {
+          if (compatibleReceiverMessage.isUpdate) {
+            if (sendMessageOperation.onMessageReceived) {
+              try {
+                sendMessageOperation.onMessageReceived(compatibleReceiverMessage.message);
+              } catch (error) {
+                sendMessageOperation.completed = true;
+                rejectOperationPromise(error);
+              }
+            } else {
+              sendMessageOperation.completed = true;
+              rejectOperationPromise(new Error(`Native receiver expected a message handler, but no handler was supplied. Message: ${compatibleReceiverMessage.message}`));
+            }
+          } else {
+            sendMessageOperation.completed = true;
+            resolveOperationPromise(compatibleReceiverMessage.message);
+          }
+          return;
+        }
+      } catch {
+      }
+      sendMessageOperation.completed = true;
+      resolveOperationPromise(compatibleReceiverMessage.message);
+    };
+    const handleError = (error) => {
+      sendMessageOperation.completed = true;
+      rejectOperationPromise(error);
+    };
+    const sendUpdate = (updateMessage) => {
+      if (sendMessageOperation.completed) {
+        throw new Error("Tried to send update for completed operation.");
+      }
+      executePluginAsync("SendMessagePlugin", "sendMessage", [
+        this._receiverName,
+        updateMessage,
+        correlationId
+      ]);
+    };
+    const sendMessageOperation = new SendMessageOperation(operationPromise, sendUpdate);
+    sendMessageOperation.onMessageReceived = onMessageReceived;
+    try {
+      await executePluginAsync("SendMessagePlugin", "sendMessage", [this._receiverName, message, correlationId], (response) => {
+        handleMessage(response);
+      });
+    } catch (error) {
+      handleError(error);
+    }
+    return sendMessageOperation;
+  }
+};
+
+var SendMessage = class _SendMessage {
+  static createInstanceAsync() {
+    return Promise.resolve(new _SendMessage());
+  }
+  async getMessageReceiverAsync(receiverName, isCompatibleChecker) {
+    const versionInfo = await this._getVersionInfo(receiverName);
+    if (versionInfo) {
+      const compatibilityCheckerResult = isCompatibleChecker(versionInfo);
+      if (compatibilityCheckerResult.isCompatible === false) {
+        return new IncompatibleMessageReceiver(versionInfo, compatibilityCheckerResult.incompatibilityDescription || "");
+      } else {
+        return new CompatibleMessageReceiver(receiverName, versionInfo);
+      }
+    } else {
+      return new IncompatibleMessageReceiver(void 0, `No receiver ${receiverName} registered.`);
+    }
+  }
+  async _getVersionInfo(receiverName) {
+    const result = await executePluginAsync("SendMessagePlugin", "getVersionInfo", [receiverName]);
+    return result;
+  }
+};
+
+var loggerInstance;
+async function initializeLogger(logger) {
+  loggerInstance = logger;
+  const sendMessagePlugin = await SendMessage.createInstanceAsync();
+  const receiver = await sendMessagePlugin.getMessageReceiverAsync("PowerApps.AppMonitorReceiver", (versionInfo) => {
+    let isCompatible = false;
+    if (versionInfo === "1.0.0") {
+      isCompatible = true;
+    }
+    return { isCompatible };
+  });
+  if (receiver.isCompatible) {
+    await receiver.sendMessage("initialize", (message) => {
+      const parsedMessage = JSON.parse(message);
+      if (parsedMessage.metrics) {
+        for (const metric of parsedMessage.metrics) {
+          loggerInstance.logMetric?.(metric);
+        }
+      }
+    });
+  }
+}
+
+function getAppLoadedPerformanceData() {
+  const performanceApi = new PerformanceApi();
+  const perfData = {
+    appTimeOrigin: performanceApi.timeOrigin
+  };
+  const navigationTimingEntries = performanceApi.getEntriesByType("navigation");
+  const navigationTiming = navigationTimingEntries[0];
+  if (navigationTiming) {
+    perfData.appNavigateType = navigationTiming.type;
+    perfData.appNavigationStart = navigationTiming.startTime;
+    perfData.appNavigationDuration = navigationTiming.duration;
+    perfData.appEncodedBodySize = navigationTiming.encodedBodySize;
+    perfData.appNextHopProtocol = navigationTiming.nextHopProtocol;
+    perfData.appDomainLookupStart = navigationTiming.domainLookupStart;
+    perfData.appDomainLookupEnd = navigationTiming.domainLookupEnd;
+    perfData.appConnectStart = navigationTiming.connectStart;
+    perfData.appConnectEnd = navigationTiming.connectEnd;
+    perfData.appSecureConnectionStart = navigationTiming.secureConnectionStart;
+    perfData.appFetchStart = navigationTiming.fetchStart;
+    perfData.appRequestStart = navigationTiming.requestStart;
+    perfData.appResponseStart = navigationTiming.responseStart;
+    perfData.appResponseEnd = navigationTiming.responseEnd;
+    perfData.appLoadEventEnd = navigationTiming.loadEventEnd;
+    perfData.appDomInteractive = navigationTiming.domInteractive;
+    perfData.appDomContentLoadedEventStart = navigationTiming.domContentLoadedEventStart;
+  }
+  return perfData;
+}
+var PerformanceApi = class {
+  constructor(targetWindow = window) {
+    __publicField(this, "_performance");
+    this._performance = targetWindow.performance;
+  }
+  get timeOrigin() {
+    return this._performance?.timeOrigin;
+  }
+  getEntriesByType(type) {
+    if (!this._performance?.getEntriesByType) {
+      return [];
+    }
+    return this._performance.getEntriesByType(type);
+  }
+};
+
+executePluginAsync("AppLifecycle", "notifyAppSdkLoaded", [getAppLoadedPerformanceData()]);
+
+function setConfig(config) {
+  if (config.logger) {
+    initializeLogger(config.logger);
+  }
+}
+
 var HttpMethod;
 (function(HttpMethod2) {
   HttpMethod2["GET"] = "GET";
@@ -17,7 +327,6 @@ var DataSources;
   DataSources2["Connector"] = "Connector";
 })(DataSources || (DataSources = {}));
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/error/codes.js
 var ErrorCodes;
 (function(ErrorCodes2) {
   ErrorCodes2["InitializationFailed"] = "PDR_INIT_FAILED";
@@ -44,7 +353,6 @@ var ErrorCodes;
   ErrorCodes2["TokenAcquisitionFailed"] = "TOKEN_ACQUISITION_FAILED";
 })(ErrorCodes || (ErrorCodes = {}));
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/error/messages.js
 var UnknownErrorMessage = "An unknown error occurred";
 var ErrorMessages = {
   // PowerDataRuntime specific errors
@@ -93,12 +401,10 @@ var DataOperationErrorMessages;
   DataOperationErrorMessages2["UpdateFailed"] = "Update operation failure";
 })(DataOperationErrorMessages || (DataOperationErrorMessages = {}));
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/types/index.js
 function isOperationResult(result) {
   return result?.success !== void 0;
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/telemetry/log.js
 var ServiceName = "PublishedAppTelemetry";
 var TelemetryActionNames;
 (function(TelemetryActionNames2) {
@@ -207,7 +513,6 @@ var _Log = class _Log {
 __publicField(_Log, "_instance", null);
 var Log = _Log;
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/error/types.js
 var PowerDataRuntimeError = class extends Error {
   /**
    * Creates an instance of PowerDataRuntimeError.
@@ -228,7 +533,6 @@ var PowerDataRuntimeError = class extends Error {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/error/constants.js
 var HeaderNames;
 (function(HeaderNames2) {
   HeaderNames2["RequestId"] = "x-ms-client-request-id";
@@ -250,7 +554,6 @@ var ConnectorOperationName;
   ConnectorOperationName2["RetrieveMultipleRecords"] = "connectorDataOperation.retrieveMultipleRecordsAsync";
 })(ConnectorOperationName || (ConnectorOperationName = {}));
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/error/util.js
 function getErrorMessage(error) {
   if (typeof error === "string") {
     return error;
@@ -300,7 +603,6 @@ function parseHttpPluginError(error) {
   };
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/data/defaultOperationOrchestrator.js
 var DefaultDataOperationOrchestrator = class {
   // Static identifiers for services and actions
   // Used to identify specific services and actions within the PowerApps environment
@@ -488,7 +790,6 @@ var DefaultDataOperationOrchestrator = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/metadata/runtimeMetadataOperations.js
 var RuntimeMetadataOperations = class {
   // Static identifiers for services and actions
   // Used to identify specific services and actions within the PowerApps environment
@@ -496,18 +797,18 @@ var RuntimeMetadataOperations = class {
     __publicField(this, "_clientProvider");
     this._clientProvider = _clientProvider;
   }
-  async getConnections(context) {
+  async getConnections(context2) {
     const client = await this._clientProvider.getMetadataClientAsync();
-    const response = await client.getAppConnectionConfigsAsync(context);
+    const response = await client.getAppConnectionConfigsAsync(context2);
     return {
       success: response.success,
       data: response.data ? [response.data] : [],
       error: response.error
     };
   }
-  async getConnectionApis(_connectionId, context) {
+  async getConnectionApis(_connectionId, context2) {
     const client = await this._clientProvider.getMetadataClientAsync();
-    const response = await client.getAppDataSourceConfigsAsync(context);
+    const response = await client.getAppDataSourceConfigsAsync(context2);
     return {
       success: response.success,
       data: response.data ? [response.data] : [],
@@ -516,7 +817,6 @@ var RuntimeMetadataOperations = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/common/utils.js
 function arrayBufferToBase64(buffer) {
   return window.btoa(convertArrayBufferToString(buffer));
 }
@@ -541,7 +841,6 @@ function extractDataverseUrlParts(url) {
   return { baseUrl, encodedPath };
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtimeClient/runtimeDataClient.js
 var _RuntimeDataClient = class _RuntimeDataClient {
   // Constructor for RuntimeDataClient
   // Accepts an IPowerOperationExecutor instance for executing operations
@@ -566,7 +865,7 @@ var _RuntimeDataClient = class _RuntimeDataClient {
    * @throws Error if the request fails or the response is invalid
    * @throws Error if the request body is invalid
    */
-  async createDataAsync(url, apiId, tableName, body, context) {
+  async createDataAsync(url, apiId, tableName, body, context2) {
     try {
       if (!body) {
         throw new Error(`${DataOperationErrorMessages.InvalidRequest}: ${DataOperationErrorMessages.MissingRequestBody}`);
@@ -578,8 +877,8 @@ var _RuntimeDataClient = class _RuntimeDataClient {
         tableName,
         body: JSON.stringify(body)
       };
-      context = this._ensureContext(context, "runtimeDataClient.createDataAsync");
-      return await this._executeRequest(config, context);
+      context2 = this._ensureContext(context2, "runtimeDataClient.createDataAsync");
+      return await this._executeRequest(config, context2);
     } catch (error) {
       if (isOperationResult(error)) {
         return error;
@@ -599,7 +898,7 @@ var _RuntimeDataClient = class _RuntimeDataClient {
    * @throws Error if the request fails or the response is invalid
    * @throws Error if the request body is invalid
    */
-  async updateDataAsync(url, apiId, tableName, body, context) {
+  async updateDataAsync(url, apiId, tableName, body, context2) {
     try {
       if (!body) {
         throw new Error(`${DataOperationErrorMessages.InvalidRequest}: ${DataOperationErrorMessages.MissingRequestBody}`);
@@ -611,8 +910,8 @@ var _RuntimeDataClient = class _RuntimeDataClient {
         tableName,
         body: JSON.stringify(body)
       };
-      context = this._ensureContext(context, "runtimeDataClient.updateDataAsync");
-      return await this._executeRequest(config, context);
+      context2 = this._ensureContext(context2, "runtimeDataClient.updateDataAsync");
+      return await this._executeRequest(config, context2);
     } catch (error) {
       if (isOperationResult(error)) {
         return error;
@@ -630,7 +929,7 @@ var _RuntimeDataClient = class _RuntimeDataClient {
    * @return Promise resolving to the response data
    * @throws Error if the request fails or the response is invalid
    */
-  async deleteDataAsync(url, connectionApi, serviceNamespace, context) {
+  async deleteDataAsync(url, connectionApi, serviceNamespace, context2) {
     try {
       const config = {
         url,
@@ -638,8 +937,8 @@ var _RuntimeDataClient = class _RuntimeDataClient {
         apiId: connectionApi,
         tableName: serviceNamespace
       };
-      context = this._ensureContext(context, "runtimeDataClient.deleteDataAsync");
-      return await this._executeRequest(config, context);
+      context2 = this._ensureContext(context2, "runtimeDataClient.deleteDataAsync");
+      return await this._executeRequest(config, context2);
     } catch (error) {
       if (isOperationResult(error)) {
         return error;
@@ -660,7 +959,7 @@ var _RuntimeDataClient = class _RuntimeDataClient {
    * @return Promise resolving to the response data
    * @throws Error if the request fails or the response is invalid
    */
-  async retrieveDataAsync(url, apiId, tableName, method, headers, body, context) {
+  async retrieveDataAsync(url, apiId, tableName, method, headers, body, context2) {
     try {
       const config = {
         url,
@@ -670,8 +969,8 @@ var _RuntimeDataClient = class _RuntimeDataClient {
         headers,
         body: body ? typeof body === "string" ? body : JSON.stringify(body) : void 0
       };
-      context = this._ensureContext(context, "runtimeDataClient.retrieveDataAsync");
-      return await this._executeRequest(config, context);
+      context2 = this._ensureContext(context2, "runtimeDataClient.retrieveDataAsync");
+      return await this._executeRequest(config, context2);
     } catch (error) {
       if (isOperationResult(error)) {
         return error;
@@ -728,7 +1027,7 @@ var _RuntimeDataClient = class _RuntimeDataClient {
    * @return The headers for the request
    * @throws Error if header creation fails
    */
-  _createHeaders(token, config, context) {
+  _createHeaders(token, config, context2) {
     const baseHeaders = {
       Accept: "application/json",
       "x-ms-protocol-semantics": "cdp",
@@ -736,14 +1035,14 @@ var _RuntimeDataClient = class _RuntimeDataClient {
       Authorization: `paauth ${token}`,
       "x-ms-pa-client-custom-headers-options": '{"addCustomHeaders":true}',
       "x-ms-enable-selects": "true",
-      "x-ms-pa-client-telemetry-options": `paclient-telemetry {"operationName":"${context?.operationName ?? "runtimeDataClient.executeRequest"}"}`,
+      "x-ms-pa-client-telemetry-options": `paclient-telemetry {"operationName":"${context2?.operationName ?? "runtimeDataClient.executeRequest"}"}`,
       "x-ms-pa-client-telemetry-additional-data": `{"apiId":"${config.apiId}"}`
     };
     if (config.apiId === DataSources.Dataverse) {
       baseHeaders["x-ms-protocol-semantics"] = DataSources.Dataverse;
       baseHeaders.Authorization = `dynamicauth ${token}`;
       const { baseUrl, encodedPath } = extractDataverseUrlParts(config.url);
-      const batchId = context?.batchId || "";
+      const batchId = context2?.batchId || "";
       const preferHeader = this._mergePreferHeaders(config.headers, config.method);
       baseHeaders.BatchInfo = JSON.stringify({
         baseUrl,
@@ -769,9 +1068,9 @@ var _RuntimeDataClient = class _RuntimeDataClient {
    * @throws Error if the request fails or the response is invalid
    * @throws Error if the response content type is invalid
    */
-  async _executeRequest(config, context) {
-    const token = await this._getAccessToken(config.apiId, context?.datasetName);
-    const headers = this._createHeaders(token, config, context);
+  async _executeRequest(config, context2) {
+    const token = await this._getAccessToken(config.apiId, context2?.datasetName);
+    const headers = this._createHeaders(token, config, context2);
     const requestBody = config.body ? new Blob([config.body], { type: "application/json" }) : "";
     let result;
     try {
@@ -809,12 +1108,12 @@ var _RuntimeDataClient = class _RuntimeDataClient {
         text = "{}";
       }
       const parsedResult = JSON.parse(text);
-      if (context?.isDataVerseOperation || this._isDataverseCall(config.url)) {
+      if (context2?.isDataVerseOperation || this._isDataverseCall(config.url)) {
         return {
           success: true,
           data: parsedResult
         };
-      } else if (!context?.isExecuteAsync && "value" in parsedResult && Array.isArray(parsedResult.value)) {
+      } else if (!context2?.isExecuteAsync && "value" in parsedResult && Array.isArray(parsedResult.value)) {
         return {
           success: true,
           data: parsedResult.value,
@@ -844,7 +1143,7 @@ var _RuntimeDataClient = class _RuntimeDataClient {
       if (buffer instanceof ArrayBuffer) {
         const value = convertArrayBufferToString(buffer);
         const status = responseData[0].status;
-        const responseType = context?.responseInfo?.[status];
+        const responseType = context2?.responseInfo?.[status];
         if (responseType) {
           let parsedValue;
           try {
@@ -888,14 +1187,14 @@ var _RuntimeDataClient = class _RuntimeDataClient {
       };
     }
   }
-  _ensureContext(context, defaultOperationName) {
-    if (!context) {
-      context = {};
+  _ensureContext(context2, defaultOperationName) {
+    if (!context2) {
+      context2 = {};
     }
-    if (!context.operationName) {
-      context.operationName = defaultOperationName;
+    if (!context2.operationName) {
+      context2.operationName = defaultOperationName;
     }
-    return context;
+    return context2;
   }
   /**
    * Checks if the given URL is a Dataverse API call
@@ -951,7 +1250,6 @@ __publicField(_RuntimeDataClient, "ACTIONS", {
 __publicField(_RuntimeDataClient, "REQUEST_SOURCE", "PublishedApp");
 var RuntimeDataClient = _RuntimeDataClient;
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtimeClient/runtimeMetadataClient.js
 var _RuntimeMetadataClient = class _RuntimeMetadataClient {
   // Private member for the PowerOperationExecutor
   // The PowerOperationExecutor is used to execute operations on the clients
@@ -1036,7 +1334,6 @@ __publicField(_RuntimeMetadataClient, "ACTIONS", {
 });
 var RuntimeMetadataClient = _RuntimeMetadataClient;
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtimeClient/runtimeClientProvider.js
 var RuntimeClientProvider = class {
   // Constructor for RuntimeClientProvider
   // Accepts an optional IPowerOperationExecutor instance for executing operations
@@ -1112,7 +1409,6 @@ var RuntimeClientProvider = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/data/executors/shared/stringQueryOptions.js
 function convertOptionsToQueryString(options) {
   if (!options) {
     return "";
@@ -1143,7 +1439,6 @@ function convertOptionsToQueryString(options) {
   return parts.length ? `?${parts.join("&")}` : "";
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/data/executors/dataverseDataOperationExecutor.js
 var ODATA_NEXT_LINK = "@odata.nextLink";
 var DataverseDataOperationExecutor = class {
   constructor(clientProvider) {
@@ -1575,7 +1870,6 @@ function extractSkipToken(nextLink) {
   return match ? decodeURIComponent(match[1]) : void 0;
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/data/executors/connectorDataOperationExecutor.js
 var ConnectorDataOperationExecutor = class {
   // =====================================
   // Constructor
@@ -2076,7 +2370,6 @@ var ConnectorDataOperationExecutor = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/metadata/runtimeDataSourceService.js
 var DataSourceServiceError;
 /* @__PURE__ */ (function(DataSourceServiceError2) {
 })(DataSourceServiceError || (DataSourceServiceError = {}));
@@ -2167,7 +2460,6 @@ var RuntimeDataSourceService = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtime/powerDataRuntime.js
 var PowerDataRuntime = class {
   /**
    * Creates a new instance of PowerDataRuntime
@@ -2253,7 +2545,6 @@ var PowerDataRuntime = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtime/powerDataRuntimeInstance.js
 var powerDataRuntimeInstance;
 function getPowerDataRuntime(powerDataSourcesInfoProvider, powerOperationExecutor) {
   if (!powerDataRuntimeInstance) {
@@ -2265,7 +2556,6 @@ function getPowerDataRuntime(powerDataSourcesInfoProvider, powerOperationExecuto
   return powerDataRuntimeInstance;
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtime/powerDataSourcesInfoProvider.js
 var _PowerDataSourcesInfoProvider = class _PowerDataSourcesInfoProvider {
   /**
    * Private constructor to enforce the singleton pattern.
@@ -2305,113 +2595,6 @@ __publicField(_PowerDataSourcesInfoProvider, "instance", null);
 var PowerDataSourcesInfoProvider = _PowerDataSourcesInfoProvider;
 var powerDataSourcesInfoProvider_default = PowerDataSourcesInfoProvider;
 
-// node_modules/@microsoft/power-apps/lib/internal/plugins/DefaultPowerAppsBridge.js
-var DefaultPowerAppsBridge = class {
-  constructor() {
-    __publicField(this, "_antiCSRFToken");
-    __publicField(this, "_callbacks", {});
-    __publicField(this, "_currentCallbackId", 0);
-    __publicField(this, "_instanceId", Date.now().toString());
-    __publicField(this, "_messageChannel", new window.MessageChannel());
-    __publicField(this, "_postMessageQueue", []);
-    __publicField(this, "_postMessageSource");
-    __publicField(this, "_handleMessageEvent", (messageEvent) => {
-      const message = messageEvent.data;
-      if (message && typeof message.isPluginCall === "boolean") {
-        if (message.isPluginCall) {
-          const callbackId = message.callbackId;
-          const status = message.status;
-          const args = message.args;
-          const keepCallback = message.keepCallback;
-          try {
-            const callback = this._callbacks[callbackId];
-            if (keepCallback) {
-              if (callback && callback.onUpdate) {
-                callback.onUpdate(message.args?.[0]);
-              }
-            } else {
-              if (callback) {
-                if (status === 1) {
-                  callback.resolve(args[0]);
-                } else if (status !== 0) {
-                  callback.reject(args);
-                }
-              }
-              if (!keepCallback) {
-                delete this._callbacks[callbackId];
-              }
-            }
-          } catch (error) {
-            console.error(error);
-          }
-        }
-      } else if (message && message.messageType === "initCommunication") {
-        this._antiCSRFToken = message.antiCSRFToken;
-        this._postMessageSource = this._messageChannel.port1;
-        if (this._postMessageSource) {
-          for (let i = 0; i < this._postMessageQueue.length; i++) {
-            this._postMessageQueue[i].antiCSRFToken = this._antiCSRFToken;
-            this._postMessageSource.postMessage(this._postMessageQueue[i]);
-          }
-        }
-      }
-    });
-  }
-  async initialize() {
-    this._messageChannel.port1.onmessage = this._handleMessageEvent;
-    window.parent.postMessage({
-      messageType: "initCommunicationWithPort",
-      instanceId: this._instanceId
-    }, "*", [this._messageChannel.port2]);
-  }
-  async executePluginAsync(pluginName, pluginAction, params = [], onUpdate) {
-    return new Promise((resolve, reject) => {
-      const callbackId = this._getCallbackId(pluginName);
-      this._callbacks[callbackId] = { resolve, reject, onUpdate };
-      this._sendMessage({
-        isPluginCall: true,
-        callbackId,
-        service: pluginName,
-        action: pluginAction,
-        actionArgs: params,
-        antiCSRFToken: this._antiCSRFToken
-      });
-    });
-  }
-  _sendMessage(message) {
-    if (!this._postMessageSource) {
-      this._postMessageQueue.push(message);
-    } else {
-      this._postMessageSource.postMessage(message);
-    }
-  }
-  _getCallbackId(pluginName) {
-    return "instanceId=" + this._instanceId + "_" + pluginName + this._currentCallbackId++;
-  }
-};
-
-// node_modules/@microsoft/power-apps/lib/internal/plugins/PluginBridge.js
-var bridgePromise;
-async function executePluginAsync(pluginName, pluginAction, params = [], update) {
-  const powerAppsBridge = await getBridge();
-  return powerAppsBridge.executePluginAsync(pluginName, pluginAction, params, update);
-}
-async function getBridge() {
-  if (!bridgePromise) {
-    bridgePromise = new Promise(async (resolve, reject) => {
-      try {
-        const bridge = window && window.powerAppsBridge ? window.powerAppsBridge : new DefaultPowerAppsBridge();
-        await bridge.initialize();
-        resolve(bridge);
-      } catch (error) {
-        reject(error);
-      }
-    });
-  }
-  return bridgePromise;
-}
-
-// node_modules/@microsoft/power-apps/lib/internal/data/ConnectionUtils.js
 var connectionsLoaded = false;
 async function loadConnections() {
   if (connectionsLoaded) {
@@ -2428,7 +2611,6 @@ async function resolveCompositeConnectionsAsync() {
   return executePluginAsync("AppPowerAppsClientPlugin", "resolveCompositeConnectionsAsync", []);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/OperationExecutor.js
 var loadConnectionsPromise;
 var OperationExecutor = class {
   /**
@@ -2455,7 +2637,6 @@ var OperationExecutor = class {
   }
 };
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/runtime/getRuntimeContext.js
 var _executor;
 function getExecutor() {
   if (!_executor) {
@@ -2469,40 +2650,130 @@ async function getPowerSdkInstance(dataSourcesInfo) {
   return getPowerDataRuntime(provider, executor);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/createRecord.js
 async function createRecordAsync(dataSourcesInfo, tableName, record) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.createRecordAsync(tableName, record);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/updateRecord.js
 async function updateRecordAsync(dataSourcesInfo, tableName, recordId, changes) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.updateRecordAsync(tableName, recordId, changes);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/deleteRecord.js
 async function deleteRecordAsync(dataSourcesInfo, tableName, recordId) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.deleteRecordAsync(tableName, recordId);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/retrieveRecord.js
 async function retrieveRecordAsync(dataSourcesInfo, tableName, recordId, options) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.retrieveRecordAsync(tableName, recordId, options);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/retrieveMultipleRecords.js
 async function retrieveMultipleRecordsAsync(dataSourcesInfo, tableName, options) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.retrieveMultipleRecordsAsync(tableName, options);
 }
 
-// node_modules/@microsoft/power-apps/lib/internal/data/core/api/execute.js
 async function executeAsync(dataSourcesInfo, operation) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.executeAsync(operation);
 }
 
-// node_modules/@microsoft/power-apps/lib/data/powerAppsData.js
+async function callActionAsync(dataSourcesInfo, actionName, params) {
+  var sdkInstance = await getPowerSdkInstance(dataSourcesInfo);
+  var dvExecutor = sdkInstance.Data._dataverseOperation;
+  var dataClient = await dvExecutor._getDataClient();
+  var dbRefs = await dvExecutor.getDatabaseReferences();
+  var sInstanceUrl = null;
+  var sDatasetName = null;
+  for (var sDbKey of Object.keys(dbRefs)) {
+    var oDb = dbRefs[sDbKey];
+    if (oDb.databaseDetails && oDb.databaseDetails.linkedEnvironmentMetadata) {
+      sInstanceUrl = oDb.databaseDetails.linkedEnvironmentMetadata.instanceUrl;
+      sDatasetName = oDb.databaseDetails.environmentName;
+      break;
+    }
+  }
+  if (!sInstanceUrl) {
+    throw new Error("Cannot call unbound action: no Dataverse instance URL found. Ensure at least one Dataverse table is registered.");
+  }
+  var sBaseUrl = sInstanceUrl.endsWith("/") ? sInstanceUrl : sInstanceUrl + "/";
+  var sRequestUrl = sBaseUrl + "api/data/v9.0/" + actionName;
+  var oContext = {
+    operationName: DataverseOperationName.CreateRecord,
+    datasetName: sDatasetName,
+    isDataVerseOperation: true
+  };
+  var sToken = await dataClient._getAccessToken(DataSources.Dataverse, sDatasetName);
+  var oHeaders = dataClient._createHeaders(sToken, {
+    url: sRequestUrl,
+    method: HttpMethod.POST,
+    apiId: DataSources.Dataverse,
+    tableName: actionName,
+    body: JSON.stringify(params || {})
+  }, oContext);
+  var oRequestBody = new Blob([JSON.stringify(params || {})], { type: "application/json" });
+  var oRawResult;
+  try {
+    oRawResult = await dataClient._powerOperationExecutor.execute(
+      "AppHttpClientPlugin", "sendHttpAsync",
+      [
+        {
+          url: sRequestUrl,
+          method: HttpMethod.POST,
+          requestSource: "PublishedApp",
+          allowSessionStorage: true,
+          returnDirectResponse: true,
+          headers: oHeaders
+        },
+        oRequestBody,
+        "arraybuffer"
+      ]
+    );
+  } catch (oErr) {
+    return { success: false, data: null, error: oErr };
+  }
+  var aResponseData = oRawResult.data;
+  var oRespHeaders = aResponseData[0] ? aResponseData[0].headers || {} : {};
+  var iStatus = aResponseData[0] ? aResponseData[0].status : 0;
+  var sContentType = oRespHeaders["Content-Type"] || "";
+  // HTTP 2xx with no body or no parseable content = success (void actions like GrantAccess)
+  if (iStatus >= 200 && iStatus < 300 && (!sContentType || !aResponseData[1])) {
+    return { success: true, data: null, error: null };
+  }
+  // Try to parse JSON response
+  if (sContentType.indexOf("application/json") !== -1 && aResponseData[1]) {
+    try {
+      var sText = "";
+      if (aResponseData[1] instanceof ArrayBuffer) {
+        sText = new TextDecoder().decode(aResponseData[1]);
+      } else if (typeof aResponseData[1] === "string") {
+        sText = aResponseData[1];
+      }
+      if (!sText) sText = "{}";
+      var oParsed = JSON.parse(sText);
+      if (iStatus >= 200 && iStatus < 300) {
+        return { success: true, data: oParsed, error: null };
+      }
+      // Error response from server
+      var sErrMsg = oParsed.error ? (oParsed.error.message || JSON.stringify(oParsed.error)) : JSON.stringify(oParsed);
+      return { success: false, data: null, error: { message: sErrMsg } };
+    } catch (oParseErr) {
+      if (iStatus >= 200 && iStatus < 300) {
+        return { success: true, data: null, error: null };
+      }
+      return { success: false, data: null, error: { message: "Failed to parse action response" } };
+    }
+  }
+  // Any other 2xx = success
+  if (iStatus >= 200 && iStatus < 300) {
+    return { success: true, data: null, error: null };
+  }
+  // Non-2xx with non-JSON body
+  return { success: false, data: null, error: { message: "Action failed with status " + iStatus } };
+}
+
 var _dataOperationExecutor;
 function getDataOperationExecutor() {
   return _dataOperationExecutor;
+}
+function setDataOperationExecutor(dataOperationExecutorOverride) {
+  _dataOperationExecutor = dataOperationExecutorOverride;
 }
 function getClient(dataSourcesInfo) {
   return {
@@ -2526,6 +2797,211 @@ function getClient(dataSourcesInfo) {
     }
   };
 }
+
+var MockDataOperationExecutor = class {
+  constructor(data) {
+    __publicField(this, "_dataStore");
+    this._dataStore = data;
+  }
+  async createRecordAsync(tableName, data) {
+    return {
+      success: false,
+      error: { message: "createRecordAsync is not supported by MockDataOperationExecutor" },
+      data: null
+    };
+  }
+  async updateRecordAsync(tableName, id, data) {
+    return {
+      success: false,
+      error: { message: "updateRecordAsync is not supported by MockDataOperationExecutor" },
+      data: null
+    };
+  }
+  async deleteRecordAsync(tableName, id) {
+    return {
+      success: false,
+      error: { message: "deleteRecordAsync is not supported by MockDataOperationExecutor" },
+      data: void 0
+    };
+  }
+  async retrieveRecordAsync(tableName, id, options) {
+    if (!this._dataStore[tableName]) {
+      return {
+        success: false,
+        error: { message: `table <${tableName}> not found` },
+        data: null
+      };
+    }
+    const record = this._dataStore[tableName][id];
+    if (!record) {
+      return {
+        success: false,
+        error: { message: `record with id "${id}" not found in table <${tableName}>` },
+        data: null
+      };
+    }
+    return {
+      success: true,
+      data: record
+    };
+  }
+  async retrieveMultipleRecordsAsync(tableName, options) {
+    if (!this._dataStore[tableName]) {
+      return {
+        success: false,
+        error: { message: `table <${tableName}> not found` },
+        data: []
+      };
+    }
+    return {
+      success: true,
+      data: Object.values(this._dataStore[tableName])
+    };
+  }
+  async executeAsync(operation) {
+    return {
+      success: false,
+      error: { message: "executeAsync is not supported by MockDataOperationExecutor" },
+      data: null
+    };
+  }
+};
+function createMockDataExecutor(data) {
+  return new MockDataOperationExecutor(data);
+}
+
+var entityClusterModeEnum = {
+  0: "Partitioned",
+  1: "Replicated",
+  2: "Local"
+};
+function getEntityClusterModeName(value) {
+  return entityClusterModeEnum[value];
+}
+var ownershipTypeEnum = {
+  0: "None",
+  1: "UserOwned",
+  2: "TeamOwned",
+  4: "BusinessOwned",
+  8: "OrganizationOwned",
+  16: "BusinessParented",
+  32: "Filtered"
+};
+function getOwnershipTypeName(value) {
+  return ownershipTypeEnum[value];
+}
+var privilegeTypeEnum = {
+  0: "None",
+  1: "Create",
+  2: "Read",
+  3: "Write",
+  4: "Delete",
+  5: "Assign",
+  6: "Share",
+  7: "Append",
+  8: "AppendTo"
+};
+function getPrivilegeTypeName(value) {
+  return privilegeTypeEnum[value];
+}
+var attributeTypeCodeEnum = {
+  0: "Boolean",
+  1: "Customer",
+  2: "DateTime",
+  3: "Decimal",
+  4: "Double",
+  5: "Integer",
+  6: "Lookup",
+  7: "Memo",
+  8: "Money",
+  9: "Owner",
+  10: "PartyList",
+  11: "Picklist",
+  12: "State",
+  13: "Status",
+  14: "String",
+  15: "Uniqueidentifier",
+  16: "CalendarRules",
+  17: "Virtual",
+  18: "BigInt",
+  19: "ManagedProperty",
+  20: "EntityName"
+};
+function getAttributeTypeCodeName(value) {
+  return attributeTypeCodeEnum[value];
+}
+var attributeRequiredLevelEnum = {
+  0: "None",
+  1: "SystemRequired",
+  2: "ApplicationRequired",
+  3: "Recommended"
+};
+function getAttributeRequiredLevelName(value) {
+  return attributeRequiredLevelEnum[value];
+}
+var relationshipTypeEnum = {
+  0: "OneToManyRelationship",
+  1: "ManyToManyRelationship"
+};
+function getRelationshipTypeName(value) {
+  return relationshipTypeEnum[value];
+}
+var securityTypesEnum = {
+  0: "None",
+  1: "Append",
+  2: "ParentChild",
+  8: "Pointer",
+  16: "Inheritance"
+  // The referencing entity record inherits security from the referenced security record.
+};
+function getSecurityTypesName(value) {
+  return securityTypesEnum[value];
+}
+var associatedMenuBehaviorEnum = {
+  0: "UseCollectionName",
+  1: "UseLabel",
+  2: "DoNotDisplay"
+};
+function getAssociatedMenuBehaviorName(value) {
+  return associatedMenuBehaviorEnum[value];
+}
+var associatedMenuGroupEnum = {
+  0: "Details",
+  1: "Sales",
+  2: "Service",
+  3: "Marketing"
+};
+function getAssociatedMenuGroupName(value) {
+  return associatedMenuGroupEnum[value];
+}
+var cascadeTypeEnum = {
+  0: "NoCascade",
+  1: "Cascade",
+  2: "Active",
+  3: "UserOwned",
+  4: "RemoveLink",
+  5: "Restrict"
+  // Prevent the Referenced entity record from being deleted when referencing entities exist.
+};
+function getCascadeTypeName(value) {
+  return cascadeTypeEnum[value];
+}
 export {
-  getClient
+  callActionAsync,
+  createMockDataExecutor,
+  getAssociatedMenuBehaviorName,
+  getAssociatedMenuGroupName,
+  getAttributeRequiredLevelName,
+  getAttributeTypeCodeName,
+  getCascadeTypeName,
+  getClient,
+  getContext,
+  getEntityClusterModeName,
+  getOwnershipTypeName,
+  getPrivilegeTypeName,
+  getRelationshipTypeName,
+  getSecurityTypesName,
+  initializeLogger,
+  setConfig,
+  setDataOperationExecutor
 };

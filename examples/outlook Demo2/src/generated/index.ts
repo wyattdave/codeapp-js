@@ -4,7 +4,11 @@
  */
 
 // Models
+export * as Office365GroupsModel from './models/Office365GroupsModel';
 export * as Office365OutlookModel from './models/Office365OutlookModel';
+export * as Office365UsersModel from './models/Office365UsersModel';
 
 // Services
+export * from './services/Office365GroupsService';
 export * from './services/Office365OutlookService';
+export * from './services/Office365UsersService';
