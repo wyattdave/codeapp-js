@@ -1,74 +1,4 @@
-
-import { getClient } from './power-apps-data.js';
-
-// ===== DATA SOURCE & API METADATA =====
-const DATA_SOURCE = 'office365';
-
-const OUTLOOK_APIS = {
-  GetEmailsV3: {
-    path: '/{connectionId}/v3/Mail',
-    method: 'GET',
-    parameters: [
-      { name: 'connectionId', in: 'path', required: true },
-      { name: 'folderPath', in: 'query', required: false },
-      { name: 'fetchOnlyUnread', in: 'query', required: false },
-      { name: 'searchQuery', in: 'query', required: false },
-      { name: 'top', in: 'query', required: false }
-    ]
-  },
-  SendEmailV2: {
-    path: '/{connectionId}/v2/Mail',
-    method: 'POST',
-    parameters: [
-      { name: 'connectionId', in: 'path', required: true },
-      { name: 'emailMessage', in: 'body', required: true }
-    ]
-  }
-};
-
-const ALL_DATA_SOURCES = {
-  [DATA_SOURCE]: {
-    tableId: '',
-    version: '',
-    primaryKey: '',
-    dataSourceType: 'Connector',
-    apis: OUTLOOK_APIS
-  }
-};
-
-// ===== SINGLE SHARED CLIENT =====
-let _client = null;
-const getSharedClient = () => {
-  if (!_client) {
-    _client = getClient(ALL_DATA_SOURCES);
-  }
-  return _client;
-};
-
-// ===== CONNECTOR HELPER =====
-const execConnector = async (tableName, operationName, parameters) => {
-  const client = getSharedClient();
-  const result = await client.executeAsync({
-    connectorOperation: {
-      tableName,
-      operationName,
-      parameters
-    }
-  });
-  return unwrapResult(result);
-};
-
-const unwrapResult = (result) => {
-  if (!result.success) {
-    const msg = result.error?.message || 'Operation failed';
-    throw new Error(msg);
-  }
-  // Normalize: could be array, { value: [] }, or direct data
-  const data = result.data;
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.value)) return data.value;
-  return data;
-};
+import { listEmails, sendEmail } from './codeapp.js';
 
 // ===== STATE =====
 let emails = [];
@@ -239,11 +169,9 @@ const selectEmail = (id) => {
 const fetchInbox = async () => {
   setStatus('Loading inbox…', 'loading');
   try {
-    const result = await execConnector(DATA_SOURCE, 'GetEmailsV3', {
-      folderPath: 'Inbox',
-      top: 25
-    });
+    const result = await listEmails({ folderId: 'Inbox', top: 25 });
     emails = Array.isArray(result) ? result : [];
+    if (result && Array.isArray(result.value)) emails = result.value;
     renderEmailList();
     setStatus(`${emails.length} email${emails.length !== 1 ? 's' : ''} loaded`);
   } catch (err) {
@@ -261,7 +189,7 @@ const fetchInbox = async () => {
 };
 
 // ===== SEND EMAIL =====
-const sendEmail = async () => {
+const doSendEmail = async () => {
   const toEl = $('#composeTo');
   const subjectEl = $('#composeSubject');
   const bodyEl = $('#composeBody');
@@ -281,13 +209,11 @@ const sendEmail = async () => {
   setStatus('Sending email…', 'loading');
 
   try {
-    await execConnector(DATA_SOURCE, 'SendEmailV2', {
-      emailMessage: {
-        To: to,
-        Subject: subject || '(No subject)',
-        Body: `<p>${escapeHtml(body || '')}</p>`,
-        Importance: 'Normal'
-      }
+    await sendEmail({
+      to: to,
+      subject: subject || '(No subject)',
+      body: '<p>' + escapeHtml(body || '') + '</p>',
+      importance: 'Normal'
     });
 
     setStatus('Email sent successfully');
@@ -323,7 +249,7 @@ const bindEvents = () => {
   $('#btnCompose')?.addEventListener('click', openCompose);
   $('#btnCloseCompose')?.addEventListener('click', closeCompose);
   $('#btnDiscardCompose')?.addEventListener('click', closeCompose);
-  $('#btnSendEmail')?.addEventListener('click', sendEmail);
+  $('#btnSendEmail')?.addEventListener('click', doSendEmail);
   $('#btnRefresh')?.addEventListener('click', fetchInbox);
 
   // Close modal on overlay click
