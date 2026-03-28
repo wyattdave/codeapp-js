@@ -1,9 +1,14 @@
 /* power-apps-data.js - Standalone Power Apps SDK for Code Apps
    Converted from @microsoft/power-apps v1.0.4
-   Zero dependencies - all code is self-contained */
+   Zero dependencies - all code is self-contained
+   Version 2.0.1: add error handling and fix for invalid response formats from plugins
+   */
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+const BRIDGE_INIT_TIMEOUT_MS = 8000;
+const PLUGIN_CALL_TIMEOUT_MS = 30000;
 
 var DefaultPowerAppsBridge = class {
   constructor() {
@@ -14,6 +19,7 @@ var DefaultPowerAppsBridge = class {
     __publicField(this, "_messageChannel", new window.MessageChannel());
     __publicField(this, "_postMessageQueue", []);
     __publicField(this, "_postMessageSource");
+    __publicField(this, "_initializePromise");
     __publicField(this, "_handleMessageEvent", (messageEvent) => {
       const message = messageEvent.data;
       if (message && typeof message.isPluginCall === "boolean") {
@@ -52,21 +58,55 @@ var DefaultPowerAppsBridge = class {
             this._postMessageQueue[i].antiCSRFToken = this._antiCSRFToken;
             this._postMessageSource.postMessage(this._postMessageQueue[i]);
           }
+          this._postMessageQueue = [];
         }
       }
     });
   }
   async initialize() {
-    this._messageChannel.port1.onmessage = this._handleMessageEvent;
-    window.parent.postMessage({
-      messageType: "initCommunicationWithPort",
-      instanceId: this._instanceId
-    }, "*", [this._messageChannel.port2]);
+    if (this._initializePromise) {
+      return this._initializePromise;
+    }
+    this._initializePromise = new Promise((resolve, reject) => {
+      if (window.parent === window) {
+        reject(new Error("Power Apps host was not detected. Open this app from the Power Apps Code Apps host instead of a standalone browser tab."));
+        return;
+      }
+      this._messageChannel.port1.onmessage = (messageEvent) => {
+        this._handleMessageEvent(messageEvent);
+        if (this._postMessageSource) {
+          clearTimeout(timeoutId);
+          resolve();
+        }
+      };
+      const timeoutId = window.setTimeout(() => {
+        reject(new Error("Timed out waiting for the Power Apps host to initialize the message bridge."));
+      }, BRIDGE_INIT_TIMEOUT_MS);
+      window.parent.postMessage({
+        messageType: "initCommunicationWithPort",
+        instanceId: this._instanceId
+      }, "*", [this._messageChannel.port2]);
+    });
+    return this._initializePromise;
   }
   async executePluginAsync(pluginName, pluginAction, params = [], onUpdate) {
     return new Promise((resolve, reject) => {
       const callbackId = this._getCallbackId(pluginName);
-      this._callbacks[callbackId] = { resolve, reject, onUpdate };
+      const timeoutId = window.setTimeout(() => {
+        delete this._callbacks[callbackId];
+        reject(new Error(`Timed out waiting for ${pluginName}.${pluginAction} to return from the Power Apps host.`));
+      }, PLUGIN_CALL_TIMEOUT_MS);
+      this._callbacks[callbackId] = {
+        resolve: (value) => {
+          clearTimeout(timeoutId);
+          resolve(value);
+        },
+        reject: (error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        },
+        onUpdate
+      };
       this._sendMessage({
         isPluginCall: true,
         callbackId,
@@ -102,6 +142,7 @@ async function getBridge() {
         await bridge.initialize();
         resolve(bridge);
       } catch (error) {
+        bridgePromise = void 0;
         reject(error);
       }
     });
@@ -1310,13 +1351,23 @@ var _RuntimeMetadataClient = class _RuntimeMetadataClient {
   async _executeOperation(config) {
     try {
       const result = await this._powerOperationExecutor.execute(config.service, config.action, config.params || []);
-      const lowerCaseResult = Object.keys(result.data).reduce((acc, key) => {
-        acc[key.toLowerCase()] = (result.data ?? {})[key];
+      const rawResult = result && typeof result === "object" && "data" in result ? result.data : result;
+      const normalizedResult = Array.isArray(rawResult) && rawResult.length === 1 && rawResult[0] && typeof rawResult[0] === "object"
+        ? rawResult[0]
+        : rawResult;
+      if (!normalizedResult || typeof normalizedResult !== "object" || Array.isArray(normalizedResult)) {
+        throw new PowerDataRuntimeError(ErrorCodes.InvalidMetadataResponse, JSON.stringify(rawResult));
+      }
+      const lowerCaseResult = Object.keys(normalizedResult).reduce((acc, key) => {
+        acc[key.toLowerCase()] = normalizedResult[key];
         return acc;
       }, {});
       return lowerCaseResult;
-    } catch {
-      throw new PowerDataRuntimeError(ErrorCodes.InvalidMetadataResponse);
+    } catch (error) {
+      if (error instanceof PowerDataRuntimeError) {
+        throw error;
+      }
+      throw new PowerDataRuntimeError(ErrorCodes.InvalidMetadataResponse, getErrorMessage(error));
     }
   }
 };
@@ -2601,8 +2652,16 @@ async function loadConnections() {
     return;
   }
   connectionsLoaded = true;
-  await loadNonCompositeConnectionsAsync();
-  await resolveCompositeConnectionsAsync();
+  try {
+    await loadNonCompositeConnectionsAsync();
+  } catch (error) {
+    console.warn("Power Apps connection preload failed; continuing with runtime metadata fetch.", error);
+  }
+  try {
+    await resolveCompositeConnectionsAsync();
+  } catch (error) {
+    console.warn("Power Apps composite connection resolution failed; continuing with runtime metadata fetch.", error);
+  }
 }
 async function loadNonCompositeConnectionsAsync() {
   return executePluginAsync("AppPowerAppsClientPlugin", "loadNonCompositeConnectionsAsync", []);
@@ -2676,8 +2735,7 @@ async function executeAsync(dataSourcesInfo, operation) {
 
 async function callActionAsync(dataSourcesInfo, actionName, params) {
   var sdkInstance = await getPowerSdkInstance(dataSourcesInfo);
-  var orchestrator = sdkInstance.Data;
-  var dvExecutor = orchestrator._dataverseOperation;
+  var dvExecutor = sdkInstance.Data._dataverseOperation;
   var dataClient = await dvExecutor._getDataClient();
   var dbRefs = await dvExecutor.getDatabaseReferences();
   var sInstanceUrl = null;
@@ -2691,26 +2749,82 @@ async function callActionAsync(dataSourcesInfo, actionName, params) {
     }
   }
   if (!sInstanceUrl) {
-    throw new Error("Cannot call unbound action: no Dataverse instance URL found. At least one Dataverse table must be registered.");
+    throw new Error("Cannot call unbound action: no Dataverse instance URL found. Ensure at least one Dataverse table is registered.");
   }
   var sBaseUrl = sInstanceUrl.endsWith("/") ? sInstanceUrl : sInstanceUrl + "/";
   var sRequestUrl = sBaseUrl + "api/data/v9.0/" + actionName;
-  var oResponse = await dataClient.createDataAsync(
-    sRequestUrl,
-    DataSources.Dataverse,
-    actionName,
-    params || {},
-    {
-      operationName: DataverseOperationName.CreateRecord,
-      datasetName: sDatasetName,
-      isDataVerseOperation: true
-    }
-  );
-  return {
-    success: oResponse.success,
-    data: oResponse.data,
-    error: oResponse.error
+  var oContext = {
+    operationName: DataverseOperationName.CreateRecord,
+    datasetName: sDatasetName,
+    isDataVerseOperation: true
   };
+  var sToken = await dataClient._getAccessToken(DataSources.Dataverse, sDatasetName);
+  var oHeaders = dataClient._createHeaders(sToken, {
+    url: sRequestUrl,
+    method: HttpMethod.POST,
+    apiId: DataSources.Dataverse,
+    tableName: actionName,
+    body: JSON.stringify(params || {})
+  }, oContext);
+  var oRequestBody = new Blob([JSON.stringify(params || {})], { type: "application/json" });
+  var oRawResult;
+  try {
+    oRawResult = await dataClient._powerOperationExecutor.execute(
+      "AppHttpClientPlugin", "sendHttpAsync",
+      [
+        {
+          url: sRequestUrl,
+          method: HttpMethod.POST,
+          requestSource: "PublishedApp",
+          allowSessionStorage: true,
+          returnDirectResponse: true,
+          headers: oHeaders
+        },
+        oRequestBody,
+        "arraybuffer"
+      ]
+    );
+  } catch (oErr) {
+    return { success: false, data: null, error: oErr };
+  }
+  var aResponseData = oRawResult.data;
+  var oRespHeaders = aResponseData[0] ? aResponseData[0].headers || {} : {};
+  var iStatus = aResponseData[0] ? aResponseData[0].status : 0;
+  var sContentType = oRespHeaders["Content-Type"] || "";
+  // HTTP 2xx with no body or no parseable content = success (void actions like GrantAccess)
+  if (iStatus >= 200 && iStatus < 300 && (!sContentType || !aResponseData[1])) {
+    return { success: true, data: null, error: null };
+  }
+  // Try to parse JSON response
+  if (sContentType.indexOf("application/json") !== -1 && aResponseData[1]) {
+    try {
+      var sText = "";
+      if (aResponseData[1] instanceof ArrayBuffer) {
+        sText = new TextDecoder().decode(aResponseData[1]);
+      } else if (typeof aResponseData[1] === "string") {
+        sText = aResponseData[1];
+      }
+      if (!sText) sText = "{}";
+      var oParsed = JSON.parse(sText);
+      if (iStatus >= 200 && iStatus < 300) {
+        return { success: true, data: oParsed, error: null };
+      }
+      // Error response from server
+      var sErrMsg = oParsed.error ? (oParsed.error.message || JSON.stringify(oParsed.error)) : JSON.stringify(oParsed);
+      return { success: false, data: null, error: { message: sErrMsg } };
+    } catch (oParseErr) {
+      if (iStatus >= 200 && iStatus < 300) {
+        return { success: true, data: null, error: null };
+      }
+      return { success: false, data: null, error: { message: "Failed to parse action response" } };
+    }
+  }
+  // Any other 2xx = success
+  if (iStatus >= 200 && iStatus < 300) {
+    return { success: true, data: null, error: null };
+  }
+  // Non-2xx with non-JSON body
+  return { success: false, data: null, error: { message: "Action failed with status " + iStatus } };
 }
 
 var _dataOperationExecutor;
