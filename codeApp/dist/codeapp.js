@@ -1066,7 +1066,6 @@ export async function deleteEvent(sEventId, sCalendarId) {
     id: sEventId,
   });
   });
-  });
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1333,3 +1332,760 @@ export async function listGroupMembers(groupId) {
   });
   });
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// ───────────────────────── Connector Helpers ────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+
+function initConnectorClientWithCandidates(aDataSourceCandidates, oApis) {
+  const dataSourcesInfo = {};
+
+  aDataSourceCandidates.forEach(function(sDataSourceName) {
+    dataSourcesInfo[sDataSourceName] = {
+      tableId: "",
+      version: "",
+      primaryKey: "",
+      dataSourceType: "Connector",
+      apis: oApis,
+    };
+  });
+
+  return getClient(dataSourcesInfo);
+}
+
+async function execConnectorOpWithCandidates(aDataSourceCandidates, oApis, sConnectorName, operationName, parameters) {
+  const client = await initConnectorClientWithCandidates(aDataSourceCandidates, oApis);
+  const aErrors = [];
+
+  for (let iIndex = 0; iIndex < aDataSourceCandidates.length; iIndex += 1) {
+    const sDataSourceName = aDataSourceCandidates[iIndex];
+
+    try {
+      const result = await client.executeAsync({
+        connectorOperation: {
+          tableName: sDataSourceName,
+          operationName,
+          parameters,
+        },
+      });
+
+      return unwrapOutlookResult(result);
+    } catch (oErr) {
+      const sMessage = stringifyOutlookError(oErr);
+      aErrors.push(sDataSourceName + ": " + sMessage);
+
+      if (sMessage.indexOf("Connection reference not found") === -1) {
+        throw oErr;
+      }
+    }
+  }
+
+  throw new Error("No " + sConnectorName + " connection reference matched. Tried: " + aErrors.join(" || "));
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────── Jira ───────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+
+const JIRA_DATA_SOURCE_CANDIDATES = ["jira", "Jira", "JIRA"];
+const JIRA_APIS = {
+  AddComment_V2: {
+    path: "/{connectionId}/v2/issue/{issueKey}/comment",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "issueKey", in: "path", required: true },
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  CancelTask_V2: {
+    path: "/{connectionId}/v2/task/{taskId}/cancel",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "taskId", in: "path", required: true },
+      { name: "X-Atlassian-Token", in: "header", required: true },
+    ],
+  },
+  CreateIssue_V3: {
+    path: "/{connectionId}/v3/issue",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "issueTypeIds", in: "query", required: true },
+      { name: "item", in: "body", required: false },
+    ],
+  },
+  EditIssue_V2: {
+    path: "/{connectionId}/v2/3/issue/{issueIdOrKey}",
+    method: "PUT",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "issueIdOrKey", in: "path", required: true },
+      { name: "notifyUsers", in: "query", required: false },
+      { name: "overrideScreenSecurity", in: "query", required: false },
+      { name: "overrideEditableFlag", in: "query", required: false },
+      { name: "body", in: "body", required: false },
+    ],
+  },
+  GetCurrentUser: {
+    path: "/{connectionId}/3/myself",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "expand", in: "query", required: false },
+    ],
+  },
+  GetIssue_V2: {
+    path: "/{connectionId}/v2/issue/{issueKey}",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "issueKey", in: "path", required: true },
+    ],
+  },
+  ListFilters_V2: {
+    path: "/{connectionId}/v2/filter/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+    ],
+  },
+  ListIssues: {
+    path: "/{connectionId}/2/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "jql", in: "query", required: false },
+      { name: "expand", in: "query", required: false },
+      { name: "fields", in: "query", required: false },
+    ],
+  },
+  ListProjects_V2: {
+    path: "/{connectionId}/project/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+    ],
+  },
+  GetTask_V2: {
+    path: "/{connectionId}/v2/task/{taskId}",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "taskId", in: "path", required: true },
+    ],
+  },
+  GetUser_V2: {
+    path: "/{connectionId}/v2/user",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "accountId", in: "query", required: true },
+      { name: "expand", in: "query", required: false },
+    ],
+  },
+};
+
+async function execJiraOp(operationName, parameters) {
+  return execConnectorOpWithCandidates(JIRA_DATA_SOURCE_CANDIDATES, JIRA_APIS, "Jira", operationName, parameters);
+}
+
+export async function callJiraOperation(operationName, parameters = {}) {
+  return _dbgWrap('callJiraOperation', [operationName, parameters], async function() {
+  return execJiraOp(operationName, parameters);
+  });
+}
+
+export async function addJiraComment(sIssueKey, body, sJiraInstance) {
+  return _dbgWrap('addJiraComment', [sIssueKey, body, sJiraInstance], async function() {
+  return execJiraOp("AddComment_V2", {
+    "X-Request-Jirainstance": sJiraInstance,
+    issueKey: sIssueKey,
+    body,
+  });
+  });
+}
+
+export async function cancelJiraTask(sTaskId, sJiraInstance, sToken) {
+  return _dbgWrap('cancelJiraTask', [sTaskId, sJiraInstance, sToken], async function() {
+  return execJiraOp("CancelTask_V2", {
+    "X-Request-Jirainstance": sJiraInstance,
+    taskId: sTaskId,
+    "X-Atlassian-Token": sToken || "nocheck",
+  });
+  });
+}
+
+export async function createJiraIssueV3({ jiraInstance, projectKey, issueTypeIds, item } = {}) {
+  return _dbgWrap('createJiraIssueV3', [{ jiraInstance, projectKey, issueTypeIds, item }], async function() {
+  return execJiraOp("CreateIssue_V3", {
+    "X-Request-Jirainstance": jiraInstance,
+    projectKey,
+    issueTypeIds,
+    item,
+  });
+  });
+}
+
+export async function editJiraIssueV2(sIssueIdOrKey, { jiraInstance, body, notifyUsers, overrideScreenSecurity, overrideEditableFlag } = {}) {
+  return _dbgWrap('editJiraIssueV2', [sIssueIdOrKey, { jiraInstance, body, notifyUsers, overrideScreenSecurity, overrideEditableFlag }], async function() {
+  return execJiraOp("EditIssue_V2", {
+    "X-Request-Jirainstance": jiraInstance,
+    issueIdOrKey: sIssueIdOrKey,
+    notifyUsers,
+    overrideScreenSecurity,
+    overrideEditableFlag,
+    body,
+  });
+  });
+}
+
+export async function getCurrentJiraUser({ jiraInstance, expand } = {}) {
+  return _dbgWrap('getCurrentJiraUser', [{ jiraInstance, expand }], async function() {
+  return execJiraOp("GetCurrentUser", {
+    "X-Request-Jirainstance": jiraInstance,
+    expand,
+  });
+  });
+}
+
+export async function getJiraIssueByKey(sIssueKey, sJiraInstance) {
+  return _dbgWrap('getJiraIssueByKey', [sIssueKey, sJiraInstance], async function() {
+  return execJiraOp("GetIssue_V2", {
+    "X-Request-Jirainstance": sJiraInstance,
+    issueKey: sIssueKey,
+  });
+  });
+}
+
+export async function listJiraFilters(sJiraInstance) {
+  return _dbgWrap('listJiraFilters', [sJiraInstance], async function() {
+  return execJiraOp("ListFilters_V2", {
+    "X-Request-Jirainstance": sJiraInstance,
+  });
+  });
+}
+
+export async function listJiraIssues({ jiraInstance, jql, fields, expand } = {}) {
+  return _dbgWrap('listJiraIssues', [{ jiraInstance, jql, fields, expand }], async function() {
+  return execJiraOp("ListIssues", {
+    "X-Request-Jirainstance": jiraInstance,
+    jql,
+    fields,
+    expand,
+  });
+  });
+}
+
+export async function listJiraProjects() {
+  return _dbgWrap('listJiraProjects', [], async function() {
+  return execJiraOp("ListProjects_V2", {});
+  });
+}
+
+export async function getJiraTask(sTaskId, sJiraInstance) {
+  return _dbgWrap('getJiraTask', [sTaskId, sJiraInstance], async function() {
+  return execJiraOp("GetTask_V2", {
+    "X-Request-Jirainstance": sJiraInstance,
+    taskId: sTaskId,
+  });
+  });
+}
+
+export async function getJiraUser(sAccountId, { jiraInstance, expand } = {}) {
+  return _dbgWrap('getJiraUser', [sAccountId, { jiraInstance, expand }], async function() {
+  return execJiraOp("GetUser_V2", {
+    "X-Request-Jirainstance": jiraInstance,
+    accountId: sAccountId,
+    expand,
+  });
+  });
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ───────────────────────────── Azure Key Vault ──────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+
+const KEY_VAULT_DATA_SOURCE_CANDIDATES = ["keyvault", "KeyVault", "azurekeyvault", "azureKeyVault", "AzureKeyVault"];
+const KEY_VAULT_APIS = {
+  GetSecret: {
+    path: "/{connectionId}/secrets/{secretName}/value",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "secretName", in: "path", required: true },
+    ],
+  },
+  ListSecrets: {
+    path: "/{connectionId}/secrets",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+    ],
+  },
+};
+
+async function execKeyVaultOp(operationName, parameters) {
+  return execConnectorOpWithCandidates(KEY_VAULT_DATA_SOURCE_CANDIDATES, KEY_VAULT_APIS, "Azure Key Vault", operationName, parameters);
+}
+
+export async function callKeyVaultOperation(operationName, parameters = {}) {
+  return _dbgWrap('callKeyVaultOperation', [operationName, parameters], async function() {
+  return execKeyVaultOp(operationName, parameters);
+  });
+}
+
+export async function getSecret(sSecretName, sApiVersion) {
+  return _dbgWrap('getSecret', [sSecretName, sApiVersion], async function() {
+  return execKeyVaultOp("GetSecret", {
+    secretName: sSecretName,
+  });
+  });
+}
+
+export async function listSecrets({ maxresults, apiVersion } = {}) {
+  return _dbgWrap('listSecrets', [{ maxresults, apiVersion }], async function() {
+  return execKeyVaultOp("ListSecrets", {});
+  });
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────── SQL ────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+
+const SQL_DATA_SOURCE_CANDIDATES = ["sql", "Sql", "SQL"];
+const SQL_APIS = {
+  GetTables_V2: {
+    path: "/GetTables_V2",
+    method: "POST",
+    parameters: [
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  GetItems_V2: {
+    path: "/GetItems_V2",
+    method: "POST",
+    parameters: [
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  GetItem_V2: {
+    path: "/GetItem_V2",
+    method: "POST",
+    parameters: [
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  PostItem_V2: {
+    path: "/PostItem_V2",
+    method: "POST",
+    parameters: [
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  PatchItem_V2: {
+    path: "/PatchItem_V2",
+    method: "POST",
+    parameters: [
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  DeleteItem_V2: {
+    path: "/DeleteItem_V2",
+    method: "POST",
+    parameters: [
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  ExecutePassThroughNativeQuery_V2: {
+    path: "/ExecutePassThroughNativeQuery_V2",
+    method: "POST",
+    parameters: [
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  ExecuteProcedure_V2: {
+    path: "/ExecuteProcedure_V2",
+    method: "POST",
+    parameters: [
+      { name: "body", in: "body", required: true },
+    ],
+  },
+};
+
+async function execSqlOp(operationName, parameters) {
+  return execConnectorOpWithCandidates(SQL_DATA_SOURCE_CANDIDATES, SQL_APIS, "SQL Server", operationName, parameters);
+}
+
+export async function callSqlOperation(operationName, parameters = {}) {
+  return _dbgWrap('callSqlOperation', [operationName, parameters], async function() {
+  return execSqlOp(operationName, parameters);
+  });
+}
+
+export async function getSqlTables({ server = "default", database = "default" } = {}) {
+  return _dbgWrap('getSqlTables', [{ server, database }], async function() {
+  return execSqlOp("GetTables_V2", {
+    body: { server, database },
+  });
+  });
+}
+
+export async function getSqlRows({ server = "default", database = "default", table, apply, filter, orderBy, skip, top, select } = {}) {
+  return _dbgWrap('getSqlRows', [{ server, database, table, apply, filter, orderBy, skip, top, select }], async function() {
+  const body = { server, database, table };
+  if (apply) body.$apply = apply;
+  if (filter) body.$filter = filter;
+  if (orderBy) body.$orderby = orderBy;
+  if (skip != null) body.$skip = skip;
+  if (top != null) body.$top = top;
+  if (select) body.$select = select;
+
+  return execSqlOp("GetItems_V2", { body });
+  });
+}
+
+export async function getSqlRow({ server = "default", database = "default", table, id } = {}) {
+  return _dbgWrap('getSqlRow', [{ server, database, table, id }], async function() {
+  return execSqlOp("GetItem_V2", {
+    body: { server, database, table, id },
+  });
+  });
+}
+
+export async function insertSqlRow({ server = "default", database = "default", table, item } = {}) {
+  return _dbgWrap('insertSqlRow', [{ server, database, table, item }], async function() {
+  return execSqlOp("PostItem_V2", {
+    body: { server, database, table, item },
+  });
+  });
+}
+
+export async function updateSqlRow({ server = "default", database = "default", table, id, item } = {}) {
+  return _dbgWrap('updateSqlRow', [{ server, database, table, id, item }], async function() {
+  return execSqlOp("PatchItem_V2", {
+    body: { server, database, table, id, item },
+  });
+  });
+}
+
+export async function deleteSqlRow({ server = "default", database = "default", table, id } = {}) {
+  return _dbgWrap('deleteSqlRow', [{ server, database, table, id }], async function() {
+  return execSqlOp("DeleteItem_V2", {
+    body: { server, database, table, id },
+  });
+  });
+}
+
+export async function executeSqlQuery({ server = "default", database = "default", query } = {}) {
+  return _dbgWrap('executeSqlQuery', [{ server, database, query }], async function() {
+  return execSqlOp("ExecutePassThroughNativeQuery_V2", {
+    body: { server, database, query },
+  });
+  });
+}
+
+export async function executeSqlStoredProcedure({ server = "default", database = "default", procedure, parameters } = {}) {
+  return _dbgWrap('executeSqlStoredProcedure', [{ server, database, procedure, parameters }], async function() {
+  return execSqlOp("ExecuteProcedure_V2", {
+    body: {
+      server,
+      database,
+      procedure,
+      parameters: parameters || {},
+    },
+  });
+  });
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────── Teams ───────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+
+const TEAMS_DATA_SOURCE_CANDIDATES = ["teams", "Teams", "microsoftteams", "MicrosoftTeams"];
+const TEAMS_APIS = {
+  GetAllTeams: {
+    path: "/{connectionId}/GetAllTeams",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+    ],
+  },
+  GetChannelsForGroup: {
+    path: "/{connectionId}/GetChannelsForGroup",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "groupId", in: "query", required: true },
+    ],
+  },
+  GetTeam: {
+    path: "/{connectionId}/GetTeam",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "teamId", in: "query", required: true },
+    ],
+  },
+  GetChannel: {
+    path: "/{connectionId}/GetChannel",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "groupId", in: "query", required: true },
+      { name: "channelId", in: "query", required: true },
+    ],
+  },
+  AddMemberToTeam: {
+    path: "/{connectionId}/AddMemberToTeam",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "teamId", in: "query", required: true },
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  AddMemberToChannel: {
+    path: "/{connectionId}/AddMemberToChannel",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "groupId", in: "query", required: true },
+      { name: "channelId", in: "query", required: true },
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  AtMentionUser: {
+    path: "/{connectionId}/AtMentionUser",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "userId", in: "query", required: true },
+    ],
+  },
+  AtMentionTag: {
+    path: "/{connectionId}/AtMentionTag",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "teamId", in: "query", required: true },
+      { name: "tagId", in: "query", required: true },
+    ],
+  },
+  ListChats: {
+    path: "/{connectionId}/ListChats",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "$top", in: "query", required: false },
+      { name: "$skip", in: "query", required: false },
+    ],
+  },
+  ListMembers: {
+    path: "/{connectionId}/ListMembers",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "groupId", in: "query", required: true },
+      { name: "channelId", in: "query", required: false },
+    ],
+  },
+  PostUserNotification: {
+    path: "/{connectionId}/PostUserNotification",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "PostNotificationRequest", in: "body", required: true },
+    ],
+  },
+  PostChannelNotification: {
+    path: "/{connectionId}/PostChannelNotification",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "groupId", in: "query", required: true },
+      { name: "PostNotificationRequest", in: "body", required: true },
+    ],
+  },
+  PostCardToConversation: {
+    path: "/{connectionId}/PostCardToConversation",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "poster", in: "query", required: true },
+      { name: "location", in: "query", required: true },
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  PostMessageToConversation: {
+    path: "/{connectionId}/PostMessageToConversation",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "poster", in: "query", required: true },
+      { name: "location", in: "query", required: true },
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  HttpRequest: {
+    path: "/{connectionId}/codeless/v1.0/httprequest",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+    ],
+  },
+};
+
+async function execTeamsOp(operationName, parameters) {
+  return execConnectorOpWithCandidates(TEAMS_DATA_SOURCE_CANDIDATES, TEAMS_APIS, "Microsoft Teams", operationName, parameters);
+}
+
+export async function callTeamsOperation(operationName, parameters = {}) {
+  return _dbgWrap('callTeamsOperation', [operationName, parameters], async function() {
+  return execTeamsOp(operationName, parameters);
+  });
+}
+
+export async function sendTeamsGraphHttpRequest({ method = "GET", uri, headers, body } = {}) {
+  return _dbgWrap('sendTeamsGraphHttpRequest', [{ method, uri, headers, body }], async function() {
+  return execTeamsOp("HttpRequest", {
+    method,
+    uri,
+    headers: headers || {},
+    body: body || "",
+  });
+  });
+}
+
+export async function listTeams() {
+  return _dbgWrap('listTeams', [], async function() {
+  return execTeamsOp("GetAllTeams", {});
+  });
+}
+
+export async function listChannels(sTeamId) {
+  return _dbgWrap('listChannels', [sTeamId], async function() {
+  return execTeamsOp("GetChannelsForGroup", {
+    groupId: sTeamId,
+  });
+  });
+}
+
+export async function getTeam(sTeamId) {
+  return _dbgWrap('getTeam', [sTeamId], async function() {
+  return execTeamsOp("GetTeam", {
+    teamId: sTeamId,
+  });
+  });
+}
+
+export async function getChannelDetails(sTeamId, sChannelId) {
+  return _dbgWrap('getChannelDetails', [sTeamId, sChannelId], async function() {
+  return execTeamsOp("GetChannel", {
+    groupId: sTeamId,
+    channelId: sChannelId,
+  });
+  });
+}
+
+export async function addMemberToTeam(sTeamId, body) {
+  return _dbgWrap('addMemberToTeam', [sTeamId, body], async function() {
+  return execTeamsOp("AddMemberToTeam", {
+    teamId: sTeamId,
+    body,
+  });
+  });
+}
+
+export async function addMemberToChannel(sTeamId, sChannelId, body) {
+  return _dbgWrap('addMemberToChannel', [sTeamId, sChannelId, body], async function() {
+  return execTeamsOp("AddMemberToChannel", {
+    groupId: sTeamId,
+    channelId: sChannelId,
+    body,
+  });
+  });
+}
+
+export async function getUserMentionToken(sUserId) {
+  return _dbgWrap('getUserMentionToken', [sUserId], async function() {
+  return execTeamsOp("AtMentionUser", {
+    userId: sUserId,
+  });
+  });
+}
+
+export async function getTeamTagMentionToken(sTeamId, sTagId) {
+  return _dbgWrap('getTeamTagMentionToken', [sTeamId, sTagId], async function() {
+  return execTeamsOp("AtMentionTag", {
+    teamId: sTeamId,
+    tagId: sTagId,
+  });
+  });
+}
+
+export async function listChats({ top, skip } = {}) {
+  return _dbgWrap('listChats', [{ top, skip }], async function() {
+  return execTeamsOp("ListChats", {
+    $top: top,
+    $skip: skip,
+  });
+  });
+}
+
+export async function listMembers(sTeamId, sChannelId) {
+  return _dbgWrap('listMembers', [sTeamId, sChannelId], async function() {
+  return execTeamsOp("ListMembers", {
+    groupId: sTeamId,
+    channelId: sChannelId,
+  });
+  });
+}
+
+export async function postFeedNotification({ groupId, body } = {}) {
+  return _dbgWrap('postFeedNotification', [{ groupId, body }], async function() {
+  if (groupId) {
+    return execTeamsOp("PostChannelNotification", {
+      groupId,
+      PostNotificationRequest: body,
+    });
+  }
+
+  return execTeamsOp("PostUserNotification", {
+    PostNotificationRequest: body,
+  });
+  });
+}
+
+export async function postCardInChatOrChannel({ poster = "Flow bot", location, body } = {}) {
+  return _dbgWrap('postCardInChatOrChannel', [{ poster, location, body }], async function() {
+  return execTeamsOp("PostCardToConversation", {
+    poster,
+    location,
+    body,
+  });
+  });
+}
+
+export async function postMessageInChatOrChannel({ poster = "Flow bot", location, body } = {}) {
+  return _dbgWrap('postMessageInChatOrChannel', [{ poster, location, body }], async function() {
+  return execTeamsOp("PostMessageToConversation", {
+    poster,
+    location,
+    body,
+  });
+  });
+}
+
