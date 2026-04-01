@@ -1,6 +1,6 @@
-# Outlook Inbox Demo
+# Outlook Signal Desk Demo
 
-Demo to show how to use the Office 365 Outlook connector to list inbox emails.
+Demo to show how to use the Office 365 Outlook connector helpers for inbox, message detail, calendar view, contact browsing, category lookup, and diagnostics.
 
 ---
 
@@ -67,13 +67,23 @@ Once in place, Copilot will automatically use this skill when you ask it to buil
 
 ## 4. Setup
 
-Copy the contents of `dist copy` into a `dist` folder, then copy the `index.html` and `index.js` from this examples folder into `dist`, replacing the defaults.
+This example already includes a complete `dist` folder. The page uses `dist/outlook.js` for the focused Outlook demo helpers.
+
+The demo page exercises these helper categories:
+
+- Inbox listing and message detail
+- Mark-as-read workflow
+- Three-day calendar view
+- Contact folder and contact listing
+- Outlook categories and raw payload diagnostics
+
+The broader helper reference for the repo-level Outlook wrapper lives at `dev files/outlook-helper-reference.md`.
 
 ---
 
 ## 5. Deploy the App
 
-Update the power.config.json file with the target environment's id (it should be the same environment you have used in CLI auth).
+Update the `power.config.json` file with the target environment's id (it should be the same environment you have used in CLI auth).
 
 ```bash
 pac code push --solutionName OutlookInbox
