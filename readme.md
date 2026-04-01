@@ -137,32 +137,61 @@ Each connector library needs a matching entry in `connectionReferences`.
       "dataSets": {}
     },
     
-    // Office 365 Outlook  (used by dist/outlook.js)
+    // Office 365 Outlook  
     "office365outlook": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
       "displayName": "Office 365 Outlook",
       "dataSources": ["office365"],
       "dataSets": {}
     },
-    // SharePoint Online  (used by dist/sharepoint.js)
+    // SharePoint Online 
     "sharepointonline": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
       "displayName": "SharePoint",
       "dataSources": ["sharepointonline"],
       "dataSets": {}
     },
-    // Office 365 Groups  (used by dist/office365groups.js)
+    // Office 365 Groups 
     "office365groups": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_office365groups",
       "displayName": "Office 365 Groups",
       "dataSources": ["office365groups"],
       "dataSets": {}
     },
-    // Office 365 Users  (used by dist/office365users.js)
+    // Office 365 Users  
     "office365users": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_office365users",
       "displayName": "Office 365 Users",
       "dataSources": ["office365users"],
+      "dataSets": {}
+    },
+    /// MS Teams
+    "ef348778-cc4f-4444-9f78-fcfdb4a45544": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_teams",
+      "displayName": "Microsoft Teams",
+      "dataSources": [
+        "teams"
+      ],
+      "dataSets": {}
+    },
+    // Jira
+    "e050e705-9ee9-4461-4444-4de4ed5904ea": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_jira",
+      "displayName": "Jira",
+      "dataSources": [
+        "jira"
+      ],
+      "authenticationType": "APIToken",
+      "dataSets": {}
+    },
+    // Azure keyvault
+    "85039b8d-b6fe-4444-b9db-6008338ec987": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_keyvault",
+      "displayName": "Azure Key Vault",
+      "dataSources": [
+        "keyvault"
+      ],
+      "authenticationType": "oauthDefault",
       "dataSets": {}
     }
   }
