@@ -2111,6 +2111,146 @@ export async function manageOutlookContacts(queryRequest, sessionId) {
 // ── Data source name (must match connectionReferences in power.config.json) ──
 const DATA_SOURCE_USERS = "office365users";
 
+const USERS_APIS = {
+  UpdateMyProfile: {
+    path: "/{connectionId}/codeless/v1.0/me",
+    method: "PATCH",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "body", in: "body", required: false },
+    ],
+  },
+  MyProfile_V2: {
+    path: "/{connectionId}/codeless/v1.0/me",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "$select", in: "query", required: false },
+    ],
+  },
+  UpdateMyPhoto: {
+    path: "/{connectionId}/codeless/v1.0/me/photo/$value",
+    method: "PUT",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "body", in: "body", required: true },
+      { name: "Content_Type", in: "header", required: true },
+    ],
+  },
+  MyTrendingDocuments: {
+    path: "/{connectionId}/codeless/v1.0/me/insights/trending",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "$filter", in: "query", required: false },
+      { name: "extractSensitivityLabel", in: "query", required: false },
+      { name: "fetchSensitivityLabelMetadata", in: "query", required: false },
+    ],
+  },
+  RelevantPeople: {
+    path: "/{connectionId}/codeless/v1.0/users/{userId}/people",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "userId", in: "path", required: true },
+    ],
+  },
+  UserProfile_V2: {
+    path: "/{connectionId}/codeless/v1.0/users/{id}",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "id", in: "path", required: true },
+      { name: "$select", in: "query", required: false },
+    ],
+  },
+  UserPhotoMetadata: {
+    path: "/{connectionId}/codeless/v1.0/users/{userId}/photo",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "userId", in: "path", required: true },
+    ],
+  },
+  Manager_V2: {
+    path: "/{connectionId}/codeless/v1.0/users/{id}/manager",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "id", in: "path", required: true },
+      { name: "$select", in: "query", required: false },
+    ],
+  },
+  DirectReports_V2: {
+    path: "/{connectionId}/codeless/v1.0/users/{id}/directReports",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "id", in: "path", required: true },
+      { name: "$select", in: "query", required: false },
+      { name: "$top", in: "query", required: false },
+    ],
+  },
+  UserPhoto_V2: {
+    path: "/{connectionId}/codeless/v1.0/users/{id}/photo/$value",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "id", in: "path", required: true },
+    ],
+    responseInfo: { "200": "image/jpeg" },
+  },
+  TrendingDocuments: {
+    path: "/{connectionId}/codeless/v1.0/users/{id}/insights/trending",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "id", in: "path", required: true },
+      { name: "$filter", in: "query", required: false },
+      { name: "extractSensitivityLabel", in: "query", required: false },
+      { name: "fetchSensitivityLabelMetadata", in: "query", required: false },
+    ],
+  },
+  SearchUserV2: {
+    path: "/{connectionId}/codeless/v1.0/users",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "searchTerm", in: "query", required: false },
+      { name: "top", in: "query", required: false },
+      { name: "isSearchTermRequired", in: "query", required: false },
+      { name: "skipToken", in: "query", required: false },
+    ],
+  },
+  SearchUser_V2: {
+    path: "/{connectionId}/codeless/v1.0/users",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "searchTerm", in: "query", required: false },
+      { name: "top", in: "query", required: false },
+      { name: "isSearchTermRequired", in: "query", required: false },
+      { name: "skipToken", in: "query", required: false },
+    ],
+  },
+  HttpRequest: {
+    path: "/{connectionId}/codeless/v1.0/httprequest",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "Uri", in: "header", required: true },
+      { name: "Method", in: "header", required: true },
+      { name: "Body", in: "body", required: false },
+      { name: "ContentType", in: "header", required: false },
+      { name: "CustomHeader1", in: "header", required: false },
+      { name: "CustomHeader2", in: "header", required: false },
+      { name: "CustomHeader3", in: "header", required: false },
+      { name: "CustomHeader4", in: "header", required: false },
+      { name: "CustomHeader5", in: "header", required: false },
+    ],
+  },
+};
+
 // ── Initialize SDK client for the Office 365 Users connector ───
 function initUsersClient() {
   const dataSourcesInfo = {
@@ -2119,68 +2259,103 @@ function initUsersClient() {
       version: "",
       primaryKey: "",
       dataSourceType: "Connector",
-      apis: {
-        MyProfile_V2: {
-          path: "/{connectionId}/codeless/v1.0/me",
-          method: "GET",
-          parameters: [
-            { name: "connectionId", in: "path", required: true },
-          ],
-        },
-        UserProfile_V2: {
-          path: "/{connectionId}/codeless/v1.0/users/{id}",
-          method: "GET",
-          parameters: [
-            { name: "connectionId", in: "path", required: true },
-            { name: "id", in: "path", required: true },
-          ],
-        },
-        Manager_V2: {
-          path: "/{connectionId}/codeless/v1.0/users/{id}/manager",
-          method: "GET",
-          parameters: [
-            { name: "connectionId", in: "path", required: true },
-            { name: "id", in: "path", required: true },
-          ],
-        },
-        DirectReports_V2: {
-          path: "/{connectionId}/codeless/v1.0/users/{id}/directReports",
-          method: "GET",
-          parameters: [
-            { name: "connectionId", in: "path", required: true },
-            { name: "id", in: "path", required: true },
-          ],
-        },
-        UserPhoto_V2: {
-          path: "/{connectionId}/codeless/v1.0/users/{id}/photo/$value",
-          method: "GET",
-          parameters: [
-            { name: "connectionId", in: "path", required: true },
-            { name: "id", in: "path", required: true },
-          ],
-          responseInfo: { "200": "image/jpeg" },
-        },
-        SearchUser_V2: {
-          path: "/{connectionId}/codeless/v1.0/users",
-          method: "GET",
-          parameters: [
-            { name: "connectionId", in: "path", required: true },
-            { name: "searchTerm", in: "query", required: false },
-            { name: "$top", in: "query", required: false },
-            { name: "$skip", in: "query", required: false },
-          ],
-        },
-        HttpRequest: {
-          path: "/{connectionId}/codeless/v1.0/httprequest",
-          method: "POST",
-          parameters: [
-            { name: "connectionId", in: "path", required: true },
-          ],
-        },
-      },
+      apis: USERS_APIS,
     },
   };
   return getClient(dataSourcesInfo);
+}
+
+function isUsersObject(oValue) {
+  return !!oValue && typeof oValue === "object" && !Array.isArray(oValue);
+}
+
+function pickUsersValue() {
+  for (let iIndex = 0; iIndex < arguments.length; iIndex += 1) {
+    const oValue = arguments[iIndex];
+    if (oValue !== undefined && oValue !== null) return oValue;
+  }
+  return undefined;
+}
+
+function setUsersIfDefined(oTarget, sKey, oValue) {
+  if (oValue !== undefined && oValue !== null) {
+    oTarget[sKey] = oValue;
+  }
+}
+
+function normalizeUsersSelect(oValue) {
+  if (Array.isArray(oValue)) return oValue.join(",");
+  return oValue;
+}
+
+function normalizeUsersSelectOptions(oOptions) {
+  if (isUsersObject(oOptions)) return oOptions;
+  if (oOptions === undefined || oOptions === null) return {};
+  return { select: oOptions };
+}
+
+function normalizeUsersDirectReportsOptions(oOptions) {
+  if (isUsersObject(oOptions)) return oOptions;
+  if (typeof oOptions === "number") return { top: oOptions };
+  if (oOptions === undefined || oOptions === null) return {};
+  return { select: oOptions };
+}
+
+function normalizeUsersSearchOptions(oOptions) {
+  if (typeof oOptions === "string") return { searchTerm: oOptions };
+  return isUsersObject(oOptions) ? oOptions : {};
+}
+
+function normalizeUsersTrendingOptions(oOptions) {
+  if (typeof oOptions === "string") return { filter: oOptions };
+  return isUsersObject(oOptions) ? oOptions : {};
+}
+
+function extractUsersSkipToken(sNextLink) {
+  if (!sNextLink || typeof sNextLink !== "string") return undefined;
+
+  try {
+    const oUrl = new URL(sNextLink);
+    return pickUsersValue(
+      oUrl.searchParams.get("skipToken"),
+      oUrl.searchParams.get("$skiptoken"),
+      oUrl.searchParams.get("$skipToken"),
+      oUrl.searchParams.get("skiptoken")
+    );
+  } catch (oError) {
+    return undefined;
+  }
+}
+
+function getUsersHeaderValue(oHeaders, sName) {
+  if (!isUsersObject(oHeaders)) return undefined;
+
+  const sMatch = String(sName).toLowerCase();
+  const aEntries = Object.entries(oHeaders);
+  for (let iIndex = 0; iIndex < aEntries.length; iIndex += 1) {
+    const [sHeaderName, oValue] = aEntries[iIndex];
+    if (String(sHeaderName).toLowerCase() === sMatch) {
+      return oValue;
+    }
+  }
+  return undefined;
+}
+
+function normalizeUsersCustomHeaders(oHeaders, aCustomHeaders) {
+  const aResolved = Array.isArray(aCustomHeaders) ? aCustomHeaders.filter((oValue) => oValue != null) : [];
+
+  if (!isUsersObject(oHeaders)) return aResolved.slice(0, 5);
+
+  const aEntries = Object.entries(oHeaders);
+  for (let iIndex = 0; iIndex < aEntries.length; iIndex += 1) {
+    const [sHeaderName, oValue] = aEntries[iIndex];
+    if (oValue === undefined || oValue === null) continue;
+    if (String(sHeaderName).toLowerCase() === "content-type") continue;
+    aResolved.push(String(sHeaderName) + ": " + String(oValue));
+    if (aResolved.length >= 5) break;
+  }
+
+  return aResolved.slice(0, 5);
 }
 
 // ── Internal: execute a connector operation ────────────────────
@@ -2193,10 +2368,7 @@ async function execUsersOp(operationName, parameters) {
       parameters,
     },
   });
-  if (!result.success) {
-    throw new Error(result.error?.message || "Operation failed");
-  }
-  return result.data;
+  return unwrapResult(result);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2211,13 +2383,29 @@ export async function callUsersOperation(operationName, parameters = {}) {
 }
 
 // ── Open HTTP Request ──────────────────────────────────────────
-export async function openUsersHttpRequest({ method = "GET", uri, headers, body }) {
-  return _dbgWrap('openUsersHttpRequest', [{ method, uri, headers, body }], async function() {
+export async function openUsersHttpRequest({ method = "GET", uri, headers, body, contentType, customHeaders } = {}) {
+  return _dbgWrap('openUsersHttpRequest', [{ method, uri, headers, body, contentType, customHeaders }], async function() {
+  const aHeaders = normalizeUsersCustomHeaders(headers, customHeaders);
   return execUsersOp("HttpRequest", {
-    method,
-    uri,
-    headers: headers || {},
-    body: body || "",
+    Uri: uri,
+    Method: method,
+    Body: body,
+    ContentType: pickUsersValue(contentType, getUsersHeaderValue(headers, "Content-Type")),
+    CustomHeader1: aHeaders[0],
+    CustomHeader2: aHeaders[1],
+    CustomHeader3: aHeaders[2],
+    CustomHeader4: aHeaders[3],
+    CustomHeader5: aHeaders[4],
+  });
+  });
+}
+
+// ── Update My Profile ──────────────────────────────────────────
+export async function updateMyProfile(oProfile = {}) {
+  return _dbgWrap('updateMyProfile', [oProfile], async function() {
+  const oBody = isUsersObject(oProfile) && "body" in oProfile ? oProfile.body : oProfile;
+  return execUsersOp("UpdateMyProfile", {
+    body: oBody,
   });
   });
 }
@@ -2227,17 +2415,31 @@ export async function openUsersHttpRequest({ method = "GET", uri, headers, body 
 // ═══════════════════════════════════════════════════════════════
 
 // ── Get My Profile ─────────────────────────────────────────────
-export async function getMyProfile() {
-  return _dbgWrap('getMyProfile', [], async function() {
-  return execUsersOp("MyProfile_V2", {});
+export async function getMyProfile(oOptions) {
+  return _dbgWrap('getMyProfile', [oOptions], async function() {
+  const oResolvedOptions = normalizeUsersSelectOptions(oOptions);
+  const params = {};
+  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(oResolvedOptions.select, oResolvedOptions.$select)));
+  return execUsersOp("MyProfile_V2", params);
   });
 }
 
 // ── Get User Profile ───────────────────────────────────────────
-export async function getUserProfile(userId) {
-  return _dbgWrap('getUserProfile', [userId], async function() {
-  return execUsersOp("UserProfile_V2", {
+export async function getUserProfile(userId, oOptions) {
+  return _dbgWrap('getUserProfile', [userId, oOptions], async function() {
+  if (isUsersObject(userId)) {
+    oOptions = userId;
+    userId = pickUsersValue(oOptions.userId, oOptions.id);
+  }
+
+  const oResolvedOptions = normalizeUsersSelectOptions(oOptions);
+  const params = {
     id: userId,
+  };
+  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(oResolvedOptions.select, oResolvedOptions.$select)));
+
+  return execUsersOp("UserProfile_V2", {
+    ...params,
   });
   });
 }
@@ -2247,19 +2449,67 @@ export async function getUserProfile(userId) {
 // ═══════════════════════════════════════════════════════════════
 
 // ── Get Manager ────────────────────────────────────────────────
-export async function getManager(userId) {
-  return _dbgWrap('getManager', [userId], async function() {
-  return execUsersOp("Manager_V2", {
+export async function getManager(userId, oOptions) {
+  return _dbgWrap('getManager', [userId, oOptions], async function() {
+  if (isUsersObject(userId)) {
+    oOptions = userId;
+    userId = pickUsersValue(oOptions.userId, oOptions.id);
+  }
+
+  const oResolvedOptions = normalizeUsersSelectOptions(oOptions);
+  const params = {
     id: userId,
+  };
+  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(oResolvedOptions.select, oResolvedOptions.$select)));
+
+  return execUsersOp("Manager_V2", {
+    ...params,
   });
   });
 }
 
 // ── Get Direct Reports ─────────────────────────────────────────
-export async function getDirectReports(userId) {
-  return _dbgWrap('getDirectReports', [userId], async function() {
-  return execUsersOp("DirectReports_V2", {
+export async function getDirectReports(userId, oOptions) {
+  return _dbgWrap('getDirectReports', [userId, oOptions], async function() {
+  if (isUsersObject(userId)) {
+    oOptions = userId;
+    userId = pickUsersValue(oOptions.userId, oOptions.id);
+  }
+
+  const oResolvedOptions = normalizeUsersDirectReportsOptions(oOptions);
+  const params = {
     id: userId,
+  };
+  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(oResolvedOptions.select, oResolvedOptions.$select)));
+  setUsersIfDefined(params, "$top", pickUsersValue(oResolvedOptions.top, oResolvedOptions.$top));
+
+  return execUsersOp("DirectReports_V2", {
+    ...params,
+  });
+  });
+}
+
+// ── Get My Trending Documents ──────────────────────────────────
+export async function getMyTrendingDocuments(oOptions = {}) {
+  return _dbgWrap('getMyTrendingDocuments', [oOptions], async function() {
+  const oResolvedOptions = normalizeUsersTrendingOptions(oOptions);
+  const params = {};
+  setUsersIfDefined(params, "$filter", pickUsersValue(oResolvedOptions.filter, oResolvedOptions.$filter));
+  setUsersIfDefined(params, "extractSensitivityLabel", oResolvedOptions.extractSensitivityLabel);
+  setUsersIfDefined(params, "fetchSensitivityLabelMetadata", oResolvedOptions.fetchSensitivityLabelMetadata);
+  return execUsersOp("MyTrendingDocuments", params);
+  });
+}
+
+// ── Get Relevant People ────────────────────────────────────────
+export async function getRelevantPeople(userId) {
+  return _dbgWrap('getRelevantPeople', [userId], async function() {
+  if (isUsersObject(userId)) {
+    userId = pickUsersValue(userId.userId, userId.id);
+  }
+
+  return execUsersOp("RelevantPeople", {
+    userId,
   });
   });
 }
@@ -2268,12 +2518,72 @@ export async function getDirectReports(userId) {
 //  PHOTO
 // ═══════════════════════════════════════════════════════════════
 
+// ── Update My Photo ────────────────────────────────────────────
+export async function updateMyPhoto(oBodyOrOptions, sContentType) {
+  return _dbgWrap('updateMyPhoto', [oBodyOrOptions, sContentType], async function() {
+  if (isUsersObject(oBodyOrOptions)) {
+    sContentType = pickUsersValue(
+      oBodyOrOptions.contentType,
+      oBodyOrOptions.Content_Type,
+      oBodyOrOptions.mimeType
+    );
+    oBodyOrOptions = pickUsersValue(
+      oBodyOrOptions.body,
+      oBodyOrOptions.content,
+      oBodyOrOptions.photo,
+      oBodyOrOptions.fileContent
+    );
+  }
+
+  return execUsersOp("UpdateMyPhoto", {
+    body: oBodyOrOptions,
+    Content_Type: sContentType,
+  });
+  });
+}
+
+// ── Get User Photo Metadata ────────────────────────────────────
+export async function getUserPhotoMetadata(userId) {
+  return _dbgWrap('getUserPhotoMetadata', [userId], async function() {
+  if (isUsersObject(userId)) {
+    userId = pickUsersValue(userId.userId, userId.id);
+  }
+
+  return execUsersOp("UserPhotoMetadata", {
+    userId,
+  });
+  });
+}
+
 // ── Get User Photo ─────────────────────────────────────────────
 export async function getUserPhoto(userId) {
   return _dbgWrap('getUserPhoto', [userId], async function() {
+  if (isUsersObject(userId)) {
+    userId = pickUsersValue(userId.userId, userId.id);
+  }
+
   return execUsersOp("UserPhoto_V2", {
     id: userId,
   });
+  });
+}
+
+// ── Get Trending Documents ─────────────────────────────────────
+export async function getTrendingDocuments(userId, oOptions = {}) {
+  return _dbgWrap('getTrendingDocuments', [userId, oOptions], async function() {
+  if (isUsersObject(userId)) {
+    oOptions = userId;
+    userId = pickUsersValue(oOptions.userId, oOptions.id);
+  }
+
+  const oResolvedOptions = normalizeUsersTrendingOptions(oOptions);
+  const params = {
+    id: userId,
+  };
+  setUsersIfDefined(params, "$filter", pickUsersValue(oResolvedOptions.filter, oResolvedOptions.$filter));
+  setUsersIfDefined(params, "extractSensitivityLabel", oResolvedOptions.extractSensitivityLabel);
+  setUsersIfDefined(params, "fetchSensitivityLabelMetadata", oResolvedOptions.fetchSensitivityLabelMetadata);
+  return execUsersOp("TrendingDocuments", params);
   });
 }
 
@@ -2282,13 +2592,27 @@ export async function getUserPhoto(userId) {
 // ═══════════════════════════════════════════════════════════════
 
 // ── Search for Users ───────────────────────────────────────────
-export async function searchForUsers({ searchTerm, top, skip } = {}) {
-  return _dbgWrap('searchForUsers', [{ searchTerm, top, skip }], async function() {
+export async function searchForUsers(oOptions = {}) {
+  return _dbgWrap('searchForUsers', [oOptions], async function() {
+  const oResolvedOptions = normalizeUsersSearchOptions(oOptions);
   const params = {};
-  if (searchTerm) params.searchTerm = searchTerm;
-  if (top != null) params.$top = top;
-  if (skip != null) params.$skip = skip;
-  return execUsersOp("SearchUser_V2", params);
+  setUsersIfDefined(params, "searchTerm", oResolvedOptions.searchTerm);
+  setUsersIfDefined(params, "top", pickUsersValue(oResolvedOptions.top, oResolvedOptions.$top));
+  setUsersIfDefined(params, "isSearchTermRequired", oResolvedOptions.isSearchTermRequired);
+
+  const oSkipToken = pickUsersValue(
+    oResolvedOptions.skipToken,
+    oResolvedOptions.$skipToken,
+    oResolvedOptions.$skiptoken,
+    extractUsersSkipToken(oResolvedOptions.nextLink),
+    oResolvedOptions.skip
+  );
+
+  if (oSkipToken !== undefined && oSkipToken !== null) {
+    params.skipToken = String(oSkipToken);
+  }
+
+  return execUsersOp("SearchUserV2", params);
   });
 }
 
@@ -2297,33 +2621,215 @@ export async function searchForUsers({ searchTerm, top, skip } = {}) {
 // ────────────────────────────────────────────────────────────────────────────
 
 
-// ── Data source name (must match connectionReferences in power.config.json) ──
-const DATA_SOURCE_GROUPS = "Office365Groups";
+// ── Data source names (must match connectionReferences in power.config.json) ──
+const DATA_SOURCE_GROUPS_CANDIDATES = ["office365groups", "Office365Groups"];
 
-// ── Initialize SDK client for the Office 365 Groups connector ──
 function initGroupsClient() {
-  const dataSourcesInfo = {
-    [DATA_SOURCE_GROUPS]: {
+  const dataSourcesInfo = {};
+
+  DATA_SOURCE_GROUPS_CANDIDATES.forEach(function(sDataSourceName) {
+    dataSourcesInfo[sDataSourceName] = {
       tableId: "",
       version: "",
       primaryKey: "",
       dataSourceType: "Connector",
       apis: {},
-    },
-  };
+    };
+  });
+
   return getClient(dataSourcesInfo);
+}
+
+function isGroupsObject(oValue) {
+  return !!oValue && typeof oValue === "object" && !Array.isArray(oValue);
+}
+
+function pickGroupsValue() {
+  for (let iIndex = 0; iIndex < arguments.length; iIndex += 1) {
+    const oValue = arguments[iIndex];
+    if (oValue !== undefined && oValue !== null) return oValue;
+  }
+  return undefined;
+}
+
+function setGroupsIfDefined(oTarget, sKey, oValue) {
+  if (oValue !== undefined && oValue !== null) {
+    oTarget[sKey] = oValue;
+  }
+}
+
+function stringifyGroupsError(oError) {
+  if (!oError) return "Unknown error";
+  if (typeof oError === "string") return oError;
+  if (typeof oError.message === "string" && oError.message) return oError.message;
+
+  try {
+    return JSON.stringify(oError);
+  } catch (oErr) {
+    return String(oError);
+  }
+}
+
+function normalizeGroupsSelect(oValue) {
+  if (Array.isArray(oValue)) return oValue.join(",");
+  return oValue;
+}
+
+function extractGroupsSkipToken(sNextLink) {
+  if (!sNextLink || typeof sNextLink !== "string") return undefined;
+
+  try {
+    const oUrl = new URL(sNextLink);
+    return pickGroupsValue(
+      oUrl.searchParams.get("$skiptoken"),
+      oUrl.searchParams.get("$skipToken"),
+      oUrl.searchParams.get("skiptoken"),
+      oUrl.searchParams.get("skipToken")
+    );
+  } catch (oError) {
+    return undefined;
+  }
+}
+
+function getGroupsHeaderValue(oHeaders, sName) {
+  if (!isGroupsObject(oHeaders)) return undefined;
+
+  const sMatch = String(sName).toLowerCase();
+  const aEntries = Object.entries(oHeaders);
+  for (let iIndex = 0; iIndex < aEntries.length; iIndex += 1) {
+    const [sHeaderName, oValue] = aEntries[iIndex];
+    if (String(sHeaderName).toLowerCase() === sMatch) {
+      return oValue;
+    }
+  }
+
+  return undefined;
+}
+
+function normalizeGroupsCustomHeaders(oHeaders, aCustomHeaders) {
+  const aResolved = Array.isArray(aCustomHeaders) ? aCustomHeaders.filter((oValue) => oValue != null) : [];
+
+  if (!isGroupsObject(oHeaders)) return aResolved.slice(0, 5);
+
+  const aEntries = Object.entries(oHeaders);
+  for (let iIndex = 0; iIndex < aEntries.length; iIndex += 1) {
+    const [sHeaderName, oValue] = aEntries[iIndex];
+    if (oValue === undefined || oValue === null) continue;
+    if (String(sHeaderName).toLowerCase() === "content-type") continue;
+    aResolved.push(String(sHeaderName) + ": " + String(oValue));
+    if (aResolved.length >= 5) break;
+  }
+
+  return aResolved.slice(0, 5);
+}
+
+function normalizeGroupsStartEnd(oSource, sKey) {
+  const oValue = pickGroupsValue(oSource[sKey], oSource[sKey.charAt(0).toUpperCase() + sKey.slice(1)]);
+
+  if (isGroupsObject(oValue)) {
+    return {
+      dateTime: pickGroupsValue(oValue.dateTime, oValue.DateTime),
+      timeZone: pickGroupsValue(oValue.timeZone, oValue.TimeZone, oSource.timeZone, oSource.TimeZone, oSource.timezone),
+    };
+  }
+
+  const sDateTime = pickGroupsValue(
+    oSource[sKey + "DateTime"],
+    oSource[sKey + "At"],
+    oSource[sKey],
+    oSource[sKey.charAt(0).toUpperCase() + sKey.slice(1) + "DateTime"],
+    oSource[sKey.charAt(0).toUpperCase() + sKey.slice(1) + "At"]
+  );
+
+  if (sDateTime === undefined || sDateTime === null) return undefined;
+
+  return {
+    dateTime: sDateTime,
+    timeZone: pickGroupsValue(oSource.timeZone, oSource.TimeZone, oSource.timezone),
+  };
+}
+
+function normalizeGroupsEventBody(oSource) {
+  const oBodySource = isGroupsObject(oSource.body) ? oSource.body : (isGroupsObject(oSource.Body) ? oSource.Body : null);
+
+  if (oBodySource) {
+    const oBody = {};
+    setGroupsIfDefined(oBody, "content", pickGroupsValue(oBodySource.content, oBodySource.Content, oBodySource.body, oBodySource.Body));
+    setGroupsIfDefined(oBody, "contentType", pickGroupsValue(oBodySource.contentType, oBodySource.ContentType, oSource.contentType, oSource.ContentType, oSource.isHtml === false ? "Text" : undefined));
+    return Object.keys(oBody).length > 0 ? oBody : undefined;
+  }
+
+  const sContent = pickGroupsValue(oSource.bodyContent, oSource.description, oSource.content);
+  if (sContent === undefined || sContent === null) return undefined;
+
+  return {
+    content: sContent,
+    contentType: pickGroupsValue(oSource.contentType, oSource.ContentType, oSource.isHtml === false ? "Text" : "Html"),
+  };
+}
+
+function normalizeGroupsEventLocation(oSource) {
+  const oLocation = pickGroupsValue(oSource.location, oSource.Location);
+  if (typeof oLocation === "string") {
+    return { displayName: oLocation };
+  }
+
+  if (isGroupsObject(oLocation)) {
+    return { displayName: pickGroupsValue(oLocation.displayName, oLocation.DisplayName) };
+  }
+
+  return undefined;
+}
+
+function normalizeGroupsEventPayload(oOptions) {
+  const oSource = isGroupsObject(oOptions && oOptions.body) && pickGroupsValue(oOptions.body.subject, oOptions.body.Subject, oOptions.body.start, oOptions.body.Start)
+    ? oOptions.body
+    : (isGroupsObject(oOptions) ? oOptions : {});
+
+  const oPayload = {};
+  setGroupsIfDefined(oPayload, "subject", pickGroupsValue(oSource.subject, oSource.Subject, oSource.title));
+  setGroupsIfDefined(oPayload, "start", normalizeGroupsStartEnd(oSource, "start"));
+  setGroupsIfDefined(oPayload, "end", normalizeGroupsStartEnd(oSource, "end"));
+  setGroupsIfDefined(oPayload, "body", normalizeGroupsEventBody(oSource));
+  setGroupsIfDefined(oPayload, "location", normalizeGroupsEventLocation(oSource));
+  setGroupsIfDefined(oPayload, "importance", pickGroupsValue(oSource.importance, oSource.Importance));
+  setGroupsIfDefined(oPayload, "isAllDay", pickGroupsValue(oSource.isAllDay, oSource.IsAllDay));
+  setGroupsIfDefined(oPayload, "isReminderOn", pickGroupsValue(oSource.isReminderOn, oSource.IsReminderOn));
+  setGroupsIfDefined(oPayload, "reminderMinutesBeforeStart", pickGroupsValue(oSource.reminderMinutesBeforeStart, oSource.ReminderMinutesBeforeStart, oSource.reminderMinutes, oSource.reminder));
+  setGroupsIfDefined(oPayload, "showAs", pickGroupsValue(oSource.showAs, oSource.ShowAs));
+  setGroupsIfDefined(oPayload, "responseRequested", pickGroupsValue(oSource.responseRequested, oSource.ResponseRequested));
+  return oPayload;
 }
 
 // ── Internal: execute a connector operation ────────────────────
 async function execGroupsOp(operationName, parameters) {
   const client = await initGroupsClient();
-  return client.executeAsync({
-    connectorOperation: {
-      tableName: DATA_SOURCE_GROUPS,
-      operationName,
-      parameters,
-    },
-  });
+  const aErrors = [];
+
+  for (let iIndex = 0; iIndex < DATA_SOURCE_GROUPS_CANDIDATES.length; iIndex += 1) {
+    const sDataSourceName = DATA_SOURCE_GROUPS_CANDIDATES[iIndex];
+
+    try {
+      const result = await client.executeAsync({
+        connectorOperation: {
+          tableName: sDataSourceName,
+          operationName,
+          parameters,
+        },
+      });
+
+      return unwrapResult(result);
+    } catch (oErr) {
+      const sMessage = stringifyGroupsError(oErr);
+      aErrors.push(sDataSourceName + ": " + sMessage);
+
+      if (sMessage.indexOf("Connection reference not found") === -1) {
+        throw oErr;
+      }
+    }
+  }
+
+  throw new Error("No Office 365 Groups connection reference matched. Tried: " + aErrors.join(" || "));
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2338,13 +2844,20 @@ export async function callGroupsOperation(operationName, parameters = {}) {
 }
 
 // ── Open HTTP Request ──────────────────────────────────────────
-export async function openGroupsHttpRequest({ method = "GET", uri, headers, body }) {
-  return _dbgWrap('openGroupsHttpRequest', [{ method, uri, headers, body }], async function() {
-  return execGroupsOp("HttpRequest", {
-    method,
-    uri,
-    headers: headers || {},
-    body: body || "",
+export async function openGroupsHttpRequest({ method = "GET", uri, headers, body, contentType, customHeaders, version, useV2, operationName } = {}) {
+  return _dbgWrap('openGroupsHttpRequest', [{ method, uri, headers, body, contentType, customHeaders, version, useV2, operationName }], async function() {
+  const aHeaders = normalizeGroupsCustomHeaders(headers, customHeaders);
+  const sOperationName = operationName || (pickGroupsValue(version, useV2 ? 2 : undefined) === 2 ? "HttpRequestV2" : "HttpRequest");
+  return execGroupsOp(sOperationName, {
+    Uri: uri,
+    Method: method,
+    Body: body,
+    ContentType: pickGroupsValue(contentType, getGroupsHeaderValue(headers, "Content-Type")),
+    CustomHeader1: aHeaders[0],
+    CustomHeader2: aHeaders[1],
+    CustomHeader3: aHeaders[2],
+    CustomHeader4: aHeaders[3],
+    CustomHeader5: aHeaders[4],
   });
   });
 }
@@ -2354,17 +2867,197 @@ export async function openGroupsHttpRequest({ method = "GET", uri, headers, body
 // ═══════════════════════════════════════════════════════════════
 
 // ── List My Groups ─────────────────────────────────────────────
-export async function listMyGroups() {
-  return _dbgWrap('listMyGroups', [], async function() {
-  return execGroupsOp("ListOwnedGroups", {});
+export async function listMyGroups(oOptions = {}) {
+  return _dbgWrap('listMyGroups', [oOptions], async function() {
+  if (!isGroupsObject(oOptions)) {
+    oOptions = {};
+  }
+
+  const iVersion = pickGroupsValue(oOptions.version, oOptions.v, 1);
+  const sOperationName = iVersion === 3 ? "ListOwnedGroups_V3" : (iVersion === 2 ? "ListOwnedGroups_V2" : "ListOwnedGroups");
+  const params = {};
+  setGroupsIfDefined(params, "extractSensitivityLabel", oOptions.extractSensitivityLabel);
+  setGroupsIfDefined(params, "fetchSensitivityLabelMetadata", oOptions.fetchSensitivityLabelMetadata);
+  return execGroupsOp(sOperationName, params);
   });
 }
 
 // ── List Members of a Group ────────────────────────────────────
-export async function listGroupMembers(groupId) {
-  return _dbgWrap('listGroupMembers', [groupId], async function() {
-  return execGroupsOp("ListGroupMembers", {
+export async function listGroupMembers(groupId, oOptions) {
+  return _dbgWrap('listGroupMembers', [groupId, oOptions], async function() {
+  if (isGroupsObject(groupId)) {
+    oOptions = groupId;
+    groupId = pickGroupsValue(oOptions.groupId, oOptions.id);
+  }
+
+  oOptions = isGroupsObject(oOptions) ? oOptions : {};
+  const params = { groupId };
+  setGroupsIfDefined(params, "$top", pickGroupsValue(oOptions.top, oOptions.$top));
+  return execGroupsOp("ListGroupMembers", params);
+  });
+}
+
+export async function listOwnedGroups(oOptions = {}) {
+  return _dbgWrap('listOwnedGroups', [oOptions], async function() {
+  return listMyGroups(oOptions);
+  });
+}
+
+export async function listGroups(oOptions = {}) {
+  return _dbgWrap('listGroups', [oOptions], async function() {
+  oOptions = isGroupsObject(oOptions) ? oOptions : {};
+  const params = {};
+  setGroupsIfDefined(params, "extractSensitivityLabel", oOptions.extractSensitivityLabel);
+  setGroupsIfDefined(params, "fetchSensitivityLabelMetadata", oOptions.fetchSensitivityLabelMetadata);
+  setGroupsIfDefined(params, "$filter", pickGroupsValue(oOptions.filter, oOptions.$filter));
+  setGroupsIfDefined(params, "$top", pickGroupsValue(oOptions.top, oOptions.$top));
+
+  const oSkipToken = pickGroupsValue(
+    oOptions.skipToken,
+    oOptions.$skipToken,
+    oOptions.$skiptoken,
+    extractGroupsSkipToken(oOptions.nextLink),
+    oOptions.skip
+  );
+
+  if (oSkipToken !== undefined && oSkipToken !== null) {
+    params.$skiptoken = String(oSkipToken);
+  }
+
+  return execGroupsOp("ListGroups", params);
+  });
+}
+
+export async function onGroupMembershipChange(groupId, oOptions = {}) {
+  return _dbgWrap('onGroupMembershipChange', [groupId, oOptions], async function() {
+  if (isGroupsObject(groupId)) {
+    oOptions = groupId;
+    groupId = pickGroupsValue(oOptions.groupId, oOptions.id);
+  }
+
+  oOptions = isGroupsObject(oOptions) ? oOptions : {};
+  return execGroupsOp("OnGroupMembershipChange", {
     groupId,
+    $select: normalizeGroupsSelect(pickGroupsValue(oOptions.select, oOptions.$select)),
+  });
+  });
+}
+
+export async function addMemberToGroup(userUpn, groupId) {
+  return _dbgWrap('addMemberToGroup', [userUpn, groupId], async function() {
+  if (isGroupsObject(userUpn)) {
+    groupId = pickGroupsValue(userUpn.groupId, userUpn.id);
+    userUpn = pickGroupsValue(userUpn.userUpn, userUpn.upn, userUpn.userPrincipalName, userUpn.email, userUpn.mail);
+  }
+
+  return execGroupsOp("AddMemberToGroup", {
+    userUpn,
+    groupId,
+  });
+  });
+}
+
+export async function removeMemberFromGroup(userUpn, groupId) {
+  return _dbgWrap('removeMemberFromGroup', [userUpn, groupId], async function() {
+  if (isGroupsObject(userUpn)) {
+    groupId = pickGroupsValue(userUpn.groupId, userUpn.id);
+    userUpn = pickGroupsValue(userUpn.userUpn, userUpn.upn, userUpn.userPrincipalName, userUpn.email, userUpn.mail);
+  }
+
+  return execGroupsOp("RemoveMemberFromGroup", {
+    userUpn,
+    groupId,
+  });
+  });
+}
+
+export async function createGroupEvent(groupId, oBodyOrOptions) {
+  return _dbgWrap('createGroupEvent', [groupId, oBodyOrOptions], async function() {
+  let oOptions = isGroupsObject(oBodyOrOptions) ? oBodyOrOptions : {};
+
+  if (isGroupsObject(groupId)) {
+    oOptions = groupId;
+    groupId = pickGroupsValue(oOptions.groupId, oOptions.id);
+  }
+
+  const iVersion = pickGroupsValue(oOptions.version, oOptions.v, 2);
+  return execGroupsOp(iVersion === 1 ? "CreateCalendarEvent" : "CreateCalendarEventV2", {
+    groupId,
+    body: normalizeGroupsEventPayload(oOptions),
+  });
+  });
+}
+
+export async function updateGroupEvent(sEventId, oBodyOrOptions, sGroupId) {
+  return _dbgWrap('updateGroupEvent', [sEventId, oBodyOrOptions, sGroupId], async function() {
+  let oOptions = isGroupsObject(oBodyOrOptions) ? oBodyOrOptions : {};
+
+  if (isGroupsObject(sEventId)) {
+    oOptions = sEventId;
+    sEventId = pickGroupsValue(oOptions.eventId, oOptions.id, oOptions.event);
+    sGroupId = pickGroupsValue(oOptions.groupId, oOptions.group, oOptions.ownerGroupId);
+  }
+
+  return execGroupsOp("UpdateCalendarEvent", {
+    event: sEventId,
+    groupId: pickGroupsValue(oOptions.groupId, sGroupId),
+    body: normalizeGroupsEventPayload(oOptions),
+  });
+  });
+}
+
+export async function deleteGroupEvent(sEventId, sGroupId) {
+  return _dbgWrap('deleteGroupEvent', [sEventId, sGroupId], async function() {
+  if (isGroupsObject(sEventId)) {
+    sGroupId = pickGroupsValue(sEventId.groupId, sEventId.group, sEventId.ownerGroupId);
+    sEventId = pickGroupsValue(sEventId.eventId, sEventId.id, sEventId.event);
+  }
+
+  return execGroupsOp("CalendarDeleteItem_V2", {
+    event: sEventId,
+    groupId: sGroupId,
+  });
+  });
+}
+
+export async function onNewGroupEvent(groupId) {
+  return _dbgWrap('onNewGroupEvent', [groupId], async function() {
+  if (isGroupsObject(groupId)) {
+    groupId = pickGroupsValue(groupId.groupId, groupId.id);
+  }
+
+  return execGroupsOp("OnNewEvent", {
+    groupId,
+  });
+  });
+}
+
+export async function listDeletedGroups() {
+  return _dbgWrap('listDeletedGroups', [], async function() {
+  return execGroupsOp("ListDeletedGroups", {});
+  });
+}
+
+export async function restoreDeletedGroup(groupId) {
+  return _dbgWrap('restoreDeletedGroup', [groupId], async function() {
+  if (isGroupsObject(groupId)) {
+    groupId = pickGroupsValue(groupId.groupId, groupId.id);
+  }
+
+  return execGroupsOp("RestoreDeletedGroup", {
+    groupId,
+  });
+  });
+}
+
+export async function listDeletedGroupsByOwner(userId) {
+  return _dbgWrap('listDeletedGroupsByOwner', [userId], async function() {
+  if (isGroupsObject(userId)) {
+    userId = pickGroupsValue(userId.userId, userId.id, userId.ownerId);
+  }
+
+  return execGroupsOp("ListDeletedGroupsByOwner", {
+    userId,
   });
   });
 }
@@ -2534,6 +3227,671 @@ const JIRA_APIS = {
   },
 };
 
+Object.assign(JIRA_APIS, {
+  EditIssue: {
+    path: "/{connectionId}/3/issue/{issueIdOrKey}",
+    method: "PUT",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "issueIdOrKey", in: "path", required: true },
+      { name: "notifyUsers", in: "query", required: false },
+      { name: "overrideScreenSecurity", in: "query", required: false },
+      { name: "overrideEditableFlag", in: "query", required: false },
+      { name: "body", in: "body", required: false },
+    ],
+  },
+  DeleteProject: {
+    path: "/{connectionId}/3/project/{projectIdOrKey}",
+    method: "DELETE",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectIdOrKey", in: "path", required: true },
+      { name: "enableUndo", in: "query", required: false },
+    ],
+  },
+  UpdateProject: {
+    path: "/{connectionId}/3/project/{projectIdOrKey}",
+    method: "PUT",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectIdOrKey", in: "path", required: true },
+      { name: "body", in: "body", required: false },
+    ],
+  },
+  DeleteProject_V2: {
+    path: "/{connectionId}/v2/project/{projectIdOrKey}",
+    method: "DELETE",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "projectIdOrKey", in: "path", required: true },
+      { name: "enableUndo", in: "query", required: false },
+    ],
+  },
+  UpdateProject_V2: {
+    path: "/{connectionId}/v2/project/{projectIdOrKey}",
+    method: "PUT",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "projectIdOrKey", in: "path", required: true },
+      { name: "body", in: "body", required: false },
+    ],
+  },
+  GetAllProjectCategories: {
+    path: "/{connectionId}/3/projectCategory",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+    ],
+  },
+  CreateProjectCategory: {
+    path: "/{connectionId}/3/projectCategory",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "body", in: "body", required: false },
+    ],
+  },
+  GetAllProjectCategories_V2: {
+    path: "/{connectionId}/v2/projectCategory",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+    ],
+  },
+  CreateProjectCategory_V2: {
+    path: "/{connectionId}/v2/projectCategory",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "body", in: "body", required: false },
+    ],
+  },
+  RemoveProjectCategory: {
+    path: "/{connectionId}/3/projectCategory/{id}",
+    method: "DELETE",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "id", in: "path", required: true },
+    ],
+  },
+  RemoveProjectCategory_V2: {
+    path: "/{connectionId}/v2/projectCategory/{id}",
+    method: "DELETE",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "id", in: "path", required: true },
+    ],
+  },
+  GetTask: {
+    path: "/{connectionId}/3/task/{taskId}",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "taskId", in: "path", required: true },
+    ],
+  },
+  CancelTask: {
+    path: "/{connectionId}/3/task/{taskId}/cancel",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "taskId", in: "path", required: true },
+      { name: "X-Atlassian-Token", in: "header", required: true },
+    ],
+  },
+  GetUser: {
+    path: "/{connectionId}/3/user",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "accountId", in: "query", required: true },
+      { name: "expand", in: "query", required: false },
+    ],
+  },
+  CreateIssue: {
+    path: "/{connectionId}/issue",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  CreateIssueV2: {
+    path: "/{connectionId}/v2/issue",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "issueTypeIds", in: "query", required: true },
+      { name: "item", in: "body", required: false },
+    ],
+  },
+  GetIssue: {
+    path: "/{connectionId}/issue/{issueKey}",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "issueKey", in: "path", required: true },
+    ],
+  },
+  UpdateIssue: {
+    path: "/{connectionId}/issue/{issueKey}",
+    method: "PUT",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "issueKey", in: "path", required: true },
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  UpdateIssue_V2: {
+    path: "/{connectionId}/v2/issue/{issueKey}",
+    method: "PUT",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "issueKey", in: "path", required: true },
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  AddComment: {
+    path: "/{connectionId}/issue/{issueKey}/comment",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "issueKey", in: "path", required: true },
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  ListIssueTypes: {
+    path: "/{connectionId}/issue/createmeta",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+    ],
+  },
+  ListIssueTypes_V2: {
+    path: "/{connectionId}/v2/types/issue/createmeta",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "projectKey", in: "query", required: true },
+    ],
+  },
+  ListIssueTypesFields: {
+    path: "/{connectionId}/v2/issue/createmeta",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "issuetypeIds", in: "query", required: true },
+    ],
+  },
+  ListIssueTypesFields_V2: {
+    path: "/{connectionId}/v3/issue/createmeta",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "issuetypeIds", in: "query", required: true },
+    ],
+  },
+  ListProjects: {
+    path: "/{connectionId}/project",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+    ],
+  },
+  CreateProject: {
+    path: "/{connectionId}/project",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "Project", in: "body", required: true },
+    ],
+  },
+  CreateProject_V2: {
+    path: "/{connectionId}/v2/project",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "Project", in: "body", required: true },
+    ],
+  },
+  ListProjects_V3: {
+    path: "/{connectionId}/v2/project/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+    ],
+  },
+  ListStatuses: {
+    path: "/{connectionId}/project/{projectId}/statuses",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "issueType", in: "query", required: true },
+      { name: "projectId", in: "path", required: true },
+    ],
+  },
+  ListStatuses_V2: {
+    path: "/{connectionId}/v2/project/{projectId}/statuses",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "projectId", in: "path", required: true },
+      { name: "issueType", in: "query", required: false },
+    ],
+  },
+  ListProjectUsers: {
+    path: "/{connectionId}/user/permission/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+    ],
+  },
+  ListProjectUsers_V2: {
+    path: "/{connectionId}/v2/user/permission/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "projectKey", in: "query", required: true },
+    ],
+  },
+  ListAssignableUsers: {
+    path: "/{connectionId}/user/assignable/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+    ],
+  },
+  ListAssignableUsers_V2: {
+    path: "/{connectionId}/v2/user/assignable/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "projectKey", in: "query", required: true },
+    ],
+  },
+  ListPriorityTypes: {
+    path: "/{connectionId}/priority",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+    ],
+  },
+  ListPriorityTypes_V2: {
+    path: "/{connectionId}/v2/priority",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+    ],
+  },
+  ListFilters: {
+    path: "/{connectionId}/2/filter/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+    ],
+  },
+  ListResources: {
+    path: "/{connectionId}/oauth/token/accessible-resources",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+    ],
+  },
+  ListIssues_Datacenter: {
+    path: "/{connectionId}/datacenter/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+    ],
+  },
+  ListTransitions: {
+    path: "/{connectionId}/3/issue/{issueIdOrKey}/transitions",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "issueIdOrKey", in: "path", required: true },
+    ],
+  },
+  UpdateTransition: {
+    path: "/{connectionId}/3/issue/{issueIdOrKey}/transitions",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "X-Request-Jirainstance", in: "header", required: true },
+      { name: "issueIdOrKey", in: "path", required: true },
+      { name: "body", in: "body", required: true },
+    ],
+  },
+  OnNewIssue: {
+    path: "/{connectionId}/new_issue_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+    ],
+  },
+  OnNewIssue_V2: {
+    path: "/{connectionId}/v2/new_issue_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "X-Request-Jirainstance", in: "query", required: false },
+    ],
+  },
+  OnNewIssue_Datacenter: {
+    path: "/{connectionId}/datacenter/new_issue_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "X-Request-Jirainstance", in: "query", required: false },
+    ],
+  },
+  OnCloseIssue: {
+    path: "/{connectionId}/close_issue_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+    ],
+  },
+  OnCloseIssue_V2: {
+    path: "/{connectionId}/v2/close_issue_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "X-Request-Jirainstance", in: "query", required: false },
+    ],
+  },
+  OnCloseIssue_Datacenter: {
+    path: "/{connectionId}/datacenter/close_issue_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "X-Request-Jirainstance", in: "query", required: false },
+    ],
+  },
+  OnUpdateIssue: {
+    path: "/{connectionId}/update_issue_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+    ],
+  },
+  OnUpdateIssue_V2: {
+    path: "/{connectionId}/v2/update_issue_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "X-Request-Jirainstance", in: "query", required: false },
+    ],
+  },
+  OnUpdateIssue_Datacenter: {
+    path: "/{connectionId}/datacenter/update_issue_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "projectKey", in: "query", required: true },
+      { name: "X-Request-Jirainstance", in: "query", required: false },
+    ],
+  },
+  OnNewIssueJQL: {
+    path: "/{connectionId}/new_issue_jql_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "jql", in: "query", required: true },
+    ],
+  },
+  OnNewIssueJQL_V2: {
+    path: "/{connectionId}/v2/new_issue_jql_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "jql", in: "query", required: true },
+      { name: "X-Request-Jirainstance", in: "query", required: false },
+    ],
+  },
+  OnNewIssueJQL_Datacenter: {
+    path: "/{connectionId}/datacenter/new_issue_jql_trigger/search",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "jql", in: "query", required: true },
+      { name: "X-Request-Jirainstance", in: "query", required: false },
+    ],
+  },
+  mcp_JiraIssueManagement: {
+    path: "/{connectionId}/mcp/JiraIssueManagement",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "queryRequest", in: "body", required: false },
+      { name: "sessionId", in: "query", required: false },
+    ],
+  },
+});
+
+function isJiraObject(oValue) {
+  return !!oValue && typeof oValue === "object" && !Array.isArray(oValue);
+}
+
+function pickJiraValue() {
+  for (let iIndex = 0; iIndex < arguments.length; iIndex += 1) {
+    const oValue = arguments[iIndex];
+    if (oValue !== undefined && oValue !== null) {
+      return oValue;
+    }
+  }
+
+  return undefined;
+}
+
+function setJiraIfDefined(oTarget, sKey, oValue) {
+  if (oValue !== undefined && oValue !== null) {
+    oTarget[sKey] = oValue;
+  }
+
+  return oTarget;
+}
+
+function normalizeJiraList(oValue) {
+  if (Array.isArray(oValue)) {
+    return oValue.join(",");
+  }
+
+  return oValue;
+}
+
+function normalizeJiraInstance(oOptions, sFallback) {
+  if (typeof oOptions === "string") {
+    return oOptions;
+  }
+
+  if (!isJiraObject(oOptions)) {
+    return sFallback;
+  }
+
+  return pickJiraValue(
+    oOptions.jiraInstance,
+    oOptions.instance,
+    oOptions.jiraUrl,
+    oOptions.site,
+    oOptions["X-Request-Jirainstance"],
+    sFallback
+  );
+}
+
+function withJiraInstance(oParams, sJiraInstance) {
+  if (sJiraInstance) {
+    oParams["X-Request-Jirainstance"] = sJiraInstance;
+  }
+
+  return oParams;
+}
+
+function normalizeJiraCommentBody(oBody) {
+  if (typeof oBody === "string") {
+    return { body: oBody };
+  }
+
+  if (!isJiraObject(oBody)) {
+    return oBody;
+  }
+
+  if (oBody.body !== undefined) {
+    return oBody;
+  }
+
+  if (typeof oBody.comment === "string") {
+    return { body: oBody.comment };
+  }
+
+  if (typeof oBody.text === "string") {
+    return { body: oBody.text };
+  }
+
+  return oBody;
+}
+
+function normalizeJiraEditBody(oOptions) {
+  if (!isJiraObject(oOptions)) {
+    return oOptions;
+  }
+
+  if (isJiraObject(oOptions.body)) {
+    return oOptions.body;
+  }
+
+  const oBody = {};
+  setJiraIfDefined(oBody, "transition", oOptions.transition);
+  setJiraIfDefined(oBody, "fields", oOptions.fields);
+  setJiraIfDefined(oBody, "update", oOptions.update);
+  setJiraIfDefined(oBody, "historyMetadata", oOptions.historyMetadata);
+  setJiraIfDefined(oBody, "properties", oOptions.properties);
+  return Object.keys(oBody).length > 0 ? oBody : undefined;
+}
+
+function normalizeJiraIssuePayload(oOptions) {
+  if (!isJiraObject(oOptions)) {
+    return oOptions;
+  }
+
+  if (isJiraObject(oOptions.body)) {
+    return oOptions.body;
+  }
+
+  if (isJiraObject(oOptions.item)) {
+    return oOptions.item;
+  }
+
+  if (isJiraObject(oOptions.issue)) {
+    return oOptions.issue;
+  }
+
+  if (isJiraObject(oOptions.fields)) {
+    return { fields: oOptions.fields };
+  }
+
+  return undefined;
+}
+
+function normalizeJiraProjectBody(oOptions) {
+  if (!isJiraObject(oOptions)) {
+    return oOptions;
+  }
+
+  if (isJiraObject(oOptions.body)) {
+    return oOptions.body;
+  }
+
+  if (isJiraObject(oOptions.Project)) {
+    return oOptions.Project;
+  }
+
+  const oBody = {};
+  [
+    "key",
+    "name",
+    "projectTypeKey",
+    "projectTemplateKey",
+    "description",
+    "lead",
+    "leadAccountId",
+    "url",
+    "assigneeType",
+    "avatarId",
+    "issueSecurityScheme",
+    "permissionScheme",
+    "notificationScheme",
+    "categoryId",
+  ].forEach(function(sKey) {
+    setJiraIfDefined(oBody, sKey, oOptions[sKey]);
+  });
+
+  return Object.keys(oBody).length > 0 ? oBody : undefined;
+}
+
+function normalizeJiraProjectCategoryBody(oOptions) {
+  if (!isJiraObject(oOptions)) {
+    return oOptions;
+  }
+
+  if (isJiraObject(oOptions.body)) {
+    return oOptions.body;
+  }
+
+  const oBody = {};
+  setJiraIfDefined(oBody, "name", oOptions.name);
+  setJiraIfDefined(oBody, "description", oOptions.description);
+  return Object.keys(oBody).length > 0 ? oBody : undefined;
+}
+
+function normalizeJiraTransitionBody(oOptions) {
+  if (!isJiraObject(oOptions)) {
+    return oOptions;
+  }
+
+  if (isJiraObject(oOptions.body)) {
+    return oOptions.body;
+  }
+
+  const oBody = {};
+  setJiraIfDefined(oBody, "fields", oOptions.fields);
+  setJiraIfDefined(oBody, "historyMetadata", oOptions.historyMetadata);
+  setJiraIfDefined(oBody, "transition", oOptions.transition);
+  setJiraIfDefined(oBody, "update", oOptions.update);
+  return Object.keys(oBody).length > 0 ? oBody : undefined;
+}
+
 async function execJiraOp(operationName, parameters) {
   return execConnectorOpWithCandidates(JIRA_DATA_SOURCE_CANDIDATES, JIRA_APIS, "Jira", operationName, parameters);
 }
@@ -2546,71 +3904,116 @@ export async function callJiraOperation(operationName, parameters = {}) {
 
 export async function addJiraComment(sIssueKey, body, sJiraInstance) {
   return _dbgWrap('addJiraComment', [sIssueKey, body, sJiraInstance], async function() {
-  return execJiraOp("AddComment_V2", {
-    "X-Request-Jirainstance": sJiraInstance,
+  if (isJiraObject(sIssueKey)) {
+    sJiraInstance = normalizeJiraInstance(sIssueKey, sJiraInstance);
+    body = pickJiraValue(sIssueKey.body, sIssueKey.comment, sIssueKey.text);
+    sIssueKey = pickJiraValue(sIssueKey.issueKey, sIssueKey.issueIdOrKey, sIssueKey.id, sIssueKey.key);
+  } else if (isJiraObject(body) && !Object.prototype.hasOwnProperty.call(body, "body") && sJiraInstance === undefined) {
+    sJiraInstance = normalizeJiraInstance(body, sJiraInstance);
+    body = pickJiraValue(body.body, body.comment, body.text, body);
+  }
+
+  const sOperationName = sJiraInstance ? "AddComment_V2" : "AddComment";
+  return execJiraOp(sOperationName, withJiraInstance({
     issueKey: sIssueKey,
-    body,
-  });
+    body: normalizeJiraCommentBody(body),
+  }, sJiraInstance));
   });
 }
 
 export async function cancelJiraTask(sTaskId, sJiraInstance, sToken) {
   return _dbgWrap('cancelJiraTask', [sTaskId, sJiraInstance, sToken], async function() {
-  return execJiraOp("CancelTask_V2", {
-    "X-Request-Jirainstance": sJiraInstance,
+  if (isJiraObject(sTaskId)) {
+    sToken = pickJiraValue(sTaskId.token, sTaskId.atlassianToken, sTaskId["X-Atlassian-Token"], sToken);
+    sJiraInstance = normalizeJiraInstance(sTaskId, sJiraInstance);
+    sTaskId = pickJiraValue(sTaskId.taskId, sTaskId.id);
+  } else if (isJiraObject(sJiraInstance)) {
+    sToken = pickJiraValue(sJiraInstance.token, sJiraInstance.atlassianToken, sJiraInstance["X-Atlassian-Token"], sToken);
+    sJiraInstance = normalizeJiraInstance(sJiraInstance);
+  }
+
+  const sOperationName = sJiraInstance ? "CancelTask_V2" : "CancelTask";
+  return execJiraOp(sOperationName, withJiraInstance({
     taskId: sTaskId,
     "X-Atlassian-Token": sToken || "nocheck",
-  });
+  }, sJiraInstance));
   });
 }
 
-export async function createJiraIssueV3({ jiraInstance, projectKey, issueTypeIds, item } = {}) {
-  return _dbgWrap('createJiraIssueV3', [{ jiraInstance, projectKey, issueTypeIds, item }], async function() {
+export async function createJiraIssueV3(oOptions = {}) {
+  return _dbgWrap('createJiraIssueV3', [oOptions], async function() {
+  const jiraInstance = normalizeJiraInstance(oOptions);
+  const projectKey = pickJiraValue(oOptions.projectKey, oOptions.project, oOptions.key);
+  const issueTypeIds = pickJiraValue(oOptions.issueTypeIds, oOptions.issueTypeId, oOptions.issuetypeIds);
+  const item = normalizeJiraIssuePayload(oOptions);
   return execJiraOp("CreateIssue_V3", {
     "X-Request-Jirainstance": jiraInstance,
     projectKey,
-    issueTypeIds,
+    issueTypeIds: normalizeJiraList(issueTypeIds),
     item,
   });
   });
 }
 
-export async function editJiraIssueV2(sIssueIdOrKey, { jiraInstance, body, notifyUsers, overrideScreenSecurity, overrideEditableFlag } = {}) {
-  return _dbgWrap('editJiraIssueV2', [sIssueIdOrKey, { jiraInstance, body, notifyUsers, overrideScreenSecurity, overrideEditableFlag }], async function() {
+export async function editJiraIssueV2(sIssueIdOrKey, oOptions = {}) {
+  return _dbgWrap('editJiraIssueV2', [sIssueIdOrKey, oOptions], async function() {
+  let jiraInstance = normalizeJiraInstance(oOptions);
+  let notifyUsers = oOptions.notifyUsers;
+  let overrideScreenSecurity = oOptions.overrideScreenSecurity;
+  let overrideEditableFlag = oOptions.overrideEditableFlag;
+  let body = normalizeJiraEditBody(oOptions);
+
+  if (isJiraObject(sIssueIdOrKey)) {
+    jiraInstance = normalizeJiraInstance(sIssueIdOrKey, jiraInstance);
+    notifyUsers = pickJiraValue(sIssueIdOrKey.notifyUsers, notifyUsers);
+    overrideScreenSecurity = pickJiraValue(sIssueIdOrKey.overrideScreenSecurity, overrideScreenSecurity);
+    overrideEditableFlag = pickJiraValue(sIssueIdOrKey.overrideEditableFlag, overrideEditableFlag);
+    body = normalizeJiraEditBody(sIssueIdOrKey);
+    sIssueIdOrKey = pickJiraValue(sIssueIdOrKey.issueIdOrKey, sIssueIdOrKey.issueKey, sIssueIdOrKey.id, sIssueIdOrKey.key);
+  }
+
   return execJiraOp("EditIssue_V2", {
     "X-Request-Jirainstance": jiraInstance,
     issueIdOrKey: sIssueIdOrKey,
     notifyUsers,
     overrideScreenSecurity,
     overrideEditableFlag,
-    body,
+    body: normalizeJiraEditBody({ body }),
   });
   });
 }
 
 export async function getCurrentJiraUser({ jiraInstance, expand } = {}) {
   return _dbgWrap('getCurrentJiraUser', [{ jiraInstance, expand }], async function() {
+  jiraInstance = normalizeJiraInstance({ jiraInstance });
   return execJiraOp("GetCurrentUser", {
     "X-Request-Jirainstance": jiraInstance,
-    expand,
+    expand: normalizeJiraList(expand),
   });
   });
 }
 
 export async function getJiraIssueByKey(sIssueKey, sJiraInstance) {
   return _dbgWrap('getJiraIssueByKey', [sIssueKey, sJiraInstance], async function() {
-  return execJiraOp("GetIssue_V2", {
-    "X-Request-Jirainstance": sJiraInstance,
+  if (isJiraObject(sIssueKey)) {
+    sJiraInstance = normalizeJiraInstance(sIssueKey, sJiraInstance);
+    sIssueKey = pickJiraValue(sIssueKey.issueKey, sIssueKey.issueIdOrKey, sIssueKey.id, sIssueKey.key);
+  } else if (isJiraObject(sJiraInstance)) {
+    sJiraInstance = normalizeJiraInstance(sJiraInstance, sJiraInstance);
+  }
+
+  const sOperationName = sJiraInstance ? "GetIssue_V2" : "GetIssue";
+  return execJiraOp(sOperationName, withJiraInstance({
     issueKey: sIssueKey,
-  });
+  }, sJiraInstance));
   });
 }
 
 export async function listJiraFilters(sJiraInstance) {
   return _dbgWrap('listJiraFilters', [sJiraInstance], async function() {
-  return execJiraOp("ListFilters_V2", {
-    "X-Request-Jirainstance": sJiraInstance,
-  });
+  const sInstance = normalizeJiraInstance(sJiraInstance);
+  const sOperationName = sInstance ? "ListFilters_V2" : "ListFilters";
+  return execJiraOp(sOperationName, withJiraInstance({}, sInstance));
   });
 }
 
@@ -2619,33 +4022,340 @@ export async function listJiraIssues({ jiraInstance, jql, fields, expand } = {})
   return execJiraOp("ListIssues", {
     "X-Request-Jirainstance": jiraInstance,
     jql,
-    fields,
-    expand,
+    fields: normalizeJiraList(fields),
+    expand: normalizeJiraList(expand),
   });
   });
 }
 
-export async function listJiraProjects() {
-  return _dbgWrap('listJiraProjects', [], async function() {
-  return execJiraOp("ListProjects_V2", {});
+export async function listJiraProjects(oOptions) {
+  return _dbgWrap('listJiraProjects', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  return execJiraOp(sJiraInstance ? "ListProjects_V3" : "ListProjects_V2", withJiraInstance({}, sJiraInstance));
   });
 }
 
 export async function getJiraTask(sTaskId, sJiraInstance) {
   return _dbgWrap('getJiraTask', [sTaskId, sJiraInstance], async function() {
-  return execJiraOp("GetTask_V2", {
-    "X-Request-Jirainstance": sJiraInstance,
+  if (isJiraObject(sTaskId)) {
+    sJiraInstance = normalizeJiraInstance(sTaskId, sJiraInstance);
+    sTaskId = pickJiraValue(sTaskId.taskId, sTaskId.id);
+  }
+
+  const sOperationName = sJiraInstance ? "GetTask_V2" : "GetTask";
+  return execJiraOp(sOperationName, withJiraInstance({
     taskId: sTaskId,
+  }, sJiraInstance));
+  });
+}
+
+export async function getJiraUser(sAccountId, oOptions = {}) {
+  return _dbgWrap('getJiraUser', [sAccountId, oOptions], async function() {
+  let jiraInstance = normalizeJiraInstance(oOptions);
+  let expand = isJiraObject(oOptions) ? oOptions.expand : undefined;
+
+  if (isJiraObject(sAccountId)) {
+    jiraInstance = normalizeJiraInstance(sAccountId, jiraInstance);
+    expand = pickJiraValue(sAccountId.expand, expand);
+    sAccountId = pickJiraValue(sAccountId.accountId, sAccountId.userId, sAccountId.id);
+  } else if (typeof oOptions === "string") {
+    jiraInstance = oOptions;
+  }
+
+  const sOperationName = jiraInstance ? "GetUser_V2" : "GetUser";
+  return execJiraOp(sOperationName, withJiraInstance({
+    accountId: sAccountId,
+    expand: normalizeJiraList(expand),
+  }, jiraInstance));
+  });
+}
+
+export async function editJiraIssue(sIssueIdOrKey, oOptions = {}) {
+  return _dbgWrap('editJiraIssue', [sIssueIdOrKey, oOptions], async function() {
+  if (isJiraObject(sIssueIdOrKey)) {
+    oOptions = sIssueIdOrKey;
+    sIssueIdOrKey = pickJiraValue(oOptions.issueIdOrKey, oOptions.issueKey, oOptions.id, oOptions.key);
+  }
+
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = sJiraInstance ? "EditIssue_V2" : "EditIssue";
+  return execJiraOp(sOperationName, withJiraInstance({
+    issueIdOrKey: sIssueIdOrKey,
+    notifyUsers: oOptions.notifyUsers,
+    overrideScreenSecurity: oOptions.overrideScreenSecurity,
+    overrideEditableFlag: oOptions.overrideEditableFlag,
+    body: normalizeJiraEditBody(oOptions),
+  }, sJiraInstance));
+  });
+}
+
+export async function createJiraIssue(oOptions = {}) {
+  return _dbgWrap('createJiraIssue', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sProjectKey = pickJiraValue(oOptions.projectKey, oOptions.project, oOptions.key);
+  const sIssueTypeIds = normalizeJiraList(pickJiraValue(oOptions.issueTypeIds, oOptions.issueTypeId, oOptions.issuetypeIds));
+  const oPayload = normalizeJiraIssuePayload(oOptions);
+
+  if (sJiraInstance) {
+    return execJiraOp("CreateIssue_V3", withJiraInstance({
+      projectKey: sProjectKey,
+      issueTypeIds: sIssueTypeIds,
+      item: oPayload,
+    }, sJiraInstance));
+  }
+
+  if (sIssueTypeIds !== undefined) {
+    return execJiraOp("CreateIssueV2", {
+      projectKey: sProjectKey,
+      issueTypeIds: sIssueTypeIds,
+      item: oPayload,
+    });
+  }
+
+  return execJiraOp("CreateIssue", {
+    projectKey: sProjectKey,
+    body: oPayload,
   });
   });
 }
 
-export async function getJiraUser(sAccountId, { jiraInstance, expand } = {}) {
-  return _dbgWrap('getJiraUser', [sAccountId, { jiraInstance, expand }], async function() {
-  return execJiraOp("GetUser_V2", {
-    "X-Request-Jirainstance": jiraInstance,
-    accountId: sAccountId,
-    expand,
+export async function updateJiraIssue(sIssueKey, oOptions = {}) {
+  return _dbgWrap('updateJiraIssue', [sIssueKey, oOptions], async function() {
+  if (isJiraObject(sIssueKey)) {
+    oOptions = sIssueKey;
+    sIssueKey = pickJiraValue(oOptions.issueKey, oOptions.issueIdOrKey, oOptions.id, oOptions.key);
+  }
+
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = sJiraInstance ? "UpdateIssue_V2" : "UpdateIssue";
+  return execJiraOp(sOperationName, withJiraInstance({
+    issueKey: sIssueKey,
+    body: normalizeJiraIssuePayload(oOptions),
+  }, sJiraInstance));
+  });
+}
+
+export async function listJiraIssueTypes(oOptions = {}) {
+  return _dbgWrap('listJiraIssueTypes', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = sJiraInstance ? "ListIssueTypes_V2" : "ListIssueTypes";
+  return execJiraOp(sOperationName, withJiraInstance({
+    projectKey: pickJiraValue(oOptions.projectKey, oOptions.project, oOptions.key),
+  }, sJiraInstance));
+  });
+}
+
+export async function listJiraIssueTypeFields(oOptions = {}) {
+  return _dbgWrap('listJiraIssueTypeFields', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = sJiraInstance ? "ListIssueTypesFields_V2" : "ListIssueTypesFields";
+  return execJiraOp(sOperationName, withJiraInstance({
+    projectKey: pickJiraValue(oOptions.projectKey, oOptions.project, oOptions.key),
+    issuetypeIds: normalizeJiraList(pickJiraValue(oOptions.issueTypeIds, oOptions.issueTypeId, oOptions.issuetypeIds)),
+  }, sJiraInstance));
+  });
+}
+
+export async function createJiraProject(oOptions = {}) {
+  return _dbgWrap('createJiraProject', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = sJiraInstance ? "CreateProject_V2" : "CreateProject";
+  const oParams = {};
+  setJiraIfDefined(oParams, "Project", normalizeJiraProjectBody(oOptions));
+  return execJiraOp(sOperationName, withJiraInstance(oParams, sJiraInstance));
+  });
+}
+
+export async function updateJiraProject(sProjectIdOrKey, oOptions = {}) {
+  return _dbgWrap('updateJiraProject', [sProjectIdOrKey, oOptions], async function() {
+  if (isJiraObject(sProjectIdOrKey)) {
+    oOptions = sProjectIdOrKey;
+    sProjectIdOrKey = pickJiraValue(oOptions.projectIdOrKey, oOptions.projectKey, oOptions.projectId, oOptions.id, oOptions.key);
+  }
+
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = sJiraInstance ? "UpdateProject_V2" : "UpdateProject";
+  return execJiraOp(sOperationName, withJiraInstance({
+    projectIdOrKey: sProjectIdOrKey,
+    body: normalizeJiraProjectBody(oOptions),
+  }, sJiraInstance));
+  });
+}
+
+export async function deleteJiraProject(sProjectIdOrKey, oOptions = {}) {
+  return _dbgWrap('deleteJiraProject', [sProjectIdOrKey, oOptions], async function() {
+  if (isJiraObject(sProjectIdOrKey)) {
+    oOptions = sProjectIdOrKey;
+    sProjectIdOrKey = pickJiraValue(oOptions.projectIdOrKey, oOptions.projectKey, oOptions.projectId, oOptions.id, oOptions.key);
+  }
+
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = sJiraInstance ? "DeleteProject_V2" : "DeleteProject";
+  return execJiraOp(sOperationName, withJiraInstance({
+    projectIdOrKey: sProjectIdOrKey,
+    enableUndo: oOptions.enableUndo,
+  }, sJiraInstance));
+  });
+}
+
+export async function listJiraProjectCategories(oOptions) {
+  return _dbgWrap('listJiraProjectCategories', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  return execJiraOp(sJiraInstance ? "GetAllProjectCategories_V2" : "GetAllProjectCategories", withJiraInstance({}, sJiraInstance));
+  });
+}
+
+export async function createJiraProjectCategory(oOptions = {}) {
+  return _dbgWrap('createJiraProjectCategory', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  return execJiraOp(sJiraInstance ? "CreateProjectCategory_V2" : "CreateProjectCategory", withJiraInstance({
+    body: normalizeJiraProjectCategoryBody(oOptions),
+  }, sJiraInstance));
+  });
+}
+
+export async function removeJiraProjectCategory(iId, oOptions) {
+  return _dbgWrap('removeJiraProjectCategory', [iId, oOptions], async function() {
+  if (isJiraObject(iId)) {
+    oOptions = iId;
+    iId = pickJiraValue(oOptions.id, oOptions.categoryId);
+  }
+
+  oOptions = isJiraObject(oOptions) ? oOptions : {};
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  return execJiraOp(sJiraInstance ? "RemoveProjectCategory_V2" : "RemoveProjectCategory", withJiraInstance({
+    id: iId,
+  }, sJiraInstance));
+  });
+}
+
+export async function listJiraStatuses(oOptions = {}) {
+  return _dbgWrap('listJiraStatuses', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = sJiraInstance ? "ListStatuses_V2" : "ListStatuses";
+  return execJiraOp(sOperationName, withJiraInstance({
+    projectId: pickJiraValue(oOptions.projectId, oOptions.project, oOptions.id),
+    issueType: pickJiraValue(oOptions.issueType, oOptions.issueTypeId),
+  }, sJiraInstance));
+  });
+}
+
+export async function listJiraProjectUsers(oOptions = {}) {
+  return _dbgWrap('listJiraProjectUsers', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = sJiraInstance ? "ListProjectUsers_V2" : "ListProjectUsers";
+  return execJiraOp(sOperationName, withJiraInstance({
+    projectKey: pickJiraValue(oOptions.projectKey, oOptions.project, oOptions.key),
+  }, sJiraInstance));
+  });
+}
+
+export async function listJiraAssignableUsers(oOptions = {}) {
+  return _dbgWrap('listJiraAssignableUsers', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = sJiraInstance ? "ListAssignableUsers_V2" : "ListAssignableUsers";
+  return execJiraOp(sOperationName, withJiraInstance({
+    projectKey: pickJiraValue(oOptions.projectKey, oOptions.project, oOptions.key),
+  }, sJiraInstance));
+  });
+}
+
+export async function listJiraPriorityTypes(oOptions) {
+  return _dbgWrap('listJiraPriorityTypes', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  return execJiraOp(sJiraInstance ? "ListPriorityTypes_V2" : "ListPriorityTypes", withJiraInstance({}, sJiraInstance));
+  });
+}
+
+export async function listJiraResources() {
+  return _dbgWrap('listJiraResources', [], async function() {
+  return execJiraOp("ListResources", {});
+  });
+}
+
+export async function listJiraIssuesDatacenter(oOptions = {}) {
+  return _dbgWrap('listJiraIssuesDatacenter', [oOptions], async function() {
+  return execJiraOp("ListIssues_Datacenter", withJiraInstance({}, normalizeJiraInstance(oOptions)));
+  });
+}
+
+export async function listJiraTransitions(sIssueIdOrKey, oOptions = {}) {
+  return _dbgWrap('listJiraTransitions', [sIssueIdOrKey, oOptions], async function() {
+  if (isJiraObject(sIssueIdOrKey)) {
+    oOptions = sIssueIdOrKey;
+    sIssueIdOrKey = pickJiraValue(oOptions.issueIdOrKey, oOptions.issueKey, oOptions.id, oOptions.key);
+  }
+
+  return execJiraOp("ListTransitions", withJiraInstance({
+    issueIdOrKey: sIssueIdOrKey,
+  }, normalizeJiraInstance(oOptions)));
+  });
+}
+
+export async function transitionJiraIssue(sIssueIdOrKey, oOptions = {}) {
+  return _dbgWrap('transitionJiraIssue', [sIssueIdOrKey, oOptions], async function() {
+  if (isJiraObject(sIssueIdOrKey)) {
+    oOptions = sIssueIdOrKey;
+    sIssueIdOrKey = pickJiraValue(oOptions.issueIdOrKey, oOptions.issueKey, oOptions.id, oOptions.key);
+  }
+
+  return execJiraOp("UpdateTransition", withJiraInstance({
+    issueIdOrKey: sIssueIdOrKey,
+    body: normalizeJiraTransitionBody(oOptions),
+  }, normalizeJiraInstance(oOptions)));
+  });
+}
+
+export async function onNewJiraIssue(oOptions = {}) {
+  return _dbgWrap('onNewJiraIssue', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = oOptions.datacenter ? "OnNewIssue_Datacenter" : (sJiraInstance ? "OnNewIssue_V2" : "OnNewIssue");
+  return execJiraOp(sOperationName, withJiraInstance({
+    projectKey: pickJiraValue(oOptions.projectKey, oOptions.project, oOptions.key),
+  }, sJiraInstance));
+  });
+}
+
+export async function onClosedJiraIssue(oOptions = {}) {
+  return _dbgWrap('onClosedJiraIssue', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = oOptions.datacenter ? "OnCloseIssue_Datacenter" : (sJiraInstance ? "OnCloseIssue_V2" : "OnCloseIssue");
+  return execJiraOp(sOperationName, withJiraInstance({
+    projectKey: pickJiraValue(oOptions.projectKey, oOptions.project, oOptions.key),
+  }, sJiraInstance));
+  });
+}
+
+export async function onUpdatedJiraIssue(oOptions = {}) {
+  return _dbgWrap('onUpdatedJiraIssue', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = oOptions.datacenter ? "OnUpdateIssue_Datacenter" : (sJiraInstance ? "OnUpdateIssue_V2" : "OnUpdateIssue");
+  return execJiraOp(sOperationName, withJiraInstance({
+    projectKey: pickJiraValue(oOptions.projectKey, oOptions.project, oOptions.key),
+  }, sJiraInstance));
+  });
+}
+
+export async function onNewJiraIssueFromJql(oOptions = {}) {
+  return _dbgWrap('onNewJiraIssueFromJql', [oOptions], async function() {
+  const sJiraInstance = normalizeJiraInstance(oOptions);
+  const sOperationName = oOptions.datacenter ? "OnNewIssueJQL_Datacenter" : (sJiraInstance ? "OnNewIssueJQL_V2" : "OnNewIssueJQL");
+  return execJiraOp(sOperationName, withJiraInstance({
+    jql: pickJiraValue(oOptions.jql, oOptions.query),
+  }, sJiraInstance));
+  });
+}
+
+export async function manageJiraIssues(queryRequest, sessionId) {
+  return _dbgWrap('manageJiraIssues', [queryRequest, sessionId], async function() {
+  if (isJiraObject(queryRequest) && sessionId === undefined && (Object.prototype.hasOwnProperty.call(queryRequest, "queryRequest") || Object.prototype.hasOwnProperty.call(queryRequest, "sessionId"))) {
+    sessionId = queryRequest.sessionId;
+    queryRequest = pickJiraValue(queryRequest.queryRequest, queryRequest.body, queryRequest);
+  }
+
+  return execJiraOp("mcp_JiraIssueManagement", {
+    queryRequest,
+    sessionId,
   });
   });
 }
@@ -2656,6 +4366,76 @@ export async function getJiraUser(sAccountId, { jiraInstance, expand } = {}) {
 
 const KEY_VAULT_DATA_SOURCE_CANDIDATES = ["keyvault", "KeyVault", "azurekeyvault", "azureKeyVault", "AzureKeyVault"];
 const KEY_VAULT_APIS = {
+  ListKeys: {
+    path: "/{connectionId}/keys",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+    ],
+  },
+  ListKeyVersions: {
+    path: "/{connectionId}/keys/{keyName}/versions",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "keyName", in: "path", required: true },
+    ],
+  },
+  GetKeyMetadata: {
+    path: "/{connectionId}/keys/{keyName}/metadata",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "keyName", in: "path", required: true },
+    ],
+  },
+  GetKeyVersionMetadata: {
+    path: "/{connectionId}/keys/{keyName}/versions/{keyVersion}/metadata",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "keyName", in: "path", required: true },
+      { name: "keyVersion", in: "path", required: true },
+    ],
+  },
+  EncryptData: {
+    path: "/{connectionId}/keys/{keyName}/encrypt",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "keyName", in: "path", required: true },
+      { name: "operationInput", in: "body", required: true },
+    ],
+  },
+  EncryptDataWithVersion: {
+    path: "/{connectionId}/keys/{keyName}/versions/{keyVersion}/encrypt",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "keyName", in: "path", required: true },
+      { name: "keyVersion", in: "path", required: true },
+      { name: "operationInput", in: "body", required: true },
+    ],
+  },
+  DecryptData: {
+    path: "/{connectionId}/keys/{keyName}/decrypt",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "keyName", in: "path", required: true },
+      { name: "operationInput", in: "body", required: true },
+    ],
+  },
+  DecryptDataWithVersion: {
+    path: "/{connectionId}/keys/{keyName}/versions/{keyVersion}/decrypt",
+    method: "POST",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "keyName", in: "path", required: true },
+      { name: "keyVersion", in: "path", required: true },
+      { name: "operationInput", in: "body", required: true },
+    ],
+  },
   GetSecret: {
     path: "/{connectionId}/secrets/{secretName}/value",
     method: "GET",
@@ -2671,7 +4451,132 @@ const KEY_VAULT_APIS = {
       { name: "connectionId", in: "path", required: true },
     ],
   },
+  ListSecretVersions: {
+    path: "/{connectionId}/secrets/{secretName}/versions",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "secretName", in: "path", required: true },
+    ],
+  },
+  GetSecretMetadata: {
+    path: "/{connectionId}/secrets/{secretName}/metadata",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "secretName", in: "path", required: true },
+    ],
+  },
+  GetSecretVersionMetadata: {
+    path: "/{connectionId}/secrets/{secretName}/versions/{secretVersion}/metadata",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "secretName", in: "path", required: true },
+      { name: "secretVersion", in: "path", required: true },
+    ],
+  },
+  GetSecretVersion: {
+    path: "/{connectionId}/secrets/{secretName}/versions/{secretVersion}/value",
+    method: "GET",
+    parameters: [
+      { name: "connectionId", in: "path", required: true },
+      { name: "secretName", in: "path", required: true },
+      { name: "secretVersion", in: "path", required: true },
+    ],
+  },
 };
+
+function isKeyVaultObject(oValue) {
+  return !!oValue && typeof oValue === "object" && !Array.isArray(oValue);
+}
+
+function pickKeyVaultValue() {
+  for (let iIndex = 0; iIndex < arguments.length; iIndex += 1) {
+    const oValue = arguments[iIndex];
+    if (oValue !== undefined && oValue !== null) return oValue;
+  }
+
+  return undefined;
+}
+
+function setKeyVaultIfDefined(oTarget, sKey, oValue) {
+  if (oValue !== undefined && oValue !== null) {
+    oTarget[sKey] = oValue;
+  }
+
+  return oTarget;
+}
+
+function normalizeKeyVaultOperationInput(oInputOrOptions, sValueKey, oFallbackOptions) {
+  const oSource = isKeyVaultObject(oInputOrOptions)
+    ? (isKeyVaultObject(oInputOrOptions.operationInput)
+      ? oInputOrOptions.operationInput
+      : (isKeyVaultObject(oInputOrOptions.input)
+        ? oInputOrOptions.input
+        : (isKeyVaultObject(oInputOrOptions.body) ? oInputOrOptions.body : oInputOrOptions)))
+    : (isKeyVaultObject(oFallbackOptions)
+      ? (isKeyVaultObject(oFallbackOptions.operationInput)
+        ? oFallbackOptions.operationInput
+        : (isKeyVaultObject(oFallbackOptions.input)
+          ? oFallbackOptions.input
+          : (isKeyVaultObject(oFallbackOptions.body) ? oFallbackOptions.body : oFallbackOptions)))
+      : {});
+
+  const oPayload = {};
+  const oFallbackSource = isKeyVaultObject(oFallbackOptions) ? oFallbackOptions : {};
+
+  setKeyVaultIfDefined(oPayload, "algorithm", pickKeyVaultValue(
+    oSource.algorithm,
+    oSource.Algorithm,
+    oSource.alg,
+    oFallbackSource.algorithm,
+    oFallbackSource.Algorithm,
+    oFallbackSource.alg,
+    "RSA-OAEP-256"
+  ));
+
+  if (typeof oInputOrOptions === "string") {
+    setKeyVaultIfDefined(oPayload, sValueKey, oInputOrOptions);
+    return oPayload;
+  }
+
+  if (sValueKey === "rawData") {
+    setKeyVaultIfDefined(oPayload, sValueKey, pickKeyVaultValue(
+      oSource.rawData,
+      oSource.RawData,
+      oSource.data,
+      oSource.raw,
+      oSource.plainText,
+      oSource.plaintext,
+      oSource.value,
+      oFallbackSource.rawData,
+      oFallbackSource.RawData,
+      oFallbackSource.data,
+      oFallbackSource.raw,
+      oFallbackSource.plainText,
+      oFallbackSource.plaintext,
+      oFallbackSource.value
+    ));
+  } else {
+    setKeyVaultIfDefined(oPayload, sValueKey, pickKeyVaultValue(
+      oSource.encryptedData,
+      oSource.EncryptedData,
+      oSource.cipherText,
+      oSource.ciphertext,
+      oSource.data,
+      oSource.value,
+      oFallbackSource.encryptedData,
+      oFallbackSource.EncryptedData,
+      oFallbackSource.cipherText,
+      oFallbackSource.ciphertext,
+      oFallbackSource.data,
+      oFallbackSource.value
+    ));
+  }
+
+  return oPayload;
+}
 
 async function execKeyVaultOp(operationName, parameters) {
   return execConnectorOpWithCandidates(KEY_VAULT_DATA_SOURCE_CANDIDATES, KEY_VAULT_APIS, "Azure Key Vault", operationName, parameters);
@@ -2683,17 +4588,234 @@ export async function callKeyVaultOperation(operationName, parameters = {}) {
   });
 }
 
+export async function listKeys(oOptions = {}) {
+  return _dbgWrap('listKeys', [oOptions], async function() {
+  if (!isKeyVaultObject(oOptions)) {
+    oOptions = {};
+  }
+
+  return execKeyVaultOp("ListKeys", {});
+  });
+}
+
+export async function listKeyVersions(sKeyName) {
+  return _dbgWrap('listKeyVersions', [sKeyName], async function() {
+  if (isKeyVaultObject(sKeyName)) {
+    sKeyName = pickKeyVaultValue(sKeyName.keyName, sKeyName.name);
+  }
+
+  return execKeyVaultOp("ListKeyVersions", {
+    keyName: sKeyName,
+  });
+  });
+}
+
+export async function getKeyMetadata(sKeyName) {
+  return _dbgWrap('getKeyMetadata', [sKeyName], async function() {
+  if (isKeyVaultObject(sKeyName)) {
+    sKeyName = pickKeyVaultValue(sKeyName.keyName, sKeyName.name);
+  }
+
+  return execKeyVaultOp("GetKeyMetadata", {
+    keyName: sKeyName,
+  });
+  });
+}
+
+export async function getKeyVersionMetadata(sKeyName, sKeyVersion) {
+  return _dbgWrap('getKeyVersionMetadata', [sKeyName, sKeyVersion], async function() {
+  if (isKeyVaultObject(sKeyName)) {
+    sKeyVersion = pickKeyVaultValue(sKeyName.keyVersion, sKeyName.version);
+    sKeyName = pickKeyVaultValue(sKeyName.keyName, sKeyName.name);
+  } else if (isKeyVaultObject(sKeyVersion)) {
+    sKeyVersion = pickKeyVaultValue(sKeyVersion.keyVersion, sKeyVersion.version);
+  }
+
+  return execKeyVaultOp("GetKeyVersionMetadata", {
+    keyName: sKeyName,
+    keyVersion: sKeyVersion,
+  });
+  });
+}
+
+export async function encryptData(sKeyName, oInputOrOptions) {
+  return _dbgWrap('encryptData', [sKeyName, oInputOrOptions], async function() {
+  let oOptions = isKeyVaultObject(oInputOrOptions) ? oInputOrOptions : {};
+
+  if (isKeyVaultObject(sKeyName)) {
+    oOptions = sKeyName;
+    sKeyName = pickKeyVaultValue(oOptions.keyName, oOptions.name);
+  }
+
+  const sKeyVersion = pickKeyVaultValue(oOptions.keyVersion, oOptions.version);
+  const sOperationName = sKeyVersion ? "EncryptDataWithVersion" : "EncryptData";
+  const params = {
+    keyName: sKeyName,
+    operationInput: normalizeKeyVaultOperationInput(oInputOrOptions, "rawData", oOptions),
+  };
+
+  setKeyVaultIfDefined(params, "keyVersion", sKeyVersion);
+  return execKeyVaultOp(sOperationName, params);
+  });
+}
+
+export async function encryptDataWithVersion(sKeyName, sKeyVersion, oInputOrOptions) {
+  return _dbgWrap('encryptDataWithVersion', [sKeyName, sKeyVersion, oInputOrOptions], async function() {
+  let oOptions = isKeyVaultObject(oInputOrOptions) ? oInputOrOptions : {};
+
+  if (isKeyVaultObject(sKeyName)) {
+    oOptions = sKeyName;
+    sKeyVersion = pickKeyVaultValue(oOptions.keyVersion, oOptions.version);
+    sKeyName = pickKeyVaultValue(oOptions.keyName, oOptions.name);
+  } else if (isKeyVaultObject(sKeyVersion)) {
+    oOptions = sKeyVersion;
+    sKeyVersion = pickKeyVaultValue(oOptions.keyVersion, oOptions.version);
+  }
+
+  return execKeyVaultOp("EncryptDataWithVersion", {
+    keyName: sKeyName,
+    keyVersion: sKeyVersion,
+    operationInput: normalizeKeyVaultOperationInput(oInputOrOptions, "rawData", oOptions),
+  });
+  });
+}
+
+export async function decryptData(sKeyName, oInputOrOptions) {
+  return _dbgWrap('decryptData', [sKeyName, oInputOrOptions], async function() {
+  let oOptions = isKeyVaultObject(oInputOrOptions) ? oInputOrOptions : {};
+
+  if (isKeyVaultObject(sKeyName)) {
+    oOptions = sKeyName;
+    sKeyName = pickKeyVaultValue(oOptions.keyName, oOptions.name);
+  }
+
+  const sKeyVersion = pickKeyVaultValue(oOptions.keyVersion, oOptions.version);
+  const sOperationName = sKeyVersion ? "DecryptDataWithVersion" : "DecryptData";
+  const params = {
+    keyName: sKeyName,
+    operationInput: normalizeKeyVaultOperationInput(oInputOrOptions, "encryptedData", oOptions),
+  };
+
+  setKeyVaultIfDefined(params, "keyVersion", sKeyVersion);
+  return execKeyVaultOp(sOperationName, params);
+  });
+}
+
+export async function decryptDataWithVersion(sKeyName, sKeyVersion, oInputOrOptions) {
+  return _dbgWrap('decryptDataWithVersion', [sKeyName, sKeyVersion, oInputOrOptions], async function() {
+  let oOptions = isKeyVaultObject(oInputOrOptions) ? oInputOrOptions : {};
+
+  if (isKeyVaultObject(sKeyName)) {
+    oOptions = sKeyName;
+    sKeyVersion = pickKeyVaultValue(oOptions.keyVersion, oOptions.version);
+    sKeyName = pickKeyVaultValue(oOptions.keyName, oOptions.name);
+  } else if (isKeyVaultObject(sKeyVersion)) {
+    oOptions = sKeyVersion;
+    sKeyVersion = pickKeyVaultValue(oOptions.keyVersion, oOptions.version);
+  }
+
+  return execKeyVaultOp("DecryptDataWithVersion", {
+    keyName: sKeyName,
+    keyVersion: sKeyVersion,
+    operationInput: normalizeKeyVaultOperationInput(oInputOrOptions, "encryptedData", oOptions),
+  });
+  });
+}
+
 export async function getSecret(sSecretName, sApiVersion) {
   return _dbgWrap('getSecret', [sSecretName, sApiVersion], async function() {
+  if (isKeyVaultObject(sSecretName)) {
+    sApiVersion = pickKeyVaultValue(sSecretName.apiVersion, sSecretName.ApiVersion);
+    sSecretName = pickKeyVaultValue(sSecretName.secretName, sSecretName.name);
+  } else if (isKeyVaultObject(sApiVersion)) {
+    sSecretName = pickKeyVaultValue(sSecretName, sApiVersion.secretName, sApiVersion.name);
+  }
+
   return execKeyVaultOp("GetSecret", {
     secretName: sSecretName,
   });
   });
 }
 
-export async function listSecrets({ maxresults, apiVersion } = {}) {
-  return _dbgWrap('listSecrets', [{ maxresults, apiVersion }], async function() {
+export async function listSecrets(oOptions = {}) {
+  return _dbgWrap('listSecrets', [oOptions], async function() {
+  if (!isKeyVaultObject(oOptions)) {
+    oOptions = {};
+  }
+
   return execKeyVaultOp("ListSecrets", {});
+  });
+}
+
+export async function listSecretVersions(sSecretName, sApiVersion) {
+  return _dbgWrap('listSecretVersions', [sSecretName, sApiVersion], async function() {
+  if (isKeyVaultObject(sSecretName)) {
+    sApiVersion = pickKeyVaultValue(sSecretName.apiVersion, sSecretName.ApiVersion);
+    sSecretName = pickKeyVaultValue(sSecretName.secretName, sSecretName.name);
+  } else if (isKeyVaultObject(sApiVersion)) {
+    sSecretName = pickKeyVaultValue(sSecretName, sApiVersion.secretName, sApiVersion.name);
+  }
+
+  return execKeyVaultOp("ListSecretVersions", {
+    secretName: sSecretName,
+  });
+  });
+}
+
+export async function getSecretMetadata(sSecretName, sApiVersion) {
+  return _dbgWrap('getSecretMetadata', [sSecretName, sApiVersion], async function() {
+  if (isKeyVaultObject(sSecretName)) {
+    sApiVersion = pickKeyVaultValue(sSecretName.apiVersion, sSecretName.ApiVersion);
+    sSecretName = pickKeyVaultValue(sSecretName.secretName, sSecretName.name);
+  } else if (isKeyVaultObject(sApiVersion)) {
+    sSecretName = pickKeyVaultValue(sSecretName, sApiVersion.secretName, sApiVersion.name);
+  }
+
+  return execKeyVaultOp("GetSecretMetadata", {
+    secretName: sSecretName,
+  });
+  });
+}
+
+export async function getSecretVersionMetadata(sSecretName, sSecretVersion, sApiVersion) {
+  return _dbgWrap('getSecretVersionMetadata', [sSecretName, sSecretVersion, sApiVersion], async function() {
+  if (isKeyVaultObject(sSecretName)) {
+    sApiVersion = pickKeyVaultValue(sSecretName.apiVersion, sSecretName.ApiVersion);
+    sSecretVersion = pickKeyVaultValue(sSecretName.secretVersion, sSecretName.version);
+    sSecretName = pickKeyVaultValue(sSecretName.secretName, sSecretName.name);
+  } else if (isKeyVaultObject(sSecretVersion)) {
+    sApiVersion = pickKeyVaultValue(sSecretVersion.apiVersion, sSecretVersion.ApiVersion);
+    sSecretVersion = pickKeyVaultValue(sSecretVersion.secretVersion, sSecretVersion.version);
+  } else if (isKeyVaultObject(sApiVersion)) {
+    sSecretName = pickKeyVaultValue(sSecretName, sApiVersion.secretName, sApiVersion.name);
+    sSecretVersion = pickKeyVaultValue(sSecretVersion, sApiVersion.secretVersion, sApiVersion.version);
+  }
+
+  return execKeyVaultOp("GetSecretVersionMetadata", {
+    secretName: sSecretName,
+    secretVersion: sSecretVersion,
+  });
+  });
+}
+
+export async function getSecretVersion(sSecretName, sSecretVersion, sApiVersion) {
+  return _dbgWrap('getSecretVersion', [sSecretName, sSecretVersion, sApiVersion], async function() {
+  if (isKeyVaultObject(sSecretName)) {
+    sApiVersion = pickKeyVaultValue(sSecretName.apiVersion, sSecretName.ApiVersion);
+    sSecretVersion = pickKeyVaultValue(sSecretName.secretVersion, sSecretName.version);
+    sSecretName = pickKeyVaultValue(sSecretName.secretName, sSecretName.name);
+  } else if (isKeyVaultObject(sSecretVersion)) {
+    sApiVersion = pickKeyVaultValue(sSecretVersion.apiVersion, sSecretVersion.ApiVersion);
+    sSecretVersion = pickKeyVaultValue(sSecretVersion.secretVersion, sSecretVersion.version);
+  } else if (isKeyVaultObject(sApiVersion)) {
+    sSecretName = pickKeyVaultValue(sSecretName, sApiVersion.secretName, sApiVersion.name);
+    sSecretVersion = pickKeyVaultValue(sSecretVersion, sApiVersion.secretVersion, sApiVersion.version);
+  }
+
+  return execKeyVaultOp("GetSecretVersion", {
+    secretName: sSecretName,
+    secretVersion: sSecretVersion,
+  });
   });
 }
 
