@@ -2,7 +2,7 @@
   "appId": "1979e40c-021e-457e-b0b5-a5bc009596c8",
   "appDisplayName": "SharePoint DemoApp",
   "description": "",
-  "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
+  "environmentId": "<ENVIRONMENT_ID>",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "default",

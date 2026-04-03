@@ -9,7 +9,7 @@ description: "Use when: building or debugging Jira connector flows in a Power Ap
 
 ## Core Rule
 
-The wrapper in `dev files/Jira.js` is the repo-local source of truth for public helper names and defaults.
+The wrapper in `dev files/jira.js` is the repo-local source of truth for public helper names and defaults.
 
 - It retries the data-source names `jira`, `Jira`, and `JIRA`.
 - It includes inline connector metadata for the operations the wrapper supports.

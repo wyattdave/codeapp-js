@@ -9,7 +9,7 @@ description: "Use when: building or debugging Microsoft Teams connector flows in
 
 ## Core Rule
 
-The wrapper in `dev files/Teams.js` is the repo-local source of truth.
+The wrapper in `dev files/teams.js` is the repo-local source of truth.
 
 - It retries `teams`, `Teams`, `microsoftteams`, and `MicrosoftTeams`.
 - It includes inline metadata for the operations it exposes.

@@ -1,8 +1,10 @@
 # CodeApp JS
 
-A JavaScript-first Power Apps Code Apps workspace built around the `@microsoft/power-apps/data` runtime, generated Dataverse services, and handwritten connector wrappers for common Microsoft and third-party services.
+A JavaScript-first Power Apps Code Apps workspace built around the `@microsoft/power-apps/data` runtime, generated Dataverse services, and handwritten connector wrappers for common Microsoft and third-party services. This repo is not affiliated with Microsoft Corporation in anyway.
 
 The repo currently ships connector wrappers for Outlook, SharePoint, Office 365 Groups, Office 365 Users, Teams, Jira, Azure Key Vault, and SQL Server.
+
+Move information can be found at [codappjs.com](https://codeappjs.com)
 
 ## Repository Layout
 
@@ -29,7 +31,6 @@ agent/
 ## Requirements
 
 - Microsoft Power Platform CLI (`pac`)
-- Node.js and npm
 - A Power Platform environment with the connectors you want to use
 
 Verify the CLI from PowerShell:
@@ -45,8 +46,6 @@ From the repository root:
 ```bash
 npm install
 ```
-
-This installs dependencies and refreshes the checked-in `power-apps-data.js` copies from the published SDK package.
 
 To serve the repo locally:
 
@@ -93,6 +92,43 @@ pac code add-data-source -a "<connection-name>" -c "<connection-id>"
 # Push the app to your Power Platform environment
 pac code push --solutionName <YourSolutionName>
 ```
+
+## AI Folder
+
+The `AI/` folder holds the repo's agent customization assets.
+
+### AI/codeapp.agent.md
+
+This file defines the custom `codeapp` agent mode used for Power Apps code-first work in this repo.. It captures repo-specific behavior such as:
+
+- preferring direct file creation and edits over advisory-only answers
+- reading connector skill files before wiring managed connectors
+- keeping durable notes in `agent/decision-log.md`
+- steering work toward `dist/`, `power.config.json`, and the repo wrappers instead of ad hoc runtime code
+
+To use it in VS Code GitHub Copilot use the set agent option and add a new agent.
+
+### AI/skills
+
+Each skill folder contains a `SKILL.md` file that gives the agent focused guidance for a connector, runtime pattern, or build workflow.
+
+| Skill folder | Purpose |
+| --- | --- |
+| `AI/skills/connections` | Shared rules for connector-backed apps, connection references, and wrapper conventions |
+| `AI/skills/dataverse` | Dataverse CRUD, table registration, unbound actions, and helper usage |
+| `AI/skills/environment-variables` | Reading Dataverse-backed environment variables through the repo helper layer |
+| `AI/skills/frontend-design` | UI and visual-direction guidance for distinctive Code App frontends |
+| `AI/skills/jira` | Jira helper behavior, instance-aware flows, and raw operation guidance |
+| `AI/skills/keyvault` | Azure Key Vault helper usage and secret-handling rules |
+| `AI/skills/office365-groups` | Group listing, membership, events, and raw HTTP group calls |
+| `AI/skills/office365-outlook` | Mail, calendar, contacts, rooms, mailbox settings, and Outlook MCP helpers |
+| `AI/skills/office365-users` | Profiles, managers, reports, photos, search, and raw HTTP user calls |
+| `AI/skills/sharepoint` | List CRUD, libraries, files, and SharePoint HTTP request flows |
+| `AI/skills/sql` | SQL Server table, row, query, and stored procedure helper guidance |
+| `AI/skills/start` | Startup skill entry used during guided app bootstrapping workflows |
+| `AI/skills/teams` | Teams, channels, chats, mentions, notifications, and Teams HTTP calls |
+
+In practice, the connector skill files should be treated as the documentation companion to the wrapper files in `codeApp/dist/connectors/`.
 
 ## codeApp Files
 
@@ -198,12 +234,52 @@ Each connector wrapper expects a matching `connectionReferences` entry. The obje
 }
 ```
 
-## Connector Coverage
 
-The handwritten connector wrappers live in `codeApp/dist/connectors/` and are the public API surface for app code in this repo.
+## Built-in Debugger
+
+`codeApp/dist/codeapp.js` includes a browser-side debugger UI for development. It is enabled by calling `enableDebugger()`.
+
+### How to Use It
+
+1. Import `enableDebugger` from `./codeapp.js` in `index.js`.
+2. Call it early in your boot path, before the Dataverse or connector calls you want to inspect.
+3. Run the app in the browser or deployed host.
+4. Click the floating bug icon in the top-right corner to open or close the debug panel.
+
+```js
+import { enableDebugger} from './codeapp.js';
+
+async function boot() {
+  enableDebugger();
+}
+
+boot();
+```
+
+### What the Debugger Shows
+
+- a floating bug icon with a badge showing the number of logged calls
+- a side panel titled `codeapp.js Debugger`
+- per-call entries with function name, timestamp, and duration
+- captured arguments for each wrapped call
+- either the returned result or the thrown error
+- a copy button that writes the entry payload to the clipboard
+- a clear button that empties the current session log
+
+### Important Behavior
+
+- The debugger is opt-in and inactive until `enableDebugger()` is called.
+- Most public helpers in `codeapp.js` and the connector wrappers are instrumented through `_dbgWrap(...)`, so enabling the debugger early gives the best coverage.
+- It supports both synchronous and asynchronous calls and records completion time in milliseconds.
+- If the document body is not ready yet, the debugger waits for `DOMContentLoaded` before injecting the UI.
+- Use it only in development. The helper logs a console warning when debug mode is enabled.
+
+## Connector Coverage
+The handwritten connector wrappers live in `codeApp/dist/connectors/` (with the exception of Dataverse which is in the codeapp.js file) and are the public API surface for app code in this repo.
 
 | Connector | Wrapper file | Preferred data source | AI skill |
 | --- | --- | --- | --- |
+| Datavese | `codeApp/dist/codeapp.js` | `dataverse` | `AI/skills/dataverse/SKILL.md` |
 | Azure Key Vault | `codeApp/dist/connectors/azureKeyvault.js` | `keyvault` | `AI/skills/keyvault/SKILL.md` |
 | Jira | `codeApp/dist/connectors/jira.js` | `jira` | `AI/skills/jira/SKILL.md` |
 | Office 365 Groups | `codeApp/dist/connectors/office365groups.js` | `office365groups` | `AI/skills/office365-groups/SKILL.md` |
@@ -213,9 +289,96 @@ The handwritten connector wrappers live in `codeApp/dist/connectors/` and are th
 | SQL Server | `codeApp/dist/connectors/sql.js` | `sql` | `AI/skills/sql/SKILL.md` |
 | Teams | `codeApp/dist/connectors/teams.js` | `teams` | `AI/skills/teams/SKILL.md` |
 
+
+### Dataverse
+
+The shared helper file `codeApp/dist/codeapp.js` exposes the repo's Dataverse-focused runtime API. Import these helpers from `./codeapp.js` in your app code.
+
+#### Bootstrapping Helpers
+
+- `initDataSources(oSources)`: initializes the Dataverse tables known to the runtime. Call this before the first Dataverse request when you already know the full table set.
+- `registerTable(tableName, primaryKey)`: adds a Dataverse table at runtime and resets the shared client so the next request picks up the new table.
+- `getEnvironmentVariable(schemaName)`: reads a Dataverse environment variable value and falls back to the definition default value when no current value row exists.
+- `whoAmI()`: returns the current user ID from the Power Apps host context.
+
+Actions:
+
+- `createItem(tableName, primaryKey, record)`
+- `getItem(tableName, primaryKey, id, select)`
+- `listItems(tableName, primaryKey, { filter, select, orderBy, top, skip })`
+- `updateItem(tableName, primaryKey, id, changedFields)`
+- `deleteItem(tableName, primaryKey, id)`
+- `callUnboundAction(tableName, primaryKey, actionName, params)`
+
+#### Notes
+
+- `listItems(...)` returns an object shaped like `{ entities: [...] }`.
+- `getItem(...)` and `listItems(...)` accept arrays or comma-separated strings for `select`, and `listItems(...)` also accepts arrays or comma-separated strings for `orderBy`.
+- `callUnboundAction(...)` uses the registered data-source map to execute a Dataverse action. Do not add action names to `power.config.json` `dataSources`; actions are not entities.
+- `getEnvironmentVariable(...)` depends on `environmentvariabledefinitions` and `environmentvariablevalues` being available through Dataverse configuration.
+
+### Example
+
+```js
+import {
+  initDataSources,
+  createItem,
+  getItem,
+  listItems,
+  updateItem,
+  deleteItem,
+  getEnvironmentVariable,
+  callUnboundAction,
+  whoAmI,
+} from './codeapp.js';
+
+function dsEntry(primaryKey) {
+  return {
+    tableId: '',
+    version: '',
+    primaryKey,
+    dataSourceType: 'Dataverse',
+    apis: {},
+  };
+}
+
+async function boot() {
+  initDataSources({
+    accounts: dsEntry('accountid'),
+    contacts: dsEntry('contactid'),
+    environmentvariabledefinitions: dsEntry('environmentvariabledefinitionid'),
+    environmentvariablevalues: dsEntry('environmentvariablevalueid'),
+  });
+
+  const me = await whoAmI();
+  const apiBaseUrl = await getEnvironmentVariable('wd_apiBaseUrl');
+
+  const created = await createItem('contacts', 'contactid', {
+    firstname: 'Ada',
+    lastname: 'Lovelace',
+  });
+
+  const contact = await getItem('contacts', 'contactid', created.contactid, ['firstname', 'lastname']);
+
+  const results = await listItems('contacts', 'contactid', {
+    select: ['firstname', 'lastname'],
+    orderBy: 'lastname asc',
+    top: 10,
+  });
+
+  await updateItem('contacts', 'contactid', created.contactid, { firstname: 'Augusta Ada' });
+  await callUnboundAction('contacts', 'contactid', 'WhoAmI', {});
+
+  console.log(me, apiBaseUrl, contact, results.entities);
+}
+```
+
+
+
+
 ### Azure Key Vault
 
-Public helpers:
+Actions:
 
 - `callKeyVaultOperation(operationName, parameters)`
 - `listKeys(options)`
@@ -235,7 +398,7 @@ Public helpers:
 
 ### Jira
 
-Public helpers:
+Actions:
 
 - `callJiraOperation(operationName, parameters)`
 - `addJiraComment(issueKey, body, jiraInstance)`
@@ -276,7 +439,7 @@ Public helpers:
 
 ### Office 365 Groups
 
-Public helpers:
+Actions:
 
 - `callGroupsOperation(operationName, parameters)`
 - `openGroupsHttpRequest(options)`
@@ -297,7 +460,7 @@ Public helpers:
 
 ### Office 365 Users
 
-Public helpers:
+Actions:
 
 - `callUsersOperation(operationName, parameters)`
 - `openUsersHttpRequest(options)`
@@ -316,7 +479,7 @@ Public helpers:
 
 ### Office 365 Outlook
 
-Public helpers:
+Actions:
 
 - `callOutlookOperation(operationName, parameters)`
 - `sendEmail(options)`
@@ -363,7 +526,7 @@ Public helpers:
 
 ### SharePoint
 
-Public helpers:
+Actions:
 
 - `callSharePointOperation(operationName, parameters)`
 - `sendHttpRequest(options)`
@@ -382,7 +545,7 @@ Public helpers:
 
 ### SQL Server
 
-Public helpers:
+Actions:
 
 - `callSqlOperation(operationName, parameters)`
 - `getSqlTables({ server, database })`
@@ -407,7 +570,7 @@ Raw SQL connector actions used by the wrapper:
 
 ### Teams
 
-Public helpers:
+Actions:
 
 - `callTeamsOperation(operationName, parameters)`
 - `sendTeamsGraphHttpRequest(options)`
@@ -425,37 +588,3 @@ Public helpers:
 - `postCardInChatOrChannel({ poster, location, body })`
 - `postMessageInChatOrChannel({ poster, location, body })`
 
-## AI Folder
-
-The `AI/` folder holds the repo's agent customization assets.
-
-### AI/codeapp.agent.md
-
-This file defines the custom `codeapp` agent mode used for Power Apps code-first work in this repo. It captures repo-specific behavior such as:
-
-- preferring direct file creation and edits over advisory-only answers
-- reading connector skill files before wiring managed connectors
-- keeping durable notes in `agent/decision-log.md`
-- steering work toward `dist/`, `power.config.json`, and the repo wrappers instead of ad hoc runtime code
-
-### AI/skills
-
-Each skill folder contains a `SKILL.md` file that gives the agent focused guidance for a connector, runtime pattern, or build workflow.
-
-| Skill folder | Purpose |
-| --- | --- |
-| `AI/skills/connections` | Shared rules for connector-backed apps, connection references, and wrapper conventions |
-| `AI/skills/dataverse` | Dataverse CRUD, table registration, unbound actions, and helper usage |
-| `AI/skills/environment-variables` | Reading Dataverse-backed environment variables through the repo helper layer |
-| `AI/skills/frontend-design` | UI and visual-direction guidance for distinctive Code App frontends |
-| `AI/skills/jira` | Jira helper behavior, instance-aware flows, and raw operation guidance |
-| `AI/skills/keyvault` | Azure Key Vault helper usage and secret-handling rules |
-| `AI/skills/office365-groups` | Group listing, membership, events, and raw HTTP group calls |
-| `AI/skills/office365-outlook` | Mail, calendar, contacts, rooms, mailbox settings, and Outlook MCP helpers |
-| `AI/skills/office365-users` | Profiles, managers, reports, photos, search, and raw HTTP user calls |
-| `AI/skills/sharepoint` | List CRUD, libraries, files, and SharePoint HTTP request flows |
-| `AI/skills/sql` | SQL Server table, row, query, and stored procedure helper guidance |
-| `AI/skills/start` | Startup skill entry used during guided app bootstrapping workflows |
-| `AI/skills/teams` | Teams, channels, chats, mentions, notifications, and Teams HTTP calls |
-
-In practice, the connector skill files should be treated as the documentation companion to the wrapper files in `codeApp/dist/connectors/`.
