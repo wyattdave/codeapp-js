@@ -1,7 +1,8 @@
 {
+  "appId": "c8f1a975-5b71-4e94-b588-a2cb4629ddb7",
   "appDisplayName": "My Profile",
   "description": "Displays the logged-in user's profile, manager, and direct reports using the Office 365 Users connector.",
-  "environmentId": "<ENVIRONMENT ID>",
+  "environmentId": "<ENVIRONMENT_ID>",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "office-240.png",
@@ -15,7 +16,7 @@
         "office365users"
       ],
       "authenticationType": null,
-      "sharedConnectionId": null,
+      "sharedConnectionId": "c668989c8535495aaf2672d13d21b815",
       "dataSets": {}
     }
   },

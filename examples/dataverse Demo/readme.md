@@ -1,6 +1,6 @@
 # Power Apps Code-First App
 
-Demo to show list and add row to Dataverse table. Uses task table to ensure all environments have the table
+Demo app for Dataverse task records with live create, update, delete, and record sharing. It uses the standard task table so the example works across environments, and it loads Dataverse users from `systemusers` to grant access with the `GrantAccess` action.
 
 ---
 

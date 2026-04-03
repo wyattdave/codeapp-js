@@ -1,8 +1,7 @@
 /* power-apps-data.js - Standalone Power Apps SDK for Code Apps
    Converted from @microsoft/power-apps v1.0.4
    Zero dependencies - all code is self-contained
-   Version 2.0.1: add error handling and fix for invalid response formats from plugins
-   */
+   Version 2.0.2: outlook fix*/
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
@@ -2703,9 +2702,24 @@ function getExecutor() {
   }
   return _executor;
 }
+function mergeDataSourcesInfo(existingDataSourcesInfo, nextDataSourcesInfo) {
+  return Object.assign({}, existingDataSourcesInfo || {}, nextDataSourcesInfo || {});
+}
+
 async function getPowerSdkInstance(dataSourcesInfo) {
   const executor = getExecutor();
+  const existingProvider = powerDataSourcesInfoProvider_default.instance;
+  if (existingProvider) {
+    existingProvider.dataSourcesInfo = mergeDataSourcesInfo(existingProvider.dataSourcesInfo, dataSourcesInfo);
+  }
   const provider = powerDataSourcesInfoProvider_default.getInstance(dataSourcesInfo);
+  if (powerDataRuntimeInstance?._dataSourceService) {
+    powerDataRuntimeInstance._dataSourceService._powerDataSourcesInfoProvider = provider;
+    powerDataRuntimeInstance._dataSourceService._dataSourcesInfo = mergeDataSourcesInfo(
+      powerDataRuntimeInstance._dataSourceService._dataSourcesInfo,
+      provider.dataSourcesInfo
+    );
+  }
   return getPowerDataRuntime(provider, executor);
 }
 

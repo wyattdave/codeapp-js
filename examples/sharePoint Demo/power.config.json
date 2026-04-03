@@ -1,5 +1,6 @@
 {
-  "appDisplayName": "SharePoint Demo App",
+  "appId": "1979e40c-021e-457e-b0b5-a5bc009596c8",
+  "appDisplayName": "SharePoint DemoApp",
   "description": "",
   "environmentId": "<ENVIRONMENT_ID>",
   "buildPath": "./dist",
@@ -15,7 +16,7 @@
         "sharepointonline"
       ],
       "authenticationType": null,
-      "sharedConnectionId": null,
+      "sharedConnectionId": "shared-sharepointonl-f5f8159f-628c-4796-b123-bce62d995bfb",
       "dataSets": {}
     }
   },

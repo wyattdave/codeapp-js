@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="./office-240.png" />
     <title>My Profile</title>
+    <link rel="stylesheet" href="./styles.css" />
     <script type="importmap">
       {
         "imports": {
@@ -11,174 +13,9 @@
         }
       }
     </script>
-    <style>
-      :root {
-        --bg: #f4f5f7;
-        --surface: #ffffff;
-        --accent: #4f46e5;
-        --accent-light: #e0e7ff;
-        --text: #1e1e2e;
-        --text-muted: #6b7280;
-        --border: #e5e7eb;
-        --radius: 16px;
-        --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-        --shadow-lg: 0 10px 30px rgba(0,0,0,.08);
-      }
-
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        min-height: 100vh;
-      }
-
-      /* ── Loading state ── */
-      .loader {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        gap: 6px;
-      }
-      .loader span {
-        width: 8px; height: 8px;
-        border-radius: 50%;
-        background: var(--accent);
-        animation: pulse .8s ease-in-out infinite alternate;
-      }
-      .loader span:nth-child(2) { animation-delay: .15s; }
-      .loader span:nth-child(3) { animation-delay: .3s; }
-      @keyframes pulse { to { opacity: .2; transform: scale(.7); } }
-
-      /* ── Layout ── */
-      .app { max-width: 960px; margin: 0 auto; padding: 32px 20px 48px; }
-
-      /* ── Hero card ── */
-      .hero {
-        position: relative;
-        background: var(--surface);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow-lg);
-        overflow: hidden;
-        margin-bottom: 28px;
-      }
-      .hero-banner {
-        height: 120px;
-        background: linear-gradient(135deg, var(--accent), #7c3aed, #a855f7);
-      }
-      .hero-body {
-        display: flex;
-        align-items: flex-end;
-        gap: 20px;
-        padding: 0 28px 24px;
-        margin-top: -52px;
-        position: relative;
-      }
-      .avatar-ring {
-        flex-shrink: 0;
-        width: 104px; height: 104px;
-        border-radius: 50%;
-        border: 4px solid var(--surface);
-        box-shadow: var(--shadow);
-        overflow: hidden;
-        background: var(--accent-light);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .avatar-ring img {
-        width: 100%; height: 100%;
-        object-fit: cover;
-      }
-      .avatar-ring .initials {
-        font-size: 28px;
-        font-weight: 700;
-        color: var(--accent);
-      }
-      .hero-info { padding-bottom: 4px; }
-      .hero-info h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
-      .hero-info p { color: var(--text-muted); font-size: 14px; margin-top: 2px; }
-
-      /* ── Detail chips ── */
-      .details {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        padding: 0 28px 24px;
-      }
-      .chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: 999px;
-        padding: 6px 14px;
-        font-size: 13px;
-        color: var(--text);
-      }
-      .chip svg { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
-
-      /* ── Section titles ── */
-      .section-title {
-        font-size: 13px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: .06em;
-        color: var(--text-muted);
-        margin-bottom: 12px;
-      }
-
-      /* ── Columns ── */
-      .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-      @media (max-width: 640px) { .columns { grid-template-columns: 1fr; } }
-
-      /* ── Person card ── */
-      .card {
-        background: var(--surface);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        padding: 20px;
-      }
-      .person-row {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        padding: 10px 0;
-      }
-      .person-row + .person-row { border-top: 1px solid var(--border); }
-      .person-avatar {
-        width: 40px; height: 40px;
-        border-radius: 50%;
-        background: var(--accent-light);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        overflow: hidden;
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--accent);
-      }
-      .person-avatar img { width: 100%; height: 100%; object-fit: cover; }
-      .person-meta { min-width: 0; }
-      .person-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .person-title { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-      .empty-state {
-        text-align: center;
-        padding: 24px 0;
-        color: var(--text-muted);
-        font-size: 13px;
-      }
-    </style>
   </head>
   <body>
-    <div id="root">
-      <div class="loader"><span></span><span></span><span></span></div>
-    </div>
+    <div id="root"></div>
     <script type="module" src="index.js"></script>
   </body>
 </html>

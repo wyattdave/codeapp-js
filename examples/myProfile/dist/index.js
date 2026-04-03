@@ -1,142 +1,325 @@
-import { getMyProfile, getUserPhoto, getManager, getDirectReports } from "./office365users.js";
+import { getMyProfile, getUserPhoto } from './office365users.js';
+import { enableDebugger } from "./codeapp.js";
 
-const root = document.getElementById("root");
+enableDebugger();
 
-// ── SVG icons ──────────────────────────────────────────────────
-const icons = {
-  mail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z"/><path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z"/></svg>`,
-  phone: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 3.5A1.5 1.5 0 013.5 2h1.148a1.5 1.5 0 011.465 1.175l.716 3.223a1.5 1.5 0 01-.638 1.59l-.558.372a.5.5 0 00-.183.548c.4 1.347 1.394 2.34 2.74 2.74a.5.5 0 00.548-.183l.372-.558a1.5 1.5 0 011.59-.638l3.223.716A1.5 1.5 0 0118 12.352v1.148A1.5 1.5 0 0116.5 15h-1.5A11.5 11.5 0 012 3.5z" clip-rule="evenodd"/></svg>`,
-  office: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 16.5v-13h-.25a.75.75 0 010-1.5h12.5a.75.75 0 010 1.5H16v13h.25a.75.75 0 010 1.5H3.75a.75.75 0 010-1.5H4zm3-11a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-1a.5.5 0 01-.5-.5v-1zm.5 2.5a.5.5 0 00-.5.5v1a.5.5 0 00.5.5h1a.5.5 0 00.5-.5v-1a.5.5 0 00-.5-.5h-1zm-.5 3.5a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-1a.5.5 0 01-.5-.5v-1zm3.5-6.5a.5.5 0 00-.5.5v1a.5.5 0 00.5.5h1a.5.5 0 00.5-.5v-1a.5.5 0 00-.5-.5h-1zm-.5 3.5a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-1a.5.5 0 01-.5-.5v-1zm.5 2.5a.5.5 0 00-.5.5v1a.5.5 0 00.5.5h1a.5.5 0 00.5-.5v-1a.5.5 0 00-.5-.5h-1z" clip-rule="evenodd"/></svg>`,
-  dept: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M7 8a3 3 0 100-6 3 3 0 000 6zm7.5 1a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 18a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z"/></svg>`,
+const eRoot = document.getElementById('root');
+const aProfileSelect = [
+  'id',
+  'displayName',
+  'givenName',
+  'surname',
+  'mail',
+  'userPrincipalName',
+  'jobTitle',
+  'department',
+  'officeLocation',
+  'mobilePhone',
+  'businessPhones',
+  'city',
+  'state',
+  'country',
+  'companyName',
+  'preferredLanguage'
+];
+
+const oState = {
+  bLoading: true,
+  sError: '',
+  oProfile: null,
+  sPhotoSrc: '',
+  sLastUpdated: ''
 };
 
-// ── Helpers ────────────────────────────────────────────────────
-function getInitials(name) {
-  if (!name) return "?";
-  return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+function escapeHtml(oValue) {
+  return String(oValue || '')
+    .replace(new RegExp('&', 'g'), '&amp;')
+    .replace(new RegExp('<', 'g'), '&lt;')
+    .replace(new RegExp('>', 'g'), '&gt;')
+    .replace(new RegExp('"', 'g'), '&quot;');
 }
 
-function renderChip(icon, text) {
-  if (!text) return "";
-  return `<span class="chip">${icon}${escapeHtml(text)}</span>`;
+function isNonEmptyString(oValue) {
+  return typeof oValue === 'string' && oValue.trim() !== '';
 }
 
-function escapeHtml(str) {
-  const d = document.createElement("div");
-  d.textContent = str;
-  return d.innerHTML;
+function toTextOrEmpty(oValue) {
+  return isNonEmptyString(oValue) ? oValue.trim() : '';
 }
 
-function personRow(name, title, photoData) {
-  const avatarContent = photoData
-    ? `<img src="data:image/jpeg;base64,${photoData}" alt="">`
-    : `<span>${getInitials(name)}</span>`;
-  return `
-    <div class="person-row">
-      <div class="person-avatar">${avatarContent}</div>
-      <div class="person-meta">
-        <div class="person-name">${escapeHtml(name || "Unknown")}</div>
-        <div class="person-title">${escapeHtml(title || "")}</div>
-      </div>
-    </div>`;
+function toArray(oValue) {
+  return Array.isArray(oValue) ? oValue.filter(Boolean) : [];
 }
 
-// ── Load photo (returns base64 or null) ────────────────────────
-async function loadPhoto(userId) {
+function getDisplayName(oProfile) {
+  return toTextOrEmpty(oProfile.displayName) || toTextOrEmpty(oProfile.mail) || 'Your profile';
+}
+
+function getProfileId(oProfile) {
+  return toTextOrEmpty(oProfile.id) || toTextOrEmpty(oProfile.mail) || toTextOrEmpty(oProfile.userPrincipalName);
+}
+
+function getInitials(sName) {
+  const aParts = String(sName || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (aParts.length === 0) return 'ME';
+  return aParts.map(function (sPart) {
+    return sPart.charAt(0).toUpperCase();
+  }).join('');
+}
+
+function getHeadline(oProfile) {
+  const aParts = [
+    toTextOrEmpty(oProfile.jobTitle),
+    toTextOrEmpty(oProfile.department),
+    toTextOrEmpty(oProfile.officeLocation)
+  ].filter(Boolean);
+
+  return aParts.join(' | ') || 'Signed-in Office 365 profile';
+}
+
+function getLocationLabel(oProfile) {
+  const aParts = [
+    toTextOrEmpty(oProfile.city),
+    toTextOrEmpty(oProfile.state),
+    toTextOrEmpty(oProfile.country)
+  ].filter(Boolean);
+
+  return aParts.join(', ') || 'Location not available';
+}
+
+function getPhoneLabel(oProfile) {
+  const aBusinessPhones = toArray(oProfile.businessPhones);
+  return toTextOrEmpty(oProfile.mobilePhone) || aBusinessPhones.join(', ') || 'No phone listed';
+}
+
+function normalizePhotoSource(oPhotoResult) {
+  let sValue = '';
+
+  if (typeof oPhotoResult === 'string') {
+    sValue = oPhotoResult;
+  } else if (oPhotoResult && typeof oPhotoResult === 'object') {
+    sValue = toTextOrEmpty(oPhotoResult.value) || toTextOrEmpty(oPhotoResult.$content) || toTextOrEmpty(oPhotoResult.content);
+  }
+
+  if (!sValue) return '';
+  if (sValue.indexOf('data:') === 0 || sValue.indexOf('blob:') === 0 || sValue.indexOf('http') === 0) return sValue;
+  return 'data:image/jpeg;base64,' + sValue;
+}
+
+function formatUpdatedTime() {
+  return new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function renderActionLink(sHref, sLabel) {
+  if (!sHref || !sLabel) return '';
+  return '<a class="button button-secondary" href="' + escapeHtml(sHref) + '">' + escapeHtml(sLabel) + '</a>';
+}
+
+function renderInfoItems(aItems) {
+  return aItems.filter(function (oItem) {
+    return Boolean(oItem.sValue);
+  }).map(function (oItem) {
+    let sValueHtml = escapeHtml(oItem.sValue);
+
+    if (oItem.sHref) {
+      sValueHtml = '<a href="' + escapeHtml(oItem.sHref) + '">' + sValueHtml + '</a>';
+    }
+
+    return '<li class="info-item">'
+      + '<span class="info-label">' + escapeHtml(oItem.sLabel) + '</span>'
+      + '<div class="info-value">' + sValueHtml + '</div>'
+      + '</li>';
+  }).join('');
+}
+
+function renderSummaryCard(sLabel, sValue, sNote) {
+  return '<article class="summary-card">'
+    + '<p class="summary-label">' + escapeHtml(sLabel) + '</p>'
+    + '<p class="summary-value">' + escapeHtml(sValue) + '</p>'
+    + '<p class="summary-note">' + escapeHtml(sNote) + '</p>'
+    + '</article>';
+}
+
+function bindEvents() {
+  const eRefresh = document.getElementById('refreshProfile');
+  if (eRefresh) {
+    eRefresh.onclick = function () {
+      loadProfile();
+    };
+  }
+}
+
+function renderLoading() {
+  eRoot.innerHTML = '<section class="status-shell">'
+    + '<div class="status-card" role="status" aria-live="polite">'
+    + '<p class="eyebrow">Office 365 Users Demo</p>'
+    + '<h1 class="status-title">Loading your Microsoft 365 profile</h1>'
+    + '<p class="status-text">The app is calling the Office 365 Users connector for your profile details and profile photo.</p>'
+    + '<div class="status-actions"><button class="button" id="refreshProfile" disabled>Loading...</button></div>'
+    + '</div>'
+    + '</section>';
+  bindEvents();
+}
+
+function renderError() {
+  eRoot.innerHTML = '<section class="status-shell">'
+    + '<div class="status-card is-error">'
+    + '<p class="eyebrow">Office 365 Users Demo</p>'
+    + '<h1 class="status-title">Unable to load your profile</h1>'
+    + '<p class="status-text">' + escapeHtml(oState.sError) + '</p>'
+    + '<div class="status-actions"><button class="button" id="refreshProfile">Try again</button></div>'
+    + '</div>'
+    + '</section>';
+  bindEvents();
+}
+
+function renderApp() {
+  if (!eRoot) return;
+
+  if (oState.bLoading) {
+    renderLoading();
+    return;
+  }
+
+  if (oState.sError) {
+    renderError();
+    return;
+  }
+
+  const oProfile = oState.oProfile || {};
+  const sDisplayName = getDisplayName(oProfile);
+  const sHeadline = getHeadline(oProfile);
+  const sInitials = getInitials(sDisplayName);
+  const aChips = [
+    toTextOrEmpty(oProfile.department),
+    toTextOrEmpty(oProfile.officeLocation),
+    toTextOrEmpty(oProfile.companyName),
+    toTextOrEmpty(oProfile.preferredLanguage)
+  ].filter(Boolean);
+  const aIdentityItems = [
+    { sLabel: 'Name', sValue: sDisplayName },
+    { sLabel: 'Job title', sValue: toTextOrEmpty(oProfile.jobTitle) || 'Not listed' },
+    { sLabel: 'Department', sValue: toTextOrEmpty(oProfile.department) || 'Not listed' },
+    { sLabel: 'Company', sValue: toTextOrEmpty(oProfile.companyName) || 'Not listed' }
+  ];
+  const aContactItems = [
+    { sLabel: 'Email', sValue: toTextOrEmpty(oProfile.mail), sHref: toTextOrEmpty(oProfile.mail) ? 'mailto:' + toTextOrEmpty(oProfile.mail) : '' },
+    { sLabel: 'Mobile phone', sValue: toTextOrEmpty(oProfile.mobilePhone), sHref: toTextOrEmpty(oProfile.mobilePhone) ? 'tel:' + toTextOrEmpty(oProfile.mobilePhone) : '' },
+    { sLabel: 'Business phones', sValue: toArray(oProfile.businessPhones).join(', ') },
+    { sLabel: 'User principal name', sValue: toTextOrEmpty(oProfile.userPrincipalName) }
+  ];
+  const aWorkItems = [
+    { sLabel: 'Office', sValue: toTextOrEmpty(oProfile.officeLocation) || 'Not listed' },
+    { sLabel: 'Location', sValue: getLocationLabel(oProfile) },
+    { sLabel: 'Preferred language', sValue: toTextOrEmpty(oProfile.preferredLanguage) || 'Not listed' },
+    { sLabel: 'Profile photo', sValue: oState.sPhotoSrc ? 'Available' : 'Not available' }
+  ];
+  const iFilledFields = aProfileSelect.reduce(function (iCount, sKey) {
+    const oValue = oProfile[sKey];
+    if (Array.isArray(oValue)) return iCount + (oValue.filter(Boolean).length > 0 ? 1 : 0);
+    return iCount + (toTextOrEmpty(oValue) ? 1 : 0);
+  }, 0);
+  const sEmailHref = toTextOrEmpty(oProfile.mail) ? 'mailto:' + toTextOrEmpty(oProfile.mail) : '';
+  const sPhotoMarkup = oState.sPhotoSrc
+    ? '<img class="photo-image" src="' + escapeHtml(oState.sPhotoSrc) + '" alt="' + escapeHtml(sDisplayName) + ' profile photo" />'
+    : '<div class="photo-fallback" aria-label="Avatar fallback">' + escapeHtml(sInitials) + '</div>';
+  const sChipMarkup = aChips.map(function (sChip) {
+    return '<li class="hero-chip">' + escapeHtml(sChip) + '</li>';
+  }).join('');
+
+  eRoot.innerHTML = '<main class="page-shell">'
+    + '<section class="hero-card">'
+    + '<div class="photo-column">'
+    + '<div class="photo-frame">' + sPhotoMarkup + '</div>'
+    + '<div class="photo-caption">'
+    + '<p class="caption-label">Profile image</p>'
+    + '<p class="caption-value">' + escapeHtml(oState.sPhotoSrc ? 'Synced from Office 365 Users' : 'Using initials fallback') + '</p>'
+    + '</div>'
+    + '</div>'
+    + '<div class="hero-copy">'
+    + '<p class="eyebrow">Office 365 Users Demo</p>'
+    + '<h1 class="hero-title">' + escapeHtml(sDisplayName) + '</h1>'
+    + '<p class="hero-subtitle">' + escapeHtml(sHeadline) + '</p>'
+    + '<ul class="hero-chips">' + sChipMarkup + '</ul>'
+    + '<div class="action-row">'
+    + '<button class="button" id="refreshProfile">Refresh profile</button>'
+    + renderActionLink(sEmailHref, 'Email me')
+    + '</div>'
+    + '</div>'
+    + '</section>'
+    + '<section class="summary-grid">'
+    + renderSummaryCard('Fields loaded', String(iFilledFields), 'Values returned across the selected Office 365 profile fields.')
+    + renderSummaryCard('Best contact', getPhoneLabel(oProfile), 'Primary phone detail chosen from mobile or business phone fields.')
+    + renderSummaryCard('Last updated', oState.sLastUpdated || '--:--', 'Timestamp from the latest successful connector refresh in this session.')
+    + '</section>'
+    + '<section class="detail-grid">'
+    + '<article class="panel">'
+    + '<h2 class="panel-title">Identity</h2>'
+    + '<p class="panel-text">The essentials returned for the signed-in user account.</p>'
+    + '<ul class="info-list">' + renderInfoItems(aIdentityItems) + '</ul>'
+    + '</article>'
+    + '<article class="panel">'
+    + '<h2 class="panel-title">Contact</h2>'
+    + '<p class="panel-text">Direct contact values from the Office 365 Users connector response.</p>'
+    + '<ul class="info-list">' + renderInfoItems(aContactItems) + '</ul>'
+    + '</article>'
+    + '<article class="panel panel-accent">'
+    + '<h2 class="panel-title">Account Snapshot</h2>'
+    + '<p class="panel-text">A small readout of the fields that usually matter first in a profile demo.</p>'
+    + '<div class="account-highlight">'
+    + '<div class="highlight-item"><p class="highlight-label">Office</p><p class="highlight-value">' + escapeHtml(toTextOrEmpty(oProfile.officeLocation) || 'No office listed') + '</p></div>'
+    + '<div class="highlight-item"><p class="highlight-label">Location</p><p class="highlight-value">' + escapeHtml(getLocationLabel(oProfile)) + '</p></div>'
+    + '<div class="highlight-item"><p class="highlight-label">Profile status</p><p class="highlight-value">' + escapeHtml(oState.sPhotoSrc ? 'Photo and key fields available' : 'Key fields available, photo fallback active') + '</p></div>'
+    + '</div>'
+    + '<ul class="info-list">' + renderInfoItems(aWorkItems) + '</ul>'
+    + '<p class="footer-note">The demo reads your signed-in profile and converts the returned photo payload into an image source when a photo is available.</p>'
+    + '</article>'
+    + '</section>'
+    + '</main>';
+
+  bindEvents();
+}
+
+async function loadProfile() {
+  oState.bLoading = true;
+  oState.sError = '';
+  renderApp();
+
   try {
-    const res = await getUserPhoto(userId);
-    return res?.value || res || null;
-  } catch { return null; }
+    const oProfile = await getMyProfile({ select: aProfileSelect });
+    const sUserId = getProfileId(oProfile);
+    let sPhotoSrc = '';
+
+    if (sUserId) {
+      try {
+        const oPhotoResult = await getUserPhoto(sUserId);
+        sPhotoSrc = normalizePhotoSource(oPhotoResult);
+      } catch (oPhotoError) {
+        sPhotoSrc = '';
+      }
+    }
+
+    oState.oProfile = oProfile;
+    oState.sPhotoSrc = sPhotoSrc;
+    oState.sLastUpdated = formatUpdatedTime();
+  } catch (oError) {
+    oState.sError = oError && oError.message ? oError.message : 'An unexpected error occurred while loading your Office 365 profile.';
+  } finally {
+    oState.bLoading = false;
+    renderApp();
+  }
 }
 
-// ── Boot ───────────────────────────────────────────────────────
 async function boot() {
-  try {
-    // 1. Fetch profile
-    const me = await getMyProfile();
-    const userId = me.id || me.mail || me.userPrincipalName;
-
-    // 2. Fetch photo, manager, and direct reports in parallel
-    const [photo, manager, reports] = await Promise.all([
-      loadPhoto(userId),
-      getManager(userId).catch(() => null),
-      getDirectReports(userId).catch(() => ({ value: [] })),
-    ]);
-
-    // 3. Load manager photo
-    const mgrId = manager?.id || manager?.mail || manager?.userPrincipalName;
-    const mgrPhoto = mgrId ? await loadPhoto(mgrId) : null;
-
-    // 4. Load report photos in parallel
-    const reportList = reports?.value || [];
-    const reportPhotos = await Promise.all(
-      reportList.map(r => loadPhoto(r.id || r.mail || r.userPrincipalName))
-    );
-
-    // 5. Render
-    render(me, photo, manager, mgrPhoto, reportList, reportPhotos);
-  } catch (err) {
-    root.innerHTML = `<div class="app"><div class="card" style="text-align:center;padding:40px;color:var(--text-muted)">
-      <p style="font-size:15px;font-weight:600;margin-bottom:8px">Unable to load profile</p>
-      <p style="font-size:13px">${escapeHtml(String(err))}</p>
-    </div></div>`;
-  }
-}
-
-function render(me, photo, manager, mgrPhoto, reports, reportPhotos) {
-  const avatarContent = photo
-    ? `<img src="data:image/jpeg;base64,${photo}" alt="Profile photo">`
-    : `<span class="initials">${getInitials(me.displayName)}</span>`;
-
-  const chips = [
-    renderChip(icons.mail, me.mail),
-    renderChip(icons.phone, me.businessPhones?.[0] || me.mobilePhone),
-    renderChip(icons.office, me.officeLocation),
-    renderChip(icons.dept, me.department),
-  ].filter(Boolean).join("");
-
-  // Manager section
-  const managerHtml = manager
-    ? personRow(manager.displayName, manager.jobTitle, mgrPhoto)
-    : `<div class="empty-state">No manager found</div>`;
-
-  // Direct reports section
-  let reportsHtml;
-  if (reports.length === 0) {
-    reportsHtml = `<div class="empty-state">No direct reports</div>`;
-  } else {
-    reportsHtml = reports
-      .map((r, i) => personRow(r.displayName, r.jobTitle, reportPhotos[i]))
-      .join("");
-  }
-
-  root.innerHTML = `
-    <div class="app">
-      <!-- Hero -->
-      <div class="hero">
-        <div class="hero-banner"></div>
-        <div class="hero-body">
-          <div class="avatar-ring">${avatarContent}</div>
-          <div class="hero-info">
-            <h1>${escapeHtml(me.displayName || "")}</h1>
-            <p>${escapeHtml(me.jobTitle || "")}</p>
-          </div>
-        </div>
-        <div class="details">${chips}</div>
-      </div>
-
-      <!-- Manager & Reports -->
-      <div class="columns">
-        <div>
-          <div class="section-title">Manager</div>
-          <div class="card">${managerHtml}</div>
-        </div>
-        <div>
-          <div class="section-title">Direct Reports</div>
-          <div class="card">${reportsHtml}</div>
-        </div>
-      </div>
-    </div>`;
+  renderApp();
+  await loadProfile();
 }
 
 boot();

@@ -1,7 +1,8 @@
 {
+  "appId":"2977d2cf-e162-4df7-b609-306b4e6b9086",
   "appDisplayName": "Outlook Inbox",
   "description": "Displays the logged-in user's first 10 inbox emails using the Office 365 Outlook connector.",
-  "environmentId": "<ENVIRONMENT ID>",
+  "environmentId": "<ENVIRONMENT_ID>",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "office-240.png",

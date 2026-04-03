@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Outlook Inbox</title>
+    <title>Outlook Signal Desk</title>
     <script type="importmap">
       {
         "imports": {
@@ -15,20 +15,135 @@
   </head>
   <body>
     <div id="root">
-      <h1>My Inbox</h1>
-      <div id="loading">Loading emails...</div>
-      <table id="emailTable" style="display:none">
-        <thead>
-          <tr>
-            <th>From</th>
-            <th>Subject</th>
-            <th>Received</th>
-            <th>Read</th>
-          </tr>
-        </thead>
-        <tbody id="emailBody"></tbody>
-      </table>
-      <div id="error" style="display:none"></div>
+    <main class="app-shell">
+      <section class="hero-panel">
+        <p class="eyebrow">Office 365 Outlook Demo</p>
+        <div class="hero-copy">
+          <div>
+            <h1>Signal Desk</h1>
+            <p class="hero-text">A compact Outlook workbench for inbox, calendar, contacts, categories, and connector diagnostics.</p>
+          </div>
+          <div class="hero-actions">
+            <button id="refreshAllButton" class="button button-primary" type="button">Refresh Desk</button>
+            <p id="statusLine" class="status-line">Loading Outlook data...</p>
+          </div>
+        </div>
+        <div class="hero-metrics">
+          <article class="metric-card">
+            <span class="metric-label">Inbox</span>
+            <strong id="inboxCount">0</strong>
+            <span class="metric-note">messages loaded</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Calendar</span>
+            <strong id="eventCount">0</strong>
+            <span class="metric-note">events in view</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Contacts</span>
+            <strong id="contactCount">0</strong>
+            <span class="metric-note">people in folder</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Categories</span>
+            <strong id="categoryCount">0</strong>
+            <span class="metric-note">labels available</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="panel panel-mail-nav">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Mail</p>
+              <h2>Inbox Navigator</h2>
+            </div>
+            <button id="refreshInboxButton" class="button" type="button">Refresh Inbox</button>
+          </div>
+          <form id="inboxForm" class="control-stack">
+            <label class="field">
+              <span>Search</span>
+              <input id="searchInput" name="searchInput" type="search" placeholder="Subject, sender, keyword" />
+            </label>
+            <label class="toggle-field">
+              <input id="unreadOnlyInput" name="unreadOnlyInput" type="checkbox" />
+              <span>Unread only</span>
+            </label>
+          </form>
+          <div id="mailList" class="mail-list"></div>
+        </article>
+
+        <article class="panel panel-detail">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Detail</p>
+              <h2>Selected Message</h2>
+            </div>
+            <button id="markReadButton" class="button button-primary" type="button" disabled>Mark Read</button>
+          </div>
+          <div id="mailDetail" class="mail-detail empty-state">
+            Pick a message to load the full Outlook payload.
+          </div>
+        </article>
+
+        <div class="side-column">
+          <article class="panel panel-calendar">
+            <div class="panel-header">
+              <div>
+                <p class="panel-kicker">Calendar</p>
+                <h2>Three-Day Window</h2>
+              </div>
+              <button id="refreshCalendarButton" class="button" type="button">Refresh</button>
+            </div>
+            <div id="calendarList" class="event-list"></div>
+          </article>
+
+          <article class="panel panel-contacts">
+            <div class="panel-header">
+              <div>
+                <p class="panel-kicker">Contacts</p>
+                <h2>Folder Browser</h2>
+              </div>
+              <button id="refreshContactsButton" class="button" type="button">Refresh</button>
+            </div>
+            <label class="field compact-field">
+              <span>Contact folder</span>
+              <select id="contactFolderSelect"></select>
+            </label>
+            <div id="contactList" class="contact-list"></div>
+          </article>
+
+          <article class="panel panel-categories">
+            <div class="panel-header">
+              <div>
+                <p class="panel-kicker">Categories</p>
+                <h2>Available Labels</h2>
+              </div>
+            </div>
+            <div id="categoryList" class="category-list"></div>
+          </article>
+
+          <article class="panel panel-diagnostics">
+            <div class="panel-header">
+              <div>
+                <p class="panel-kicker">Diagnostics</p>
+                <h2>Last Connector Payload</h2>
+              </div>
+              <select id="diagnosticSelect" class="diagnostic-select">
+                <option value="inbox">Inbox</option>
+                <option value="message">Message</option>
+                <option value="calendar">Calendar</option>
+                <option value="contacts">Contacts</option>
+                <option value="categories">Categories</option>
+              </select>
+            </div>
+            <pre id="diagnosticOutput" class="diagnostic-output">Waiting for Outlook responses...</pre>
+            <div id="errorBanner" class="error-banner is-hidden"></div>
+          </article>
+        </div>
+      </section>
+    </main>
     </div>
     <script type="module" src="index.js"></script>
   </body>
