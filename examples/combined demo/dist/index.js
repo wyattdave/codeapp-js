@@ -1,470 +1,490 @@
+import { getMyProfile, getUserPhoto } from './office365users.js';
+import { getCalendarView, listEmails } from './outlook.js';
+import { enableDebugger } from "./codeapp.js";
 
-import { getMyProfile, listEmails, listMyGroups } from './codeapp.js';
-import { getClient } from './power-apps-data.js';
+enableDebugger();
 
-// ── SendEmailV2 connector (not yet in codeapp.js) ─────────────
-const SEND_EMAIL_CANDIDATES = ['office365outlook', 'Office365Outlook', 'office365'];
-const SEND_EMAIL_APIS = {
-  SendEmailV2: {
-    path: '/{connectionId}/v2/Mail',
-    method: 'POST',
-    parameters: [
-      { name: 'connectionId', in: 'path', required: true },
-      { name: 'emailMessage', in: 'body', required: true }
-    ]
-  }
+const eRoot = document.getElementById('root');
+
+const oState = {
+  bLoading: true,
+  bRefreshing: false,
+  oProfile: null,
+  sPhoto: '',
+  aEmails: [],
+  aMeetings: [],
+  aErrors: [],
+  sUpdatedAt: '',
 };
 
-let oSendClient = null;
+function getDayWindow() {
+  const oNow = new Date();
+  const oStart = new Date(oNow.getFullYear(), oNow.getMonth(), oNow.getDate());
+  const oEnd = new Date(oNow.getFullYear(), oNow.getMonth(), oNow.getDate() + 1);
 
-function getSendClient() {
-  if (!oSendClient) {
-    let oSources = {};
-    SEND_EMAIL_CANDIDATES.forEach((sName) => {
-      oSources[sName] = {
-        tableId: '',
-        version: '',
-        primaryKey: '',
-        dataSourceType: 'Connector',
-        apis: SEND_EMAIL_APIS
-      };
-    });
-    oSendClient = getClient(oSources);
-  }
-  return oSendClient;
+  return {
+    oNow,
+    oStart,
+    oEnd,
+    sStartIso: oStart.toISOString(),
+    sEndIso: oEnd.toISOString(),
+    sLabel: oStart.toLocaleDateString([], {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    }),
+  };
 }
 
-let eStatusMessage = null;
-let eProfileCard = null;
-let eProfileStatus = null;
-let eEmailList = null;
-let eGroupList = null;
-let eEmailCount = null;
-let eGroupCount = null;
-let eRefreshButton = null;
-let eScrollComposeButton = null;
-let eComposeForm = null;
-let eComposeTo = null;
-let eComposeSubject = null;
-let eComposeBody = null;
-let eSendButton = null;
-
-let oProfile = null;
-let aEmails = [];
-let aGroups = [];
-
-function getElement(sId) {
-  return document.getElementById(sId);
-}
-
-function cacheDomElements() {
-  eStatusMessage = getElement('statusMessage');
-  eProfileCard = getElement('profileCard');
-  eProfileStatus = getElement('profileStatus');
-  eEmailList = getElement('emailList');
-  eGroupList = getElement('groupList');
-  eEmailCount = getElement('emailCount');
-  eGroupCount = getElement('groupCount');
-  eRefreshButton = getElement('refreshButton');
-  eScrollComposeButton = getElement('scrollComposeButton');
-  eComposeForm = getElement('composeForm');
-  eComposeTo = getElement('composeTo');
-  eComposeSubject = getElement('composeSubject');
-  eComposeBody = getElement('composeBody');
-  eSendButton = getElement('sendButton');
-}
-
-function escapeHtml(sValue) {
-  let sText = String(sValue == null ? '' : sValue);
-  return sText
-    .replace(new RegExp('&', 'g'), '&amp;')
-    .replace(new RegExp('<', 'g'), '&lt;')
-    .replace(new RegExp('>', 'g'), '&gt;')
-    .replace(new RegExp('"', 'g'), '&quot;')
-    .replace(new RegExp("'", 'g'), '&#39;');
-}
-
-function setStatus(sMessage, sTone = 'info') {
-  if (!eStatusMessage) {
-    return;
-  }
-  eStatusMessage.textContent = sMessage;
-  eStatusMessage.className = 'statusBar ' + sTone;
-}
-
-function getInitials(sName) {
-  let aParts = String(sName || 'U').trim().split(new RegExp('\\s+', 'g')).filter(Boolean);
-  return aParts.slice(0, 2).map((sPart) => sPart.charAt(0).toUpperCase()).join('');
-}
-
-function normalizePayload(oValue) {
-  if (oValue == null) {
-    return null;
+function normalizeItems(oResult) {
+  if (Array.isArray(oResult)) {
+    return oResult;
   }
 
-  if (typeof oValue === 'string') {
-    try {
-      return JSON.parse(oValue);
-    } catch (oErr) {
-      return oValue;
-    }
-  }
-
-  if (typeof oValue === 'object' && Object.prototype.hasOwnProperty.call(oValue, 'body')) {
-    return normalizePayload(oValue.body);
-  }
-
-  if (typeof oValue === 'object' && Object.prototype.hasOwnProperty.call(oValue, 'value') && Array.isArray(oValue.value)) {
-    return oValue;
-  }
-
-  return oValue;
-}
-
-function getArrayFromPayload(oValue) {
-  let oPayload = normalizePayload(oValue);
-
-  if (Array.isArray(oPayload)) {
-    return oPayload;
-  }
-
-  if (oPayload && Array.isArray(oPayload.value)) {
-    return oPayload.value;
-  }
-
-  if (oPayload && Array.isArray(oPayload.messages)) {
-    return oPayload.messages;
-  }
-
-  if (oPayload && Array.isArray(oPayload.items)) {
-    return oPayload.items;
+  if (oResult && Array.isArray(oResult.value)) {
+    return oResult.value;
   }
 
   return [];
 }
 
-function getProfileFromPayload(oValue) {
-  let oPayload = normalizePayload(oValue);
-  if (!oPayload || typeof oPayload !== 'object') {
-    return {};
-  }
-  return oPayload.user && typeof oPayload.user === 'object' ? oPayload.user : oPayload;
-}
-
-function formatEmailDate(sValue) {
-  if (!sValue) {
-    return 'No date';
+function getErrorMessage(oError) {
+  if (!oError) {
+    return 'Unknown error';
   }
 
-  let oDate = new Date(sValue);
-  if (Number.isNaN(oDate.getTime())) {
-    return String(sValue);
+  if (typeof oError === 'string') {
+    return oError;
   }
 
-  return oDate.toLocaleString();
-}
-
-function getEmailFromValue(oValue) {
-  if (!oValue || typeof oValue !== 'object') {
-    return '';
-  }
-
-  if (typeof oValue.address === 'string') {
-    return oValue.address;
-  }
-
-  if (typeof oValue.email === 'string') {
-    return oValue.email;
-  }
-
-  if (oValue.emailAddress && typeof oValue.emailAddress.address === 'string') {
-    return oValue.emailAddress.address;
-  }
-
-  if (oValue.EmailAddress && typeof oValue.EmailAddress.Address === 'string') {
-    return oValue.EmailAddress.Address;
-  }
-
-  return '';
-}
-
-function getSenderLabel(oEmail) {
-  let oFrom = oEmail.from || oEmail.From || oEmail.sender || oEmail.Sender || {};
-  if (oFrom.emailAddress && typeof oFrom.emailAddress === 'object') {
-    return oFrom.emailAddress.name || oFrom.emailAddress.address || 'Unknown sender';
-  }
-  if (oFrom.EmailAddress && typeof oFrom.EmailAddress === 'object') {
-    return oFrom.EmailAddress.Name || oFrom.EmailAddress.Address || 'Unknown sender';
-  }
-  if (typeof oFrom.displayName === 'string') {
-    return oFrom.displayName;
-  }
-  return getEmailFromValue(oFrom) || 'Unknown sender';
-}
-
-function getGroupTagsMarkup(oGroup) {
-  let aTags = Array.isArray(oGroup.groupTypes) ? oGroup.groupTypes : [];
-  return aTags.map((sTag) => '<span class="pill">' + escapeHtml(sTag) + '</span>').join('');
-}
-
-function renderProfile() {
-  if (!eProfileCard) {
-    return;
-  }
-
-  if (!oProfile || Object.keys(oProfile).length === 0) {
-    eProfileCard.innerHTML = '<div class="emptyState">Profile information was not returned.</div>';
-    if (eProfileStatus) {
-      eProfileStatus.textContent = 'Unavailable';
-    }
-    return;
-  }
-
-  let sName = oProfile.displayName || oProfile.DisplayName || oProfile.name || 'Unknown user';
-  let sEmail = oProfile.mail || oProfile.Mail || oProfile.userPrincipalName || oProfile.UserPrincipalName || '';
-  let sJobTitle = oProfile.jobTitle || oProfile.JobTitle || 'No title';
-  let sDepartment = oProfile.department || oProfile.Department || 'No department';
-  let sPhone = oProfile.mobilePhone || oProfile.MobilePhone || '';
-
-  eProfileCard.innerHTML = `
-    <div class="profileBadge">${escapeHtml(getInitials(sName))}</div>
-    <div>
-      <h3 class="profileName">${escapeHtml(sName)}</h3>
-      <p class="profileMeta">${escapeHtml(sJobTitle)} · ${escapeHtml(sDepartment)}</p>
-      <p class="profileSubMeta">${escapeHtml(sEmail || 'No email')}</p>
-      <p class="profileSubMeta">${escapeHtml(sPhone || 'No phone')}</p>
-    </div>
-  `;
-
-  if (eProfileStatus) {
-    eProfileStatus.textContent = 'Ready';
-  }
-}
-
-function renderEmails() {
-  if (!eEmailList) {
-    return;
-  }
-
-  if (eEmailCount) {
-    eEmailCount.textContent = String(aEmails.length);
-  }
-
-  if (!Array.isArray(aEmails) || aEmails.length === 0) {
-    eEmailList.innerHTML = '<div class="emptyState">No emails were returned.</div>';
-    return;
-  }
-
-  eEmailList.innerHTML = aEmails.map((oEmail) => {
-    let sSubject = oEmail.subject || oEmail.Subject || '(No subject)';
-    let sPreview = oEmail.bodyPreview || oEmail.BodyPreview || oEmail.body || oEmail.Body || '';
-    let sReceived = oEmail.receivedDateTime || oEmail.DateTimeReceived || oEmail.createdDateTime || '';
-    let sSender = getSenderLabel(oEmail);
-
-    return `
-      <article class="listCard">
-        <h3 class="listTitle">${escapeHtml(sSubject)}</h3>
-        <p class="listMeta">From: ${escapeHtml(sSender)} · ${escapeHtml(formatEmailDate(sReceived))}</p>
-        <p class="listBody">${escapeHtml(String(sPreview).slice(0, 220) || 'No preview available.')}</p>
-      </article>
-    `;
-  }).join('');
-}
-
-function renderGroups() {
-  if (!eGroupList) {
-    return;
-  }
-
-  if (eGroupCount) {
-    eGroupCount.textContent = String(aGroups.length);
-  }
-
-  if (!Array.isArray(aGroups) || aGroups.length === 0) {
-    eGroupList.innerHTML = '<div class="emptyState">No group memberships were returned.</div>';
-    return;
-  }
-
-  eGroupList.innerHTML = aGroups.map((oGroup) => {
-    let sName = oGroup.displayName || oGroup.DisplayName || 'Unnamed group';
-    let sDescription = oGroup.description || oGroup.Description || 'No description';
-    let sMail = oGroup.mail || oGroup.Mail || 'No group mailbox';
-
-    return `
-      <article class="listCard">
-        <h3 class="listTitle">${escapeHtml(sName)}</h3>
-        <p class="listMeta">${escapeHtml(sMail)}</p>
-        <p class="listBody">${escapeHtml(sDescription)}</p>
-        ${getGroupTagsMarkup(oGroup)}
-      </article>
-    `;
-  }).join('');
-}
-
-async function loadProfile() {
-  oProfile = getProfileFromPayload(await getMyProfile());
-  renderProfile();
-}
-
-async function loadEmails() {
-  aEmails = getArrayFromPayload(await listEmails({ folderId: 'Inbox', top: 15 }));
-  renderEmails();
-}
-
-async function loadGroups() {
-  aGroups = getArrayFromPayload(await listMyGroups());
-  renderGroups();
-}
-
-async function sendEmailMessage(sTo, sSubject, sBody) {
-  let client = getSendClient();
-  let aErrors = [];
-
-  for (let iIndex = 0; iIndex < SEND_EMAIL_CANDIDATES.length; iIndex += 1) {
-    let sName = SEND_EMAIL_CANDIDATES[iIndex];
-    try {
-      let oResult = await client.executeAsync({
-        connectorOperation: {
-          tableName: sName,
-          operationName: 'SendEmailV2',
-          parameters: {
-            emailMessage: {
-              To: sTo,
-              Subject: sSubject,
-              Body: sBody,
-              Importance: 'Normal',
-              IsHtml: true
-            }
-          }
-        }
-      });
-      if (oResult && oResult.success === false) {
-        throw new Error(oResult.error ? (oResult.error.message || JSON.stringify(oResult.error)) : 'Send failed');
-      }
-      return oResult && Object.prototype.hasOwnProperty.call(oResult, 'data') ? oResult.data : oResult;
-    } catch (oErr) {
-      let sMessage = oErr.message || String(oErr);
-      aErrors.push(sName + ': ' + sMessage);
-      if (sMessage.indexOf('Connection reference not found') === -1) {
-        throw oErr;
-      }
-    }
-  }
-
-  throw new Error('No Outlook connection reference matched. Tried: ' + aErrors.join(' || '));
-}
-
-async function loadDashboard() {
-  setStatus('Loading your dashboard…', 'info');
-
-  let aResults = await Promise.allSettled([
-    loadProfile(),
-    loadEmails(),
-    loadGroups()
-  ]);
-
-  let aErrors = aResults
-    .filter((oResult) => oResult.status === 'rejected')
-    .map((oResult) => oResult.reason?.message || String(oResult.reason));
-
-  renderProfile();
-  renderEmails();
-  renderGroups();
-
-  if (aErrors.length > 0) {
-    setStatus('Loaded with connector issues: ' + aErrors.join(' | '), 'error');
-    return;
-  }
-
-  setStatus('Dashboard loaded successfully.', 'success');
-}
-
-async function handleRefreshClick() {
-  await loadDashboard();
-}
-
-function handleScrollComposeClick() {
-  let eComposeSection = getElement('composeSection');
-  if (eComposeSection) {
-    eComposeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-}
-
-async function handleComposeSubmit(oEvent) {
-  oEvent.preventDefault();
-
-  let sTo = String(eComposeTo?.value || '').trim();
-  let sSubject = String(eComposeSubject?.value || '').trim();
-  let sBody = String(eComposeBody?.value || '').trim();
-
-  if (!sTo || !sSubject || !sBody) {
-    setStatus('Complete the To, Subject, and Message fields before sending.', 'error');
-    return;
+  if (typeof oError.message === 'string' && oError.message) {
+    return oError.message;
   }
 
   try {
-    if (eSendButton) {
-      eSendButton.disabled = true;
-      eSendButton.textContent = 'Sending...';
-    }
-
-    setStatus('Sending email…', 'info');
-    await sendEmailMessage(sTo, sSubject, sBody);
-
-    if (eComposeForm) {
-      eComposeForm.reset();
-    }
-
-    setStatus('Email sent successfully.', 'success');
-    await loadEmails();
-  } catch (oErr) {
-    setStatus('Send email failed: ' + (oErr.message || oErr), 'error');
-  } finally {
-    if (eSendButton) {
-      eSendButton.disabled = false;
-      eSendButton.textContent = 'Send email';
-    }
+    return JSON.stringify(oError);
+  } catch (oInnerError) {
+    return String(oError);
   }
 }
 
-function attachEvents() {
-  if (eRefreshButton) {
-    eRefreshButton.addEventListener('click', () => {
-      handleRefreshClick().catch((oErr) => {
-        setStatus('Refresh failed: ' + (oErr.message || oErr), 'error');
-      });
-    });
+function escapeHtml(sValue) {
+  const eDiv = document.createElement('div');
+  eDiv.textContent = sValue || '';
+  return eDiv.innerHTML;
+}
+
+function stripHtml(sValue) {
+  const eDiv = document.createElement('div');
+  eDiv.innerHTML = sValue || '';
+  return eDiv.textContent || eDiv.innerText || '';
+}
+
+function getInitials(sName) {
+  if (!sName) {
+    return '?';
   }
 
-  if (eScrollComposeButton) {
-    eScrollComposeButton.addEventListener('click', handleScrollComposeClick);
+  const aParts = String(sName)
+    .split(' ')
+    .map((sPart) => sPart.trim())
+    .filter(Boolean);
+
+  if (aParts.length === 0) {
+    return '?';
   }
 
-  if (eComposeForm) {
-    eComposeForm.addEventListener('submit', (oEvent) => {
-      handleComposeSubmit(oEvent).catch((oErr) => {
-        setStatus('Send email failed: ' + (oErr.message || oErr), 'error');
-      });
-    });
+  if (aParts.length === 1) {
+    return aParts[0].slice(0, 2).toUpperCase();
+  }
+
+  return (aParts[0].charAt(0) + aParts[aParts.length - 1].charAt(0)).toUpperCase();
+}
+
+function getEmailDate(oEmail) {
+  return oEmail.DateTimeReceived || oEmail.receivedDateTime || oEmail.ReceivedDateTime || '';
+}
+
+function getMeetingStart(oMeeting) {
+  return oMeeting.Start || oMeeting.start || oMeeting.startDateTime || '';
+}
+
+function getMeetingEnd(oMeeting) {
+  return oMeeting.End || oMeeting.end || oMeeting.endDateTime || '';
+}
+
+function toDate(oValue) {
+  if (!oValue) {
+    return null;
+  }
+
+  const oDate = new Date(oValue);
+  if (Number.isNaN(oDate.getTime())) {
+    return null;
+  }
+
+  return oDate;
+}
+
+function isInDay(oValue, oWindow) {
+  const oDate = toDate(oValue);
+  if (!oDate) {
+    return false;
+  }
+
+  return oDate >= oWindow.oStart && oDate < oWindow.oEnd;
+}
+
+function formatTime(oValue) {
+  const oDate = toDate(oValue);
+  if (!oDate) {
+    return '';
+  }
+
+  return oDate.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function formatUpdatedAt() {
+  return new Date().toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function formatMeetingRange(oMeeting) {
+  if (oMeeting.IsAllDay || oMeeting.isAllDay) {
+    return 'All day';
+  }
+
+  const sStart = formatTime(getMeetingStart(oMeeting));
+  const sEnd = formatTime(getMeetingEnd(oMeeting));
+  if (!sStart && !sEnd) {
+    return 'Time unavailable';
+  }
+
+  return sStart + ' - ' + sEnd;
+}
+
+function renderMetaChip(sLabel, sValue) {
+  if (!sValue) {
+    return '';
+  }
+
+  return '<span class="meta-chip">' + escapeHtml(sLabel + ': ' + sValue) + '</span>';
+}
+
+function renderProfileCard(oWindow) {
+  if (!oState.oProfile) {
+    return '<div class="profile-card skeleton" style="min-height:130px"></div>';
+  }
+
+  const oProfile = oState.oProfile;
+  const sImageHtml = oState.sPhoto
+    ? '<img src="data:image/jpeg;base64,' + oState.sPhoto + '" alt="Profile photo" />'
+    : '<span>' + escapeHtml(getInitials(oProfile.displayName || oProfile.mail || 'Me')) + '</span>';
+
+  const aMeta = [
+    renderMetaChip('Mail', oProfile.mail || oProfile.userPrincipalName),
+    renderMetaChip('Phone', (oProfile.businessPhones && oProfile.businessPhones[0]) || oProfile.mobilePhone),
+    renderMetaChip('Department', oProfile.department),
+    renderMetaChip('Office', oProfile.officeLocation),
+  ].filter(Boolean);
+
+  return '<div class="profile-card">'
+    + '<div class="avatar-frame">' + sImageHtml + '</div>'
+    + '<div>'
+    + '<h2 class="profile-name">' + escapeHtml(oProfile.displayName || 'Signed-in user') + '</h2>'
+    + '<p class="profile-role">' + escapeHtml(oProfile.jobTitle || 'Role unavailable') + '</p>'
+    + '<p class="profile-line">' + escapeHtml(oWindow.sLabel) + '</p>'
+    + '<p class="profile-line">'
+    + escapeHtml((oProfile.mail || oProfile.userPrincipalName || '').toString())
+    + '</p>'
+    + '</div>'
+    + '</div>'
+    + '<div class="hero-meta">' + aMeta.join('') + '</div>';
+}
+
+function renderStatsCard() {
+  const sUpdatedCopy = oState.sUpdatedAt
+    ? 'Updated at ' + oState.sUpdatedAt
+    : 'Waiting for data';
+
+  return '<div class="stats-card">'
+    + '<div class="stats-row">'
+    + '<div class="stat-tile' + (oState.bLoading ? ' skeleton' : '') + '">'
+    + '<span class="stat-label">Emails Today</span>'
+    + '<span class="stat-value">' + String(oState.aEmails.length) + '</span>'
+    + '</div>'
+    + '<div class="stat-tile' + (oState.bLoading ? ' skeleton' : '') + '">'
+    + '<span class="stat-label">Meetings Today</span>'
+    + '<span class="stat-value">' + String(oState.aMeetings.length) + '</span>'
+    + '</div>'
+    + '</div>'
+    + '<div class="toolbar">'
+    + '<span class="status-copy">' + escapeHtml(sUpdatedCopy) + '</span>'
+    + '<button class="action-button" data-action="refresh"' + (oState.bRefreshing ? ' disabled' : '') + '>'
+    + (oState.bRefreshing ? 'Refreshing...' : 'Refresh')
+    + '</button>'
+    + '</div>'
+    + '</div>';
+}
+
+function renderEmailList() {
+  if (oState.bLoading && oState.aEmails.length === 0) {
+    return '<div class="item-list">'
+      + '<div class="list-item skeleton" style="min-height:110px"></div>'
+      + '<div class="list-item skeleton" style="min-height:110px"></div>'
+      + '<div class="list-item skeleton" style="min-height:110px"></div>'
+      + '</div>';
+  }
+
+  if (oState.aEmails.length === 0) {
+    return '<div class="empty-state">'
+      + '<h3 class="empty-title">No emails yet today</h3>'
+      + '<p class="empty-copy">Your inbox is clear so far, or newer mail has not arrived in the first inbox batch yet.</p>'
+      + '</div>';
+  }
+
+  return '<div class="item-list">'
+    + oState.aEmails.map((oEmail) => {
+      const oFrom = oEmail.From || oEmail.from || {};
+      const oEmailAddress = oFrom.EmailAddress || oFrom.emailAddress || {};
+      const sSender = oEmailAddress.Name || oEmailAddress.name || oFrom.Name || 'Unknown sender';
+      const sAddress = oEmailAddress.Address || oEmailAddress.address || oFrom.Address || '';
+      const sSubject = oEmail.Subject || oEmail.subject || '(No subject)';
+      const sPreview = stripHtml(oEmail.BodyPreview || oEmail.bodyPreview || oEmail.Body || oEmail.body || '');
+      const sReceived = formatTime(getEmailDate(oEmail));
+      const bUnread = oEmail.IsRead === false || oEmail.isRead === false;
+
+      return '<article class="list-item' + (bUnread ? ' list-item--unread' : '') + '">'
+        + '<div class="item-topline">'
+        + '<div>'
+        + '<h3 class="item-title">' + escapeHtml(sSubject) + '</h3>'
+        + '<p class="item-meta">' + escapeHtml(sSender + (sAddress ? ' • ' + sAddress : '')) + '</p>'
+        + '</div>'
+        + '<span class="item-time">' + escapeHtml(sReceived || 'Today') + '</span>'
+        + '</div>'
+        + '<p class="item-preview">' + escapeHtml(sPreview.slice(0, 180) || 'No preview available.') + '</p>'
+        + '</article>';
+    }).join('')
+    + '</div>';
+}
+
+function renderMeetingList() {
+  if (oState.bLoading && oState.aMeetings.length === 0) {
+    return '<div class="item-list">'
+      + '<div class="list-item skeleton" style="min-height:104px"></div>'
+      + '<div class="list-item skeleton" style="min-height:104px"></div>'
+      + '<div class="list-item skeleton" style="min-height:104px"></div>'
+      + '</div>';
+  }
+
+  if (oState.aMeetings.length === 0) {
+    return '<div class="empty-state">'
+      + '<h3 class="empty-title">No meetings on the calendar</h3>'
+      + '<p class="empty-copy">Today looks open. When events appear on your primary calendar, they will show up here.</p>'
+      + '</div>';
+  }
+
+  return '<div class="item-list">'
+    + oState.aMeetings.map((oMeeting) => {
+      const sSubject = oMeeting.Subject || oMeeting.subject || '(Untitled meeting)';
+      const sLocation = oMeeting.Location || oMeeting.location || 'Location not set';
+      const sOrganizer = oMeeting.Organizer || oMeeting.organizer || '';
+      const sRange = formatMeetingRange(oMeeting);
+      const sWebLink = oMeeting.WebLink || oMeeting.webLink || '';
+
+      return '<article class="list-item">'
+        + '<div class="item-topline">'
+        + '<div>'
+        + '<h3 class="item-title">' + escapeHtml(sSubject) + '</h3>'
+        + '<p class="item-meta">' + escapeHtml(sLocation) + '</p>'
+        + '</div>'
+        + '<span class="item-time">' + escapeHtml(sRange) + '</span>'
+        + '</div>'
+        + (sOrganizer ? '<p class="item-preview">Organizer: ' + escapeHtml(sOrganizer) + '</p>' : '')
+        + (sWebLink ? '<a class="meeting-link" href="' + escapeHtml(sWebLink) + '" target="_blank" rel="noreferrer">Open in Outlook</a>' : '')
+        + '</article>';
+    }).join('')
+    + '</div>';
+}
+
+function renderNotice() {
+  if (oState.aErrors.length === 0) {
+    return '';
+  }
+
+  return '<section class="notice">'
+    + '<h3 class="notice-title">Some data could not be loaded</h3>'
+    + '<p class="notice-copy">' + escapeHtml(oState.aErrors.join(' ')) + ' If this is a fresh app, use Sync Connections so Outlook and Office 365 Users are available.</p>'
+    + '</section>';
+}
+
+function renderApp() {
+  const oWindow = getDayWindow();
+
+  eRoot.innerHTML = '<div class="app-shell">'
+    + '<section class="hero-card">'
+    + '<div class="hero-layout">'
+    + '<div>'
+    + '<p class="eyebrow">Daily snapshot</p>'
+    + '<h1 class="hero-heading">Profile, mail, and meetings in one glance.</h1>'
+    + '<p class="hero-subtitle">A compact view of the signed-in user, the messages received today, and the meetings scheduled for the rest of the day.</p>'
+    + renderProfileCard(oWindow)
+    + '</div>'
+    + '<div class="hero-side">'
+    + renderStatsCard()
+    + '</div>'
+    + '</div>'
+    + '</section>'
+    + '<div class="content-grid">'
+    + '<section class="panel">'
+    + '<header class="panel-header">'
+    + '<div>'
+    + '<h2 class="panel-title">Today\'s Emails</h2>'
+    + '<p class="panel-subtitle">Latest inbox items received since midnight.</p>'
+    + '</div>'
+    + '<span class="count-pill">' + String(oState.aEmails.length) + '</span>'
+    + '</header>'
+    + renderEmailList()
+    + '</section>'
+    + '<section class="panel">'
+    + '<header class="panel-header">'
+    + '<div>'
+    + '<h2 class="panel-title">Today\'s Meetings</h2>'
+    + '<p class="panel-subtitle">Events from your primary calendar for ' + escapeHtml(oWindow.sLabel) + '.</p>'
+    + '</div>'
+    + '<span class="count-pill">' + String(oState.aMeetings.length) + '</span>'
+    + '</header>'
+    + renderMeetingList()
+    + '</section>'
+    + '</div>'
+    + renderNotice()
+    + '</div>';
+}
+
+async function loadProfileBundle() {
+  const oProfile = await getMyProfile({
+    select: ['displayName', 'mail', 'userPrincipalName', 'jobTitle', 'department', 'officeLocation', 'businessPhones', 'mobilePhone', 'id'],
+  });
+  const sUserId = oProfile.id || oProfile.mail || oProfile.userPrincipalName;
+  let sPhoto = '';
+
+  if (sUserId) {
+    try {
+      const oPhotoResult = await getUserPhoto(sUserId);
+      sPhoto = (oPhotoResult && oPhotoResult.value) || oPhotoResult || '';
+    } catch (oPhotoError) {
+      sPhoto = '';
+    }
+  }
+
+  return {
+    oProfile,
+    sPhoto,
+  };
+}
+
+async function loadTodayEmails() {
+  const oWindow = getDayWindow();
+  const oResult = await listEmails({ folderId: 'Inbox', top: 50 });
+
+  return normalizeItems(oResult)
+    .filter((oEmail) => isInDay(getEmailDate(oEmail), oWindow))
+    .sort((oLeft, oRight) => {
+      const iLeft = (toDate(getEmailDate(oLeft)) || new Date(0)).getTime();
+      const iRight = (toDate(getEmailDate(oRight)) || new Date(0)).getTime();
+      return iRight - iLeft;
+    })
+    .slice(0, 10);
+}
+
+async function loadTodayMeetings() {
+  const oWindow = getDayWindow();
+  const oResult = await getCalendarView({
+    calendarId: 'Calendar',
+    startDateTimeUtc: oWindow.sStartIso,
+    endDateTimeUtc: oWindow.sEndIso,
+    top: 20,
+  });
+
+  return normalizeItems(oResult)
+    .filter((oMeeting) => isInDay(getMeetingStart(oMeeting), oWindow))
+    .sort((oLeft, oRight) => {
+      const iLeft = (toDate(getMeetingStart(oLeft)) || new Date(0)).getTime();
+      const iRight = (toDate(getMeetingStart(oRight)) || new Date(0)).getTime();
+      return iLeft - iRight;
+    })
+    .slice(0, 20);
+}
+
+async function refreshDashboard() {
+  oState.bLoading = !oState.sUpdatedAt;
+  oState.bRefreshing = true;
+  oState.aErrors = [];
+  renderApp();
+
+  const aResults = await Promise.allSettled([
+    loadProfileBundle(),
+    loadTodayEmails(),
+    loadTodayMeetings(),
+  ]);
+
+  const [oProfileResult, oEmailResult, oMeetingResult] = aResults;
+  const aErrors = [];
+
+  if (oProfileResult.status === 'fulfilled') {
+    oState.oProfile = oProfileResult.value.oProfile;
+    oState.sPhoto = oProfileResult.value.sPhoto;
+  } else {
+    oState.oProfile = null;
+    oState.sPhoto = '';
+    aErrors.push('Profile: ' + getErrorMessage(oProfileResult.reason) + '.');
+  }
+
+  if (oEmailResult.status === 'fulfilled') {
+    oState.aEmails = oEmailResult.value;
+  } else {
+    oState.aEmails = [];
+    aErrors.push('Emails: ' + getErrorMessage(oEmailResult.reason) + '.');
+  }
+
+  if (oMeetingResult.status === 'fulfilled') {
+    oState.aMeetings = oMeetingResult.value;
+  } else {
+    oState.aMeetings = [];
+    aErrors.push('Meetings: ' + getErrorMessage(oMeetingResult.reason) + '.');
+  }
+
+  oState.aErrors = aErrors;
+  oState.bLoading = false;
+  oState.bRefreshing = false;
+  oState.sUpdatedAt = formatUpdatedAt();
+  renderApp();
+}
+
+function handleRootClick(oEvent) {
+  const eTarget = oEvent.target.closest('[data-action]');
+  if (!eTarget) {
+    return;
+  }
+
+  if (eTarget.dataset.action === 'refresh' && !oState.bRefreshing) {
+    refreshDashboard();
   }
 }
 
 async function boot() {
-  cacheDomElements();
-  attachEvents();
-  renderProfile();
-  renderEmails();
-  renderGroups();
-
-  try {
-    await loadDashboard();
-  } catch (oErr) {
-    setStatus('App failed to start: ' + (oErr.message || oErr), 'error');
+  if (!eRoot) {
+    return;
   }
+
+  eRoot.addEventListener('click', handleRootClick);
+  renderApp();
+  await refreshDashboard();
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  boot().catch((oErr) => {
-    setStatus('App failed to start: ' + (oErr.message || oErr), 'error');
-  });
-});
+boot();

@@ -3,52 +3,144 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="./icon-512.png" />
     <title>Dataverse Demo</title>
-    <script type="importmap">
-      {
-        "imports": {
-          "@microsoft/power-apps/data": "./power-apps-data.js"
-        }
-      }
-    </script>
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: "Segoe UI", sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
-      h1 { margin-bottom: 1.5rem; font-size: 1.4rem; }
-      #add-bar { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
-      #task-input { flex: 1; padding: .5rem .75rem; border: 1px solid #ccc; border-radius: 6px; font-size: .95rem; }
-      button { padding: .5rem 1.25rem; border: none; border-radius: 6px; background: #0078d4; color: #fff; font-size: .95rem; cursor: pointer; }
-      button:hover { background: #106ebe; }
-      button:disabled { opacity: .5; cursor: not-allowed; }
-      table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
-      th, td { text-align: left; padding: .75rem 1rem; }
-      th { background: #0078d4; color: #fff; font-weight: 600; }
-      tr:nth-child(even) { background: #fafafa; }
-      #status { margin-top: 1rem; font-size: .85rem; color: #666; }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <h1>Dataverse Tasks</h1>
+    <div id="root">
+      <div class="page-shell">
+        <aside class="side-panel">
+          <div class="brand-card">
+            <p class="eyebrow">Power Apps Code App</p>
+            <h1>Dataverse Task Studio</h1>
+            <p class="intro-copy">A polished demo against the standard Dataverse task table, with live CRUD and record sharing to Dataverse users.</p>
+          </div>
 
-    <div id="add-bar">
-      <input id="task-input" type="text" placeholder="New task subject..." />
-      <button id="btn-add">Add Task</button>
+          <div class="metrics-grid">
+            <article class="metric-card">
+              <span class="metric-card__label">Connection</span>
+              <strong class="metric-card__value" id="connectionState">Connecting</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-card__label">Task records</span>
+              <strong class="metric-card__value" id="taskCount">0</strong>
+            </article>
+            <article class="metric-card">
+              <span class="metric-card__label">Share targets</span>
+              <strong class="metric-card__value" id="userCount">0</strong>
+            </article>
+          </div>
+
+          <div class="command-card">
+            <button class="btn btn--ghost" id="btnRefresh" type="button">Refresh data</button>
+            <button class="btn btn--accent" id="btnNewTask" type="button">New task</button>
+          </div>
+
+          <div class="filter-card">
+            <label class="field-label" for="taskSearch">Search tasks</label>
+            <input class="field-input" id="taskSearch" type="search" placeholder="Search by subject or description" />
+
+            <label class="field-label" for="priorityFilter">Priority filter</label>
+            <select class="field-input field-input--select" id="priorityFilter">
+              <option value="all">All priorities</option>
+              <option value="2">High</option>
+              <option value="1">Normal</option>
+              <option value="0">Low</option>
+            </select>
+          </div>
+
+          <div class="status-card">
+            <div class="status-card__header">
+              <span>Status</span>
+              <span class="status-pill" id="statusTone">Live</span>
+            </div>
+            <p class="status-copy" id="statusText">Booting Dataverse task workspace...</p>
+            <p class="status-copy status-copy--secondary" id="currentUserText">Detecting current Dataverse user...</p>
+          </div>
+        </aside>
+
+        <main class="workspace">
+          <section class="task-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Task records</p>
+                <h2>Live Dataverse list</h2>
+              </div>
+              <p class="panel-caption" id="listCaption">Showing the latest task records.</p>
+            </div>
+            <div class="task-list" id="taskList"></div>
+          </section>
+
+          <section class="editor-panel">
+            <div class="panel-header panel-header--tight">
+              <div>
+                <p class="eyebrow">Editor</p>
+                <h2 id="editorHeading">New task</h2>
+              </div>
+              <p class="panel-caption" id="recordMeta">Create a new Dataverse task record.</p>
+            </div>
+
+            <form class="editor-form" id="taskForm">
+              <label class="field-label" for="taskTitle">Subject</label>
+              <input class="field-input" id="taskTitle" name="taskTitle" type="text" maxlength="200" placeholder="Quarterly planning wrap-up" required />
+
+              <div class="form-row">
+                <div>
+                  <label class="field-label" for="taskPriority">Priority</label>
+                  <select class="field-input field-input--select" id="taskPriority" name="taskPriority">
+                    <option value="2">High</option>
+                    <option value="1" selected>Normal</option>
+                    <option value="0">Low</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="field-label" for="taskDueDate">Due date</label>
+                  <input class="field-input" id="taskDueDate" name="taskDueDate" type="date" />
+                </div>
+              </div>
+
+              <label class="field-label" for="taskDescription">Description</label>
+              <textarea class="field-input field-input--textarea" id="taskDescription" name="taskDescription" rows="8" placeholder="Use this demo to create, update, delete, and share Dataverse task records."></textarea>
+
+              <div class="button-row">
+                <button class="btn btn--accent" id="btnSaveTask" type="submit">Save task</button>
+                <button class="btn btn--ghost" id="btnResetTask" type="button">Reset form</button>
+                <button class="btn btn--danger" id="btnDeleteTask" type="button">Delete selected</button>
+              </div>
+            </form>
+
+            <section class="share-panel">
+              <div class="panel-header panel-header--tight">
+                <div>
+                  <p class="eyebrow">Sharing</p>
+                  <h2>Grant task access</h2>
+                </div>
+                <p class="panel-caption">Uses the Dataverse GrantAccess action.</p>
+              </div>
+
+              <div class="form-row">
+                <div>
+                  <label class="field-label" for="shareUser">Dataverse user</label>
+                  <select class="field-input field-input--select" id="shareUser"></select>
+                </div>
+                <div>
+                  <label class="field-label" for="shareAccess">Access level</label>
+                  <select class="field-input field-input--select" id="shareAccess"></select>
+                </div>
+              </div>
+
+              <div class="button-row button-row--single">
+                <button class="btn btn--accent" id="btnShareTask" type="button">Share selected task</button>
+              </div>
+
+              <p class="status-copy" id="shareStatusText">Select a task, choose a user, then grant access.</p>
+              <div class="share-log" id="shareLog"></div>
+            </section>
+          </section>
+        </main>
+      </div>
     </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Subject</th>
-          <th>Status</th>
-          <th>Created On</th>
-        </tr>
-      </thead>
-      <tbody id="task-body">
-        <tr><td colspan="3">Loading…</td></tr>
-      </tbody>
-    </table>
-    <div id="status"></div>
-
     <script type="module" src="index.js"></script>
   </body>
 </html>

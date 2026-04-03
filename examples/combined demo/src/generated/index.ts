@@ -4,11 +4,9 @@
  */
 
 // Models
-export * as Office365GroupsModel from './models/Office365GroupsModel';
-export * as Office365OutlookModel from './models/Office365OutlookModel';
-export * as Office365UsersModel from './models/Office365UsersModel';
+export * as AzureKeyVaultModel from './models/AzureKeyVaultModel';
+export * as JiraModel from './models/JiraModel';
 
 // Services
-export * from './services/Office365GroupsService';
-export * from './services/Office365OutlookService';
-export * from './services/Office365UsersService';
+export * from './services/AzureKeyVaultService';
+export * from './services/JiraService';

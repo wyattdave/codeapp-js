@@ -1,0 +1,34 @@
+{
+  "siteUrl": "https://37wcqv.sharepoint.com/sites/testsite",
+  "listName": "Test List",
+  "connectionApproach": "table-id",
+  "runtimeBehavior": {
+    "fieldDiscovery": "Derives editable fields from returned items at runtime and ensures a Title field exists even when no rows are returned yet.",
+    "crudMode": "Resolves a connector table ID through listTables and uses table-ID CRUD for all reads and writes.",
+    "advancedOverrides": true
+  },
+  "baselineFields": [
+    {
+      "internalName": "Title",
+      "displayName": "Title",
+      "type": "Text",
+      "required": true,
+      "notes": "Included as the guaranteed baseline create field when metadata discovery cannot infer additional columns."
+    }
+  ],
+  "excludedSystemFields": [
+    "ID",
+    "GUID",
+    "Modified",
+    "Created",
+    "Author",
+    "AuthorId",
+    "Editor",
+    "EditorId",
+    "Attachments",
+    "ContentType",
+    "ContentTypeId",
+    "FileRef",
+    "FileLeafRef"
+  ]
+}

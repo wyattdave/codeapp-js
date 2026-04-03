@@ -1,9 +1,13 @@
 /* power-apps-data.js - Standalone Power Apps SDK for Code Apps
    Converted from @microsoft/power-apps v1.0.4
-   Zero dependencies - all code is self-contained */
+   Zero dependencies - all code is self-contained
+   Version 2.0.2: outlook fix*/
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+const BRIDGE_INIT_TIMEOUT_MS = 8000;
+const PLUGIN_CALL_TIMEOUT_MS = 30000;
 
 var DefaultPowerAppsBridge = class {
   constructor() {
@@ -14,6 +18,7 @@ var DefaultPowerAppsBridge = class {
     __publicField(this, "_messageChannel", new window.MessageChannel());
     __publicField(this, "_postMessageQueue", []);
     __publicField(this, "_postMessageSource");
+    __publicField(this, "_initializePromise");
     __publicField(this, "_handleMessageEvent", (messageEvent) => {
       const message = messageEvent.data;
       if (message && typeof message.isPluginCall === "boolean") {
@@ -52,21 +57,55 @@ var DefaultPowerAppsBridge = class {
             this._postMessageQueue[i].antiCSRFToken = this._antiCSRFToken;
             this._postMessageSource.postMessage(this._postMessageQueue[i]);
           }
+          this._postMessageQueue = [];
         }
       }
     });
   }
   async initialize() {
-    this._messageChannel.port1.onmessage = this._handleMessageEvent;
-    window.parent.postMessage({
-      messageType: "initCommunicationWithPort",
-      instanceId: this._instanceId
-    }, "*", [this._messageChannel.port2]);
+    if (this._initializePromise) {
+      return this._initializePromise;
+    }
+    this._initializePromise = new Promise((resolve, reject) => {
+      if (window.parent === window) {
+        reject(new Error("Power Apps host was not detected. Open this app from the Power Apps Code Apps host instead of a standalone browser tab."));
+        return;
+      }
+      this._messageChannel.port1.onmessage = (messageEvent) => {
+        this._handleMessageEvent(messageEvent);
+        if (this._postMessageSource) {
+          clearTimeout(timeoutId);
+          resolve();
+        }
+      };
+      const timeoutId = window.setTimeout(() => {
+        reject(new Error("Timed out waiting for the Power Apps host to initialize the message bridge."));
+      }, BRIDGE_INIT_TIMEOUT_MS);
+      window.parent.postMessage({
+        messageType: "initCommunicationWithPort",
+        instanceId: this._instanceId
+      }, "*", [this._messageChannel.port2]);
+    });
+    return this._initializePromise;
   }
   async executePluginAsync(pluginName, pluginAction, params = [], onUpdate) {
     return new Promise((resolve, reject) => {
       const callbackId = this._getCallbackId(pluginName);
-      this._callbacks[callbackId] = { resolve, reject, onUpdate };
+      const timeoutId = window.setTimeout(() => {
+        delete this._callbacks[callbackId];
+        reject(new Error(`Timed out waiting for ${pluginName}.${pluginAction} to return from the Power Apps host.`));
+      }, PLUGIN_CALL_TIMEOUT_MS);
+      this._callbacks[callbackId] = {
+        resolve: (value) => {
+          clearTimeout(timeoutId);
+          resolve(value);
+        },
+        reject: (error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        },
+        onUpdate
+      };
       this._sendMessage({
         isPluginCall: true,
         callbackId,
@@ -102,6 +141,7 @@ async function getBridge() {
         await bridge.initialize();
         resolve(bridge);
       } catch (error) {
+        bridgePromise = void 0;
         reject(error);
       }
     });
@@ -1310,13 +1350,23 @@ var _RuntimeMetadataClient = class _RuntimeMetadataClient {
   async _executeOperation(config) {
     try {
       const result = await this._powerOperationExecutor.execute(config.service, config.action, config.params || []);
-      const lowerCaseResult = Object.keys(result.data).reduce((acc, key) => {
-        acc[key.toLowerCase()] = (result.data ?? {})[key];
+      const rawResult = result && typeof result === "object" && "data" in result ? result.data : result;
+      const normalizedResult = Array.isArray(rawResult) && rawResult.length === 1 && rawResult[0] && typeof rawResult[0] === "object"
+        ? rawResult[0]
+        : rawResult;
+      if (!normalizedResult || typeof normalizedResult !== "object" || Array.isArray(normalizedResult)) {
+        throw new PowerDataRuntimeError(ErrorCodes.InvalidMetadataResponse, JSON.stringify(rawResult));
+      }
+      const lowerCaseResult = Object.keys(normalizedResult).reduce((acc, key) => {
+        acc[key.toLowerCase()] = normalizedResult[key];
         return acc;
       }, {});
       return lowerCaseResult;
-    } catch {
-      throw new PowerDataRuntimeError(ErrorCodes.InvalidMetadataResponse);
+    } catch (error) {
+      if (error instanceof PowerDataRuntimeError) {
+        throw error;
+      }
+      throw new PowerDataRuntimeError(ErrorCodes.InvalidMetadataResponse, getErrorMessage(error));
     }
   }
 };
@@ -2601,8 +2651,16 @@ async function loadConnections() {
     return;
   }
   connectionsLoaded = true;
-  await loadNonCompositeConnectionsAsync();
-  await resolveCompositeConnectionsAsync();
+  try {
+    await loadNonCompositeConnectionsAsync();
+  } catch (error) {
+    console.warn("Power Apps connection preload failed; continuing with runtime metadata fetch.", error);
+  }
+  try {
+    await resolveCompositeConnectionsAsync();
+  } catch (error) {
+    console.warn("Power Apps composite connection resolution failed; continuing with runtime metadata fetch.", error);
+  }
 }
 async function loadNonCompositeConnectionsAsync() {
   return executePluginAsync("AppPowerAppsClientPlugin", "loadNonCompositeConnectionsAsync", []);
@@ -2644,9 +2702,24 @@ function getExecutor() {
   }
   return _executor;
 }
+function mergeDataSourcesInfo(existingDataSourcesInfo, nextDataSourcesInfo) {
+  return Object.assign({}, existingDataSourcesInfo || {}, nextDataSourcesInfo || {});
+}
+
 async function getPowerSdkInstance(dataSourcesInfo) {
   const executor = getExecutor();
+  const existingProvider = powerDataSourcesInfoProvider_default.instance;
+  if (existingProvider) {
+    existingProvider.dataSourcesInfo = mergeDataSourcesInfo(existingProvider.dataSourcesInfo, dataSourcesInfo);
+  }
   const provider = powerDataSourcesInfoProvider_default.getInstance(dataSourcesInfo);
+  if (powerDataRuntimeInstance?._dataSourceService) {
+    powerDataRuntimeInstance._dataSourceService._powerDataSourcesInfoProvider = provider;
+    powerDataRuntimeInstance._dataSourceService._dataSourcesInfo = mergeDataSourcesInfo(
+      powerDataRuntimeInstance._dataSourceService._dataSourcesInfo,
+      provider.dataSourcesInfo
+    );
+  }
   return getPowerDataRuntime(provider, executor);
 }
 

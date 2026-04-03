@@ -1,36 +1,42 @@
-# CodeApp js
-A simplified JavaScript version of Microsofts Power Apps Code Apps.
-The project using the `@microsoft/power-apps/data` SDK. It includes generated Dataverse services and connector libraries for Outlook, SharePoint, Office 365 Groups, and Office 365 Users (more to follow soon).
+# CodeApp JS
 
----
+A JavaScript-first Power Apps Code Apps workspace built around the `@microsoft/power-apps/data` runtime, generated Dataverse services, and handwritten connector wrappers for common Microsoft and third-party services.
 
-## Project Structure
+The repo currently ships connector wrappers for Outlook, SharePoint, Office 365 Groups, Office 365 Users, Teams, Jira, Azure Key Vault, and SQL Server.
 
+## Repository Layout
+
+```text
+AI/
+  codeapp.agent.md      # Custom agent definition for repo-specific Code App workflows
+  skills/               # Reusable skill documents for connectors and app-building guidance
+codeApp/
+  dist/
+    codeapp.js          # Shared helper bridge for app code
+    power-apps-data.js  # Bundled Power Apps data runtime
+    connectors/         # Handwritten connector wrappers used by apps in this repo
+    index.html          # Starter app shell
+    index.js            # Starter app logic
+  src/
+    generated/          # Generated Dataverse and connector models/services
+  power.config.json     # App configuration, Dataverse tables, and connection references
+examples/
+  ...                   # Sample apps showing different connector and Dataverse patterns
+agent/
+  decision-log.md       # Durable repo-level decisions for AI-assisted work
 ```
-dist/
-  codeapp.js            # bridging functions to the sdk
-  power-apps-data.js    # JavaScript version of SDK
-  index.js              # Custom JavaScript for your app
-  index.html            # Web page for App
-src/
-  generated/           # Auto-generated connection services & models
-    services/
-      AccountsService.ts
-    models/
-      AccountsModel.ts
-      CommonModels.ts
-power.config.json      # App configuration, connections, and data sources
-```
-
----
 
 ## Requirements
 
-- Microsoft Power Platform CLI (`pac`) must be installed before using this project.
-- Node.js and npm must be installed to use the local npm workflow.
-- Verify the CLI is available by running `pac` or `Get-Command pac | Format-List` in PowerShell.
+- Microsoft Power Platform CLI (`pac`)
+- Node.js and npm
+- A Power Platform environment with the connectors you want to use
 
----
+Verify the CLI from PowerShell:
+
+```powershell
+Get-Command pac | Format-List
+```
 
 ## npm Setup
 
@@ -40,18 +46,18 @@ From the repository root:
 npm install
 ```
 
-This installs the npm dependencies and rebuilds every local `power-apps-data.js` file from the published `@microsoft/power-apps` package so the samples stay in sync with npm.
+This installs dependencies and refreshes the checked-in `power-apps-data.js` copies from the published SDK package.
 
-To serve the repository locally:
+To serve the repo locally:
 
 ```bash
 npm start
 ```
 
-The server runs from the repo root on port `4173`, so you can open any sample directly, for example:
+The local server runs from the repo root on port `4173`. Useful sample URLs include:
 
 - `http://localhost:4173/codeApp/dist/`
-- `http://localhost:4173/examples/todo/dist/`
+- `http://localhost:4173/examples/apps/todo/dist/`
 - `http://localhost:4173/examples/outlook%20Demo/dist/`
 
 To jump straight to the starter app:
@@ -60,9 +66,7 @@ To jump straight to the starter app:
 npm run start:codeapp
 ```
 
----
-
-## CLI Commands
+## PAC CLI Reference
 
 ```bash
 # Authenticate and create a local auth profile
@@ -84,33 +88,45 @@ pac connection list
 pac connection create --name "<connection-name>" --application-id "<app-id>" --client-secret "<client-secret>" --tenant-id "<tenant-id>"
 
 # Add datasource files
-pac code add-data-source -a "<connection-name>" -c "<connection-id"
+pac code add-data-source -a "<connection-name>" -c "<connection-id>"
 
 # Push the app to your Power Platform environment
 pac code push --solutionName <YourSolutionName>
 ```
 
----
+## codeApp Files
 
-## Configuring `power.config.json`
+The starter app in `codeApp/` is the reference implementation for repo conventions.
 
-### Adding a Dataverse Table
+- `codeApp/dist/index.html`: the single-page shell loaded by the Power Apps host.
+- `codeApp/dist/index.js`: user-authored app logic and startup orchestration.
+- `codeApp/dist/codeapp.js`: shared helper layer for Dataverse and app runtime integration.
+- `codeApp/dist/power-apps-data.js`: bundled SDK runtime used by the wrappers.
+- `codeApp/dist/connectors/*.js`: stable handwritten wrappers for connector-backed operations.
+- `codeApp/src/generated/services/*.ts`: generated service classes for Dataverse and generated connector metadata.
+- `codeApp/src/generated/models/*.ts`: generated models used by the service layer.
+- `codeApp/power.config.json`: Dataverse table registration plus connection references for managed connectors.
 
-To add a new Dataverse table (e.g. **contacts**), add an entry under `databaseReferences.default.cds.dataSources`:
+## Configuring power.config.json
+
+### Dataverse Tables
+
+Add Dataverse tables under `databaseReferences.default.cds.dataSources`:
 
 ```jsonc
 {
-  // ... other config ...
   "databaseReferences": {
     "default.cds": {
       "dataSources": {
         "accounts": {
           "entitySetName": "accounts",
-          "logicalName": "account"
+          "logicalName": "account",
+          "isHidden": false
         },
         "contacts": {
           "entitySetName": "contacts",
-          "logicalName": "contact"
+          "logicalName": "contact",
+          "isHidden": false
         }
       },
       "environmentVariableName": ""
@@ -119,97 +135,155 @@ To add a new Dataverse table (e.g. **contacts**), add an entry under `databaseRe
 }
 ```
 
-After adding the table, run `pac code push` — the SDK will auto-generate a service class (like `AccountsService`) that you can import and use.
+After adding the table, run `pac code push` to regenerate the corresponding service classes.
 
-### Adding a Connection Reference
+### Connection References
 
-Each connector library needs a matching entry in `connectionReferences`. 
-
+Each connector wrapper expects a matching `connectionReferences` entry. The object key can vary by environment, but the `dataSources` value should stay aligned with the wrapper.
 
 ```jsonc
 {
   "connectionReferences": {
-    // Dataverse
-    "Dataverse": {
-      "id": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-      "displayName": "Microsoft Dataverse",
-      "dataSources": ["commondataserviceforapps"],
-      "dataSets": {}
-    },
-    
-    // Office 365 Outlook  
     "office365outlook": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
       "displayName": "Office 365 Outlook",
       "dataSources": ["office365"],
       "dataSets": {}
     },
-    // SharePoint Online 
     "sharepointonline": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
       "displayName": "SharePoint",
       "dataSources": ["sharepointonline"],
       "dataSets": {}
     },
-    // Office 365 Groups 
     "office365groups": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_office365groups",
       "displayName": "Office 365 Groups",
       "dataSources": ["office365groups"],
       "dataSets": {}
     },
-    // Office 365 Users  
     "office365users": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_office365users",
       "displayName": "Office 365 Users",
       "dataSources": ["office365users"],
       "dataSets": {}
     },
-    /// MS Teams
-    "ef348778-cc4f-4444-9f78-fcfdb4a45544": {
+    "teamsConnection": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_teams",
       "displayName": "Microsoft Teams",
-      "dataSources": [
-        "teams"
-      ],
+      "dataSources": ["teams"],
       "dataSets": {}
     },
-    // Jira
-    "e050e705-9ee9-4461-4444-4de4ed5904ea": {
+    "jiraConnection": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_jira",
       "displayName": "Jira",
-      "dataSources": [
-        "jira"
-      ],
+      "dataSources": ["jira"],
       "authenticationType": "APIToken",
       "dataSets": {}
     },
-    // Azure keyvault
-    "85039b8d-b6fe-4444-b9db-6008338ec987": {
+    "keyVaultConnection": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_keyvault",
       "displayName": "Azure Key Vault",
-      "dataSources": [
-        "keyvault"
-      ],
+      "dataSources": ["keyvault"],
       "authenticationType": "oauthDefault",
+      "dataSets": {}
+    },
+    "sqlConnection": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sql",
+      "displayName": "SQL Server",
+      "dataSources": ["sql"],
       "dataSets": {}
     }
   }
 }
 ```
 
----
+## Connector Coverage
 
-## Office 365 Groups Helpers
+The handwritten connector wrappers live in `codeApp/dist/connectors/` and are the public API surface for app code in this repo.
 
-The Groups helpers in [codeApp/dist/codeapp.js](codeApp/dist/codeapp.js) are now aligned to the generated connector surface in [codeApp/src/generated/services/Office365GroupsService.ts](codeApp/src/generated/services/Office365GroupsService.ts) and [codeApp/src/generated/models/Office365GroupsModel.ts](codeApp/src/generated/models/Office365GroupsModel.ts), while keeping the existing helper names and positional calls usable.
+| Connector | Wrapper file | Preferred data source | AI skill |
+| --- | --- | --- | --- |
+| Azure Key Vault | `codeApp/dist/connectors/azureKeyvault.js` | `keyvault` | `AI/skills/keyvault/SKILL.md` |
+| Jira | `codeApp/dist/connectors/jira.js` | `jira` | `AI/skills/jira/SKILL.md` |
+| Office 365 Groups | `codeApp/dist/connectors/office365groups.js` | `office365groups` | `AI/skills/office365-groups/SKILL.md` |
+| Office 365 Users | `codeApp/dist/connectors/office365users.js` | `office365users` | `AI/skills/office365-users/SKILL.md` |
+| Office 365 Outlook | `codeApp/dist/connectors/outlook.js` | `office365` | `AI/skills/office365-outlook/SKILL.md` |
+| SharePoint | `codeApp/dist/connectors/sharepoint.js` | `sharepointonline` | `AI/skills/sharepoint/SKILL.md` |
+| SQL Server | `codeApp/dist/connectors/sql.js` | `sql` | `AI/skills/sql/SKILL.md` |
+| Teams | `codeApp/dist/connectors/teams.js` | `teams` | `AI/skills/teams/SKILL.md` |
 
-Available helpers:
+### Azure Key Vault
 
+Public helpers:
+
+- `callKeyVaultOperation(operationName, parameters)`
+- `listKeys(options)`
+- `listKeyVersions(keyName)`
+- `getKeyMetadata(keyName)`
+- `getKeyVersionMetadata(keyName, keyVersion)`
+- `encryptData(keyName, input)`
+- `encryptDataWithVersion(keyName, keyVersion, input)`
+- `decryptData(keyName, input)`
+- `decryptDataWithVersion(keyName, keyVersion, input)`
+- `getSecret(secretName, apiVersion)`
+- `listSecrets(options)`
+- `listSecretVersions(secretName, apiVersion)`
+- `getSecretMetadata(secretName, apiVersion)`
+- `getSecretVersionMetadata(secretName, secretVersion, apiVersion)`
+- `getSecretVersion(secretName, secretVersion, apiVersion)`
+
+### Jira
+
+Public helpers:
+
+- `callJiraOperation(operationName, parameters)`
+- `addJiraComment(issueKey, body, jiraInstance)`
+- `cancelJiraTask(taskId, jiraInstance, token)`
+- `createJiraIssueV3(options)`
+- `editJiraIssueV2(issueIdOrKey, options)`
+- `getCurrentJiraUser({ jiraInstance, expand })`
+- `getJiraIssueByKey(issueKey, jiraInstance)`
+- `listJiraFilters(jiraInstance)`
+- `listJiraIssues({ jiraInstance, jql, fields, expand })`
+- `listJiraProjects(options)`
+- `getJiraTask(taskId, jiraInstance)`
+- `getJiraUser(accountId, options)`
+- `editJiraIssue(issueIdOrKey, options)`
+- `createJiraIssue(options)`
+- `updateJiraIssue(issueKey, options)`
+- `listJiraIssueTypes(options)`
+- `listJiraIssueTypeFields(options)`
+- `createJiraProject(options)`
+- `updateJiraProject(projectIdOrKey, options)`
+- `deleteJiraProject(projectIdOrKey, options)`
+- `listJiraProjectCategories(options)`
+- `createJiraProjectCategory(options)`
+- `removeJiraProjectCategory(id, options)`
+- `listJiraStatuses(options)`
+- `listJiraProjectUsers(options)`
+- `listJiraAssignableUsers(options)`
+- `listJiraPriorityTypes(options)`
+- `listJiraResources()`
+- `listJiraIssuesDatacenter(options)`
+- `listJiraTransitions(issueIdOrKey, options)`
+- `transitionJiraIssue(issueIdOrKey, options)`
+- `onNewJiraIssue(options)`
+- `onClosedJiraIssue(options)`
+- `onUpdatedJiraIssue(options)`
+- `onNewJiraIssueFromJql(options)`
+- `manageJiraIssues(queryRequest, sessionId)`
+
+### Office 365 Groups
+
+Public helpers:
+
+- `callGroupsOperation(operationName, parameters)`
+- `openGroupsHttpRequest(options)`
 - `listMyGroups(options)`
+- `listGroupMembers(groupId, options)`
 - `listOwnedGroups(options)`
 - `listGroups(options)`
-- `listGroupMembers(groupId, options)`
 - `onGroupMembershipChange(groupId, options)`
 - `addMemberToGroup(userUpn, groupId)`
 - `removeMemberFromGroup(userUpn, groupId)`
@@ -220,153 +294,168 @@ Available helpers:
 - `listDeletedGroups()`
 - `restoreDeletedGroup(groupId)`
 - `listDeletedGroupsByOwner(userId)`
-- `openGroupsHttpRequest(options)`
 
-Examples:
+### Office 365 Users
 
-```js
-const myGroups = await listMyGroups({ version: 3, extractSensitivityLabel: true });
+Public helpers:
 
-const members = await listGroupMembers('00000000-0000-0000-0000-000000000001', { top: 25 });
-
-const allGroups = await listGroups({ filter: "startsWith(displayName,'Finance')", top: 50 });
-
-await addMemberToGroup('user@contoso.com', '00000000-0000-0000-0000-000000000001');
-
-await createGroupEvent('00000000-0000-0000-0000-000000000001', {
-  subject: 'Monthly review',
-  start: { dateTime: '2026-04-15T09:00:00', timeZone: 'Pacific Standard Time' },
-  end: { dateTime: '2026-04-15T10:00:00', timeZone: 'Pacific Standard Time' },
-  body: { content: '<p>Status review</p>', contentType: 'Html' },
-  location: 'Conference Room A'
-});
-
-const response = await openGroupsHttpRequest({
-  method: 'GET',
-  uri: '/groups',
-  version: 2,
-  headers: { ConsistencyLevel: 'eventual' }
-});
-```
-
-Compatibility notes:
-
-- Existing calls like `listMyGroups()` and `listGroupMembers(groupId)` still work.
-- `listMyGroups(options)` now accepts `version: 1 | 2 | 3` so apps can opt into `ListOwnedGroups_V2` or `ListOwnedGroups_V3` without changing helper names.
-- `listGroupMembers`, `onGroupMembershipChange`, `addMemberToGroup`, `removeMemberFromGroup`, `restoreDeletedGroup`, and `listDeletedGroupsByOwner` also accept a single options object with IDs and related properties.
-- `listGroups` accepts `filter`, `top`, `skipToken`, `$skiptoken`, `nextLink`, and the sensitivity label flags. `skip` is treated as a compatibility alias for `skipToken`.
-- `openGroupsHttpRequest` now maps friendly inputs like `uri`, `method`, `headers`, `body`, `contentType`, and `customHeaders` to the connector's expected `Uri`, `Method`, `Body`, `ContentType`, and `CustomHeader1..5` fields. By default it keeps using the legacy `HttpRequest` action; set `version: 2` to use `HttpRequestV2`.
-- Group helper results are now unwrapped to the connector payload, matching the behavior of the Users and Outlook helpers.
-
-When you need the raw generated action, `callGroupsOperation(operationName, parameters)` remains available.
-
----
-
-## Office 365 Users Helpers
-
-The Users helpers in [codeApp/dist/codeapp.js](codeApp/dist/codeapp.js) are now aligned to the generated connector surface in [codeApp/src/generated/services/Office365UsersService.ts](codeApp/src/generated/services/Office365UsersService.ts) while keeping the older positional calls working.
-
-Available helpers:
-
+- `callUsersOperation(operationName, parameters)`
+- `openUsersHttpRequest(options)`
+- `updateMyProfile(profile)`
 - `getMyProfile(options)`
 - `getUserProfile(userId, options)`
 - `getManager(userId, options)`
 - `getDirectReports(userId, options)`
-- `getUserPhoto(userId)`
-- `getUserPhotoMetadata(userId)`
-- `searchForUsers(options)`
-- `updateMyProfile(profile)`
-- `updateMyPhoto(bodyOrOptions, contentType)`
 - `getMyTrendingDocuments(options)`
-- `getTrendingDocuments(userId, options)`
 - `getRelevantPeople(userId)`
-- `openUsersHttpRequest(options)`
+- `updateMyPhoto(bodyOrOptions, contentType)`
+- `getUserPhotoMetadata(userId)`
+- `getUserPhoto(userId)`
+- `getTrendingDocuments(userId, options)`
+- `searchForUsers(options)`
 
-Examples:
+### Office 365 Outlook
 
-```js
-const me = await getMyProfile({ select: ['displayName', 'mail', 'jobTitle'] });
+Public helpers:
 
-const manager = await getManager('user@contoso.com', { select: 'displayName,mail' });
+- `callOutlookOperation(operationName, parameters)`
+- `sendEmail(options)`
+- `forwardEmail(messageId, options)`
+- `replyToEmail(messageId, options)`
+- `listEmails(options)`
+- `sendFromSharedMailbox(sharedMailbox, options)`
+- `moveEmail(messageId, destinationFolderId, options)`
+- `deleteEmail(messageId, options)`
+- `createEvent(options)`
+- `listEvents(options)`
+- `editEvent(eventId, changedFields, calendarId)`
+- `deleteEvent(eventId, calendarId, options)`
+- `getEmail(messageId, options)`
+- `draftEmail(options)`
+- `updateDraftEmail(messageId, options)`
+- `sendDraftEmail(messageId)`
+- `markEmailAsRead(messageId, options)`
+- `updateEmailFlag(messageId, options)`
+- `getEmailAttachment(messageId, attachmentId, options)`
+- `listOutlookCategories()`
+- `assignOutlookCategory(messageId, category)`
+- `assignOutlookCategoryBulk(messageIds, categoryName)`
+- `listCalendars(options)`
+- `getEvent(eventId, calendarId, options)`
+- `getCalendarView(options)`
+- `respondToEventInvite(eventId, response, options)`
+- `listRoomLists()`
+- `listRooms()`
+- `listRoomsInRoomList(roomList)`
+- `findMeetingTimes(request)`
+- `setAutomaticReplies(settings)`
+- `getMailTips(request)`
+- `listContactFolders()`
+- `listContacts(folderId, options)`
+- `getContact(folderId, contactId, options)`
+- `createContact(folderId, contact)`
+- `updateContact(folderId, contactId, contact)`
+- `deleteContact(folderId, contactId, options)`
+- `callOutlookHttpRequest(options)`
+- `manageOutlookEmails(queryRequest, sessionId)`
+- `manageOutlookMeetings(queryRequest, sessionId)`
+- `manageOutlookContacts(queryRequest, sessionId)`
 
-const reports = await getDirectReports('user@contoso.com', { select: ['displayName', 'mail'], top: 25 });
+### SharePoint
 
-const firstPage = await searchForUsers({ searchTerm: 'alex', top: 25 });
-const nextPage = await searchForUsers({
-  searchTerm: 'alex',
-  nextLink: firstPage && firstPage['@odata.nextLink']
-});
+Public helpers:
 
-await updateMyProfile({ aboutMe: 'Builder', skills: ['Power Apps', 'JavaScript'] });
-```
+- `callSharePointOperation(operationName, parameters)`
+- `sendHttpRequest(options)`
+- `getItems(siteUrl, listId, options)`
+- `getSpItem(siteUrl, listId, itemId)`
+- `createSpItem(siteUrl, listId, fields)`
+- `updateSpItem(siteUrl, listId, itemId, changedFields)`
+- `deleteSpItem(siteUrl, listId, itemId)`
+- `listTables(siteUrl)`
+- `listLibrary(siteUrl)`
+- `createFile(siteUrl, libraryName, fileName, fileContent)`
+- `updateFile(siteUrl, fileId, fileContent)`
+- `deleteFile(siteUrl, fileId)`
+- `moveFile(siteUrl, sourceFileId, destinationFolderPath, newFileName)`
+- `getFileMetadata(siteUrl, fileId)`
 
-Compatibility notes:
+### SQL Server
 
-- Existing positional calls like `getUserProfile(userId)` and `getDirectReports(userId)` still work.
-- `select` can be either an array or a comma-separated string.
-- `searchForUsers` still accepts `skip`, but it is treated as `skipToken` for compatibility with the generated `SearchUserV2` action.
-- `openUsersHttpRequest` expects Graph-style connector inputs: `Uri`, `Method`, optional `Body`, `ContentType`, and up to five custom headers. The helper accepts friendly inputs like `uri`, `method`, `headers`, `body`, `contentType`, and `customHeaders` and maps them for you.
+Public helpers:
 
-When you need the raw generated action, `callUsersOperation(operationName, parameters)` remains available.
+- `callSqlOperation(operationName, parameters)`
+- `getSqlTables({ server, database })`
+- `getSqlRows({ server, database, table, apply, filter, orderBy, skip, top, select })`
+- `getSqlRow({ server, database, table, id })`
+- `insertSqlRow({ server, database, table, item })`
+- `updateSqlRow({ server, database, table, id, item })`
+- `deleteSqlRow({ server, database, table, id })`
+- `executeSqlQuery({ server, database, query })`
+- `executeSqlStoredProcedure({ server, database, procedure, parameters })`
 
----
+Raw SQL connector actions used by the wrapper:
 
-## Azure Key Vault Helpers
+- `GetTables_V2`
+- `GetItems_V2`
+- `GetItem_V2`
+- `PostItem_V2`
+- `PatchItem_V2`
+- `DeleteItem_V2`
+- `ExecutePassThroughNativeQuery_V2`
+- `ExecuteProcedure_V2`
 
-The Azure Key Vault helpers in [codeApp/dist/codeapp.js](codeApp/dist/codeapp.js) are now aligned to the generated connector surface in [codeApp/src/generated/services/AzureKeyVaultService.ts](codeApp/src/generated/services/AzureKeyVaultService.ts) and [codeApp/src/generated/models/AzureKeyVaultModel.ts](codeApp/src/generated/models/AzureKeyVaultModel.ts), while keeping the existing secret helper signatures usable.
+### Teams
 
-Available helpers:
+Public helpers:
 
-- `listKeys(options)`
-- `listKeyVersions(keyName)`
-- `getKeyMetadata(keyName)`
-- `getKeyVersionMetadata(keyName, keyVersion)`
-- `encryptData(keyName, input)`
-- `encryptDataWithVersion(keyName, keyVersion, input)`
-- `decryptData(keyName, input)`
-- `decryptDataWithVersion(keyName, keyVersion, input)`
-- `listSecrets(options)`
-- `listSecretVersions(secretName)`
-- `getSecret(secretName, apiVersion)`
-- `getSecretMetadata(secretName)`
-- `getSecretVersion(secretName, secretVersion)`
-- `getSecretVersionMetadata(secretName, secretVersion)`
-- `callKeyVaultOperation(operationName, parameters)`
+- `callTeamsOperation(operationName, parameters)`
+- `sendTeamsGraphHttpRequest(options)`
+- `listTeams()`
+- `listChannels(teamId)`
+- `getTeam(teamId)`
+- `getChannelDetails(teamId, channelId)`
+- `addMemberToTeam(teamId, body)`
+- `addMemberToChannel(teamId, channelId, body)`
+- `getUserMentionToken(userId)`
+- `getTeamTagMentionToken(teamId, tagId)`
+- `listChats({ top, skip })`
+- `listMembers(teamId, channelId)`
+- `postFeedNotification({ groupId, body })`
+- `postCardInChatOrChannel({ poster, location, body })`
+- `postMessageInChatOrChannel({ poster, location, body })`
 
-Examples:
+## AI Folder
 
-```js
-const secrets = await listSecrets();
+The `AI/` folder holds the repo's agent customization assets.
 
-const secret = await getSecret('ContosoApiKey');
+### AI/codeapp.agent.md
 
-const versions = await listSecretVersions('ContosoApiKey');
+This file defines the custom `codeapp` agent mode used for Power Apps code-first work in this repo. It captures repo-specific behavior such as:
 
-const encrypted = await encryptData('contoso-encryption-key', {
-  algorithm: 'RSA-OAEP-256',
-  rawData: 'hello world'
-});
+- preferring direct file creation and edits over advisory-only answers
+- reading connector skill files before wiring managed connectors
+- keeping durable notes in `agent/decision-log.md`
+- steering work toward `dist/`, `power.config.json`, and the repo wrappers instead of ad hoc runtime code
 
-const encryptedWithVersion = await encryptData({
-  keyName: 'contoso-encryption-key',
-  keyVersion: '8b9d2c7f0d2743f0a0a9a8e4e10abcde',
-  rawData: 'hello world'
-});
+### AI/skills
 
-const decrypted = await decryptData('contoso-encryption-key', {
-  encryptedData: encrypted && encrypted.encryptedData
-});
+Each skill folder contains a `SKILL.md` file that gives the agent focused guidance for a connector, runtime pattern, or build workflow.
 
-const keyMetadata = await getKeyMetadata('contoso-encryption-key');
-```
+| Skill folder | Purpose |
+| --- | --- |
+| `AI/skills/connections` | Shared rules for connector-backed apps, connection references, and wrapper conventions |
+| `AI/skills/dataverse` | Dataverse CRUD, table registration, unbound actions, and helper usage |
+| `AI/skills/environment-variables` | Reading Dataverse-backed environment variables through the repo helper layer |
+| `AI/skills/frontend-design` | UI and visual-direction guidance for distinctive Code App frontends |
+| `AI/skills/jira` | Jira helper behavior, instance-aware flows, and raw operation guidance |
+| `AI/skills/keyvault` | Azure Key Vault helper usage and secret-handling rules |
+| `AI/skills/office365-groups` | Group listing, membership, events, and raw HTTP group calls |
+| `AI/skills/office365-outlook` | Mail, calendar, contacts, rooms, mailbox settings, and Outlook MCP helpers |
+| `AI/skills/office365-users` | Profiles, managers, reports, photos, search, and raw HTTP user calls |
+| `AI/skills/sharepoint` | List CRUD, libraries, files, and SharePoint HTTP request flows |
+| `AI/skills/sql` | SQL Server table, row, query, and stored procedure helper guidance |
+| `AI/skills/start` | Startup skill entry used during guided app bootstrapping workflows |
+| `AI/skills/teams` | Teams, channels, chats, mentions, notifications, and Teams HTTP calls |
 
-Compatibility notes:
-
-- Existing calls like `getSecret('ContosoApiKey')` and `listSecrets({ maxresults: 25, apiVersion: '7.4' })` still work. The extra options are preserved as accepted inputs even though the current connector action does not use them.
-- The new Key Vault helpers accept either positional arguments or a single options object. For example, `getKeyVersionMetadata({ keyName, keyVersion })` and `getSecretVersion({ secretName, secretVersion })` are both supported.
-- `encryptData` and `decryptData` accept either the generated `operationInput` shape or flatter inputs like `{ keyName, rawData, algorithm }` and `{ keyName, encryptedData, algorithm }`. If `algorithm` is omitted, the helper defaults it to `RSA-OAEP-256`, which matches the connector schema default.
-- `encryptData` and `decryptData` also honor `keyVersion` when supplied in the options object, so apps can opt into the version-specific connector actions without changing helper names.
-
-When you need the raw generated action, `callKeyVaultOperation(operationName, parameters)` remains available.
-
----
+In practice, the connector skill files should be treated as the documentation companion to the wrapper files in `codeApp/dist/connectors/`.

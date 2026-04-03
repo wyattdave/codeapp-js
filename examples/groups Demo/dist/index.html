@@ -1,10 +1,11 @@
-
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Office 365 Groups Smoke Test</title>
+    <link rel="icon" type="image/png" href="./icon-512.png" />
+    <title>test groups app</title>
+    <link rel="stylesheet" href="./styles.css" />
     <script type="importmap">
       {
         "imports": {
@@ -12,186 +13,9 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="pageShell">
-      <header class="heroPanel">
-        <div>
-          <p class="eyebrow">Office 365 Groups</p>
-          <h1>Connector smoke test</h1>
-          <p class="heroCopy">Run the updated Groups helpers against a live connection, inspect the raw payloads, and optionally exercise the manual write paths.</p>
-        </div>
-        <p id="appStatus" class="statusLine pending">Waiting for your Office 365 Groups connection.</p>
-      </header>
-
-      <main class="layoutShell">
-        <section class="controlPanel">
-          <div class="panelHeaderBlock">
-            <p class="eyebrow">Read checks</p>
-            <h2>Queries</h2>
-          </div>
-
-          <div class="controlGroup">
-            <label for="ownedVersion">Owned groups version</label>
-            <select id="ownedVersion">
-              <option value="1">ListOwnedGroups</option>
-              <option value="2">ListOwnedGroups_V2</option>
-              <option value="3" selected>ListOwnedGroups_V3</option>
-            </select>
-            <label class="checkboxRow" for="ownedSensitivity">
-              <input id="ownedSensitivity" type="checkbox" />
-              <span>Extract sensitivity labels</span>
-            </label>
-            <label class="checkboxRow" for="ownedMetadata">
-              <input id="ownedMetadata" type="checkbox" />
-              <span>Fetch label metadata</span>
-            </label>
-            <button id="loadOwnedButton" type="button">Load my groups</button>
-          </div>
-
-          <div class="controlGroup">
-            <label for="directoryFilter">Directory filter</label>
-            <input id="directoryFilter" type="text" placeholder="startsWith(displayName,'Fin')" />
-            <label for="directoryTop">Top</label>
-            <input id="directoryTop" type="number" min="1" step="1" value="15" />
-            <button id="loadDirectoryButton" type="button">Search organization groups</button>
-          </div>
-
-          <div class="controlGroup">
-            <label for="deletedOwnerId">Deleted groups by owner</label>
-            <input id="deletedOwnerId" type="text" placeholder="user id or UPN" />
-            <div class="buttonRow">
-              <button id="loadDeletedButton" type="button">List deleted groups</button>
-              <button id="loadDeletedByOwnerButton" type="button">List deleted by owner</button>
-            </div>
-          </div>
-
-          <div class="controlGroup">
-            <label for="httpVersion">Raw /groups HTTP version</label>
-            <select id="httpVersion">
-              <option value="1" selected>HttpRequest</option>
-              <option value="2">HttpRequestV2</option>
-            </select>
-            <button id="loadHttpButton" type="button">Run raw /groups request</button>
-          </div>
-
-          <details class="advancedPanel">
-            <summary>Manual write checks</summary>
-
-            <div class="controlGroup compactGroup">
-              <label for="selectedGroupId">Group ID</label>
-              <input id="selectedGroupId" type="text" placeholder="Select a group or paste an ID" />
-              <label for="memberUpn">Member UPN</label>
-              <input id="memberUpn" type="text" placeholder="user@contoso.com" />
-              <div class="buttonRow">
-                <button id="addMemberButton" type="button">Add member</button>
-                <button id="removeMemberButton" type="button">Remove member</button>
-              </div>
-            </div>
-
-            <div class="controlGroup compactGroup">
-              <label for="eventGroupId">Event group ID</label>
-              <input id="eventGroupId" type="text" placeholder="Defaults to the selected group" />
-              <label for="eventId">Event ID</label>
-              <input id="eventId" type="text" placeholder="Needed for update or delete" />
-              <label for="eventVersion">Create event version</label>
-              <select id="eventVersion">
-                <option value="2" selected>CreateCalendarEventV2</option>
-                <option value="1">CreateCalendarEvent</option>
-              </select>
-              <label for="eventSubject">Subject</label>
-              <input id="eventSubject" type="text" value="Smoke test meeting" />
-              <label for="eventStart">Start</label>
-              <input id="eventStart" type="datetime-local" />
-              <label for="eventEnd">End</label>
-              <input id="eventEnd" type="datetime-local" />
-              <label for="eventTimeZone">Windows time zone</label>
-              <input id="eventTimeZone" type="text" value="Pacific Standard Time" />
-              <label for="eventBody">Body</label>
-              <textarea id="eventBody" rows="4"><p>Created from the Office 365 Groups smoke test page.</p></textarea>
-              <div class="buttonRow">
-                <button id="createEventButton" type="button">Create event</button>
-                <button id="updateEventButton" type="button">Update event</button>
-                <button id="deleteEventButton" type="button">Delete event</button>
-              </div>
-            </div>
-
-            <div class="controlGroup compactGroup">
-              <label for="restoreGroupId">Deleted group ID</label>
-              <input id="restoreGroupId" type="text" placeholder="Paste a deleted group ID" />
-              <button id="restoreDeletedButton" type="button">Restore deleted group</button>
-            </div>
-          </details>
-        </section>
-
-        <section class="resultPanel">
-          <div class="metricGrid">
-            <article class="metricCard">
-              <p>Owned groups</p>
-              <strong id="ownedCount">0</strong>
-            </article>
-            <article class="metricCard">
-              <p>Directory results</p>
-              <strong id="directoryCount">0</strong>
-            </article>
-            <article class="metricCard">
-              <p>Members</p>
-              <strong id="memberCount">0</strong>
-            </article>
-            <article class="metricCard">
-              <p>Deleted groups</p>
-              <strong id="deletedCount">0</strong>
-            </article>
-          </div>
-
-          <section class="panelBlock">
-            <div class="panelHeaderBlock inlineHeader">
-              <div>
-                <p class="eyebrow">Current collection</p>
-                <h2 id="collectionTitle">Owned groups</h2>
-              </div>
-              <button id="loadMembersButton" type="button">Load selected group members</button>
-            </div>
-            <div id="groupGrid" class="cardGrid"></div>
-          </section>
-
-          <section class="panelBlock splitPanel">
-            <div>
-              <div class="panelHeaderBlock inlineHeader">
-                <div>
-                  <p class="eyebrow">Selected group</p>
-                  <h2>Details</h2>
-                </div>
-              </div>
-              <div id="groupDetail" class="detailCard emptyState">Select a group to inspect its details and reuse its ID for member or event checks.</div>
-            </div>
-
-            <div>
-              <div class="panelHeaderBlock inlineHeader">
-                <div>
-                  <p class="eyebrow">Members</p>
-                  <h2 id="memberListTitle">Not loaded</h2>
-                </div>
-                <button id="clearMembersButton" type="button">Clear members</button>
-              </div>
-              <div id="memberList" class="memberList emptyState">Run a member lookup to populate this panel.</div>
-            </div>
-          </section>
-
-          <section class="panelBlock diagnosticBlock">
-            <div class="panelHeaderBlock inlineHeader">
-              <div>
-                <p class="eyebrow">Diagnostics</p>
-                <h2>Raw payload</h2>
-              </div>
-              <button id="clearDiagnosticsButton" type="button">Clear diagnostics</button>
-            </div>
-            <pre id="diagnosticOutput">Run a smoke test action to inspect the connector payload.</pre>
-          </section>
-        </section>
-      </main>
-    </div>
+    <div id="root"></div>
     <script type="module" src="index.js"></script>
   </body>
 </html>

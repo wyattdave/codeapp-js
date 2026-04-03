@@ -1,7 +1,8 @@
 {
+  "appId":"f77d53bb-2423-4788-8ea7-47faa8869872",
   "appDisplayName": "Dataverse Demo",
   "description": "A simple demo showing CRUD operations against the Dataverse task table.",
-  "environmentId": "<ENVIRONMENT ID>",
+  "environmentId": "cd..-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "default",
@@ -15,7 +16,7 @@
         "commondataserviceforapps"
       ],
       "authenticationType": null,
-      "sharedConnectionId": null,
+      "sharedConnectionId": "300515b919c542759d28b5a23b5b304a",
       "dataSets": {}
     }
   },
@@ -26,6 +27,11 @@
         "tasks": {
           "entitySetName": "tasks",
           "logicalName": "task",
+          "isHidden": false
+        },
+        "systemusers": {
+          "entitySetName": "systemusers",
+          "logicalName": "systemuser",
           "isHidden": false
         }
       },

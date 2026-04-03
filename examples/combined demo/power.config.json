@@ -1,21 +1,22 @@
 {
-  "appDisplayName": "Multi Demo2",
-  "description": "",
-  "environmentId": "<ENVIRONMENT ID>",
+  "appId": "ea69ae82-53f2-44a8-966b-8338a079ed76",
+  "appDisplayName": "test Outlook Skill",
+  "description": "Shows the signed-in user's profile, today's emails, and today's meetings.",
+  "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
-  "logoPath": "",
+  "logoPath": "./dist/icon-512.png",
   "localAppUrl": "http://localhost:3000",
   "region": "prod",
   "connectionReferences": {
-    "Office365Outlook": {
+    "office365outlook": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
       "displayName": "Office 365 Outlook",
       "dataSources": [
         "office365"
       ],
       "authenticationType": null,
-      "sharedConnectionId": null,
+      "sharedConnectionId": "b950ec12b23a417cb9819cb39417e105",
       "dataSets": {}
     },
     "office365users": {
@@ -25,17 +26,7 @@
         "office365users"
       ],
       "authenticationType": null,
-      "sharedConnectionId": null,
-      "dataSets": {}
-    },
-    "office365groups": {
-      "id": "/providers/Microsoft.PowerApps/apis/shared_office365groups",
-      "displayName": "Office 365 Groups",
-      "dataSources": [
-        "office365groups"
-      ],
-      "authenticationType": null,
-      "sharedConnectionId": null,
+      "sharedConnectionId": "c668989c8535495aaf2672d13d21b815",
       "dataSets": {}
     }
   },

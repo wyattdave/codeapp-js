@@ -1,7 +1,11 @@
-import { getClient } from "@microsoft/power-apps/data";
+// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────── O365 User ──────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
 
 // ── Data source name (must match connectionReferences in power.config.json) ──
-const DATA_SOURCE = "office365users";
+import {unwrapResult,_dbgWrap  } from "./codeapp.js";
+import {getClient } from "./power-apps-data.js";
+const DATA_SOURCE_USERS = "office365users";
 
 const USERS_APIS = {
   UpdateMyProfile: {
@@ -144,9 +148,9 @@ const USERS_APIS = {
 };
 
 // ── Initialize SDK client for the Office 365 Users connector ───
-function initClient() {
+function initUsersClient() {
   const dataSourcesInfo = {
-    [DATA_SOURCE]: {
+    [DATA_SOURCE_USERS]: {
       tableId: "",
       version: "",
       primaryKey: "",
@@ -157,115 +161,109 @@ function initClient() {
   return getClient(dataSourcesInfo);
 }
 
-function unwrapResult(result) {
-  if (result && result.success === false) {
-    throw new Error(result.error?.message || "Operation failed");
-  }
-
-  return result && Object.prototype.hasOwnProperty.call(result, "data") ? result.data : result;
-}
-
-function isUsersObject(value) {
-  return !!value && typeof value === "object" && !Array.isArray(value);
+function isUsersObject(oValue) {
+  return !!oValue && typeof oValue === "object" && !Array.isArray(oValue);
 }
 
 function pickUsersValue() {
   for (let iIndex = 0; iIndex < arguments.length; iIndex += 1) {
-    const value = arguments[iIndex];
-    if (value !== undefined && value !== null) return value;
+    const oValue = arguments[iIndex];
+    if (oValue !== undefined && oValue !== null) return oValue;
   }
-
   return undefined;
 }
 
-function setUsersIfDefined(target, key, value) {
-  if (value !== undefined && value !== null) {
-    target[key] = value;
+function setUsersIfDefined(oTarget, sKey, oValue) {
+  if (oValue !== undefined && oValue !== null) {
+    oTarget[sKey] = oValue;
   }
 }
 
-function normalizeUsersSelect(value) {
-  if (Array.isArray(value)) return value.join(",");
-  return value;
+function normalizeUsersSelect(oValue) {
+  if (Array.isArray(oValue)) return oValue.join(",");
+  return oValue;
 }
 
-function normalizeUsersSelectOptions(options) {
-  if (isUsersObject(options)) return options;
-  if (options === undefined || options === null) return {};
-  return { select: options };
+function normalizeUsersSelectOptions(oOptions) {
+  if (isUsersObject(oOptions)) return oOptions;
+  if (oOptions === undefined || oOptions === null) return {};
+  return { select: oOptions };
 }
 
-function normalizeUsersDirectReportsOptions(options) {
-  if (isUsersObject(options)) return options;
-  if (typeof options === "number") return { top: options };
-  if (options === undefined || options === null) return {};
-  return { select: options };
+function normalizeUsersDirectReportsOptions(oOptions) {
+  if (isUsersObject(oOptions)) return oOptions;
+  if (typeof oOptions === "number") return { top: oOptions };
+  if (oOptions === undefined || oOptions === null) return {};
+  return { select: oOptions };
 }
 
-function normalizeUsersSearchOptions(options) {
-  if (typeof options === "string") return { searchTerm: options };
-  return isUsersObject(options) ? options : {};
+function normalizeUsersSearchOptions(oOptions) {
+  if (typeof oOptions === "string") return { searchTerm: oOptions };
+  return isUsersObject(oOptions) ? oOptions : {};
 }
 
-function normalizeUsersTrendingOptions(options) {
-  if (typeof options === "string") return { filter: options };
-  return isUsersObject(options) ? options : {};
+function normalizeUsersTrendingOptions(oOptions) {
+  if (typeof oOptions === "string") return { filter: oOptions };
+  return isUsersObject(oOptions) ? oOptions : {};
 }
 
-function extractUsersSkipToken(nextLink) {
-  if (!nextLink || typeof nextLink !== "string") return undefined;
+function extractUsersSkipToken(sNextLink) {
+  if (!sNextLink || typeof sNextLink !== "string") return undefined;
 
   try {
-    const url = new URL(nextLink);
+    const oUrl = new URL(sNextLink);
     return pickUsersValue(
-      url.searchParams.get("skipToken"),
-      url.searchParams.get("$skiptoken"),
-      url.searchParams.get("$skipToken"),
-      url.searchParams.get("skiptoken")
+      oUrl.searchParams.get("skipToken"),
+      oUrl.searchParams.get("$skiptoken"),
+      oUrl.searchParams.get("$skipToken"),
+      oUrl.searchParams.get("skiptoken")
     );
-  } catch {
+  } catch (oError) {
     return undefined;
   }
 }
 
-function getUsersHeaderValue(headers, name) {
-  if (!isUsersObject(headers)) return undefined;
+function getUsersHeaderValue(oHeaders, sName) {
+  if (!isUsersObject(oHeaders)) return undefined;
 
-  const headerName = String(name).toLowerCase();
-  const entries = Object.entries(headers);
-  for (let iIndex = 0; iIndex < entries.length; iIndex += 1) {
-    const [currentName, value] = entries[iIndex];
-    if (String(currentName).toLowerCase() === headerName) {
-      return value;
+  const sMatch = String(sName).toLowerCase();
+  const aEntries = Object.entries(oHeaders);
+  for (let iIndex = 0; iIndex < aEntries.length; iIndex += 1) {
+    const [sHeaderName, oValue] = aEntries[iIndex];
+    if (String(sHeaderName).toLowerCase() === sMatch) {
+      return oValue;
     }
   }
-
   return undefined;
 }
 
-function normalizeUsersCustomHeaders(headers, customHeaders) {
-  const resolved = Array.isArray(customHeaders) ? customHeaders.filter((value) => value != null) : [];
+function normalizeUsersCustomHeaders(oHeaders, aCustomHeaders) {
+  const aResolved = Array.isArray(aCustomHeaders) ? aCustomHeaders.filter((oValue) => oValue != null) : [];
 
-  if (!isUsersObject(headers)) return resolved.slice(0, 5);
+  if (!isUsersObject(oHeaders)) return aResolved.slice(0, 5);
 
-  const entries = Object.entries(headers);
-  for (let iIndex = 0; iIndex < entries.length; iIndex += 1) {
-    const [headerName, value] = entries[iIndex];
-    if (value === undefined || value === null) continue;
-    if (String(headerName).toLowerCase() === "content-type") continue;
-    resolved.push(String(headerName) + ": " + String(value));
-    if (resolved.length >= 5) break;
+  const aEntries = Object.entries(oHeaders);
+  for (let iIndex = 0; iIndex < aEntries.length; iIndex += 1) {
+    const [sHeaderName, oValue] = aEntries[iIndex];
+    if (oValue === undefined || oValue === null) continue;
+    if (String(sHeaderName).toLowerCase() === "content-type") continue;
+    aResolved.push(String(sHeaderName) + ": " + String(oValue));
+    if (aResolved.length >= 5) break;
   }
 
-  return resolved.slice(0, 5);
+  return aResolved.slice(0, 5);
 }
 
 // ── Internal: execute a connector operation ────────────────────
-async function execOp(operationName, parameters) {
-  const client = await initClient();
+async function execUsersOp(operationName, parameters) {
+  if (!Object.prototype.hasOwnProperty.call(USERS_APIS, operationName)) {
+    throw new Error("Office 365 Users operation metadata is not registered for: " + operationName);
+  }
+
+  const client = await initUsersClient();
   const result = await client.executeAsync({
     connectorOperation: {
-      tableName: DATA_SOURCE,
+      tableName: DATA_SOURCE_USERS,
       operationName,
       parameters,
     },
@@ -279,28 +277,37 @@ async function execOp(operationName, parameters) {
 
 // ── Call any Office 365 Users operation by name ────────────────
 export async function callUsersOperation(operationName, parameters = {}) {
-  return execOp(operationName, parameters);
+  return _dbgWrap('callUsersOperation', [operationName, parameters], async function() {
+  return execUsersOp(operationName, parameters);
+  });
 }
 
 // ── Open HTTP Request ──────────────────────────────────────────
-export async function openHttpRequest({ method = "GET", uri, headers, body, contentType, customHeaders } = {}) {
-  const resolvedHeaders = normalizeUsersCustomHeaders(headers, customHeaders);
-  return execOp("HttpRequest", {
+export async function openUsersHttpRequest({ method = "GET", uri, headers, body, contentType, customHeaders } = {}) {
+  return _dbgWrap('openUsersHttpRequest', [{ method, uri, headers, body, contentType, customHeaders }], async function() {
+  const aHeaders = normalizeUsersCustomHeaders(headers, customHeaders);
+  return execUsersOp("HttpRequest", {
     Uri: uri,
     Method: method,
     Body: body,
     ContentType: pickUsersValue(contentType, getUsersHeaderValue(headers, "Content-Type")),
-    CustomHeader1: resolvedHeaders[0],
-    CustomHeader2: resolvedHeaders[1],
-    CustomHeader3: resolvedHeaders[2],
-    CustomHeader4: resolvedHeaders[3],
-    CustomHeader5: resolvedHeaders[4],
+    CustomHeader1: aHeaders[0],
+    CustomHeader2: aHeaders[1],
+    CustomHeader3: aHeaders[2],
+    CustomHeader4: aHeaders[3],
+    CustomHeader5: aHeaders[4],
+  });
   });
 }
 
-export async function updateMyProfile(profile = {}) {
-  const body = isUsersObject(profile) && "body" in profile ? profile.body : profile;
-  return execOp("UpdateMyProfile", { body });
+// ── Update My Profile ──────────────────────────────────────────
+export async function updateMyProfile(oProfile = {}) {
+  return _dbgWrap('updateMyProfile', [oProfile], async function() {
+  const oBody = isUsersObject(oProfile) && "body" in oProfile ? oProfile.body : oProfile;
+  return execUsersOp("UpdateMyProfile", {
+    body: oBody,
+  });
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -308,24 +315,33 @@ export async function updateMyProfile(profile = {}) {
 // ═══════════════════════════════════════════════════════════════
 
 // ── Get My Profile ─────────────────────────────────────────────
-export async function getMyProfile(options) {
-  const resolvedOptions = normalizeUsersSelectOptions(options);
+export async function getMyProfile(oOptions) {
+  return _dbgWrap('getMyProfile', [oOptions], async function() {
+  const oResolvedOptions = normalizeUsersSelectOptions(oOptions);
   const params = {};
-  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(resolvedOptions.select, resolvedOptions.$select)));
-  return execOp("MyProfile_V2", params);
+  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(oResolvedOptions.select, oResolvedOptions.$select)));
+  return execUsersOp("MyProfile_V2", params);
+  });
 }
 
 // ── Get User Profile ───────────────────────────────────────────
-export async function getUserProfile(userId, options) {
+export async function getUserProfile(userId, oOptions) {
+  return _dbgWrap('getUserProfile', [userId, oOptions], async function() {
   if (isUsersObject(userId)) {
-    options = userId;
-    userId = pickUsersValue(options.userId, options.id);
+    oOptions = userId;
+    userId = pickUsersValue(oOptions.userId, oOptions.id);
   }
 
-  const resolvedOptions = normalizeUsersSelectOptions(options);
-  const params = { id: userId };
-  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(resolvedOptions.select, resolvedOptions.$select)));
-  return execOp("UserProfile_V2", params);
+  const oResolvedOptions = normalizeUsersSelectOptions(oOptions);
+  const params = {
+    id: userId,
+  };
+  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(oResolvedOptions.select, oResolvedOptions.$select)));
+
+  return execUsersOp("UserProfile_V2", {
+    ...params,
+  });
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -333,94 +349,142 @@ export async function getUserProfile(userId, options) {
 // ═══════════════════════════════════════════════════════════════
 
 // ── Get Manager ────────────────────────────────────────────────
-export async function getManager(userId, options) {
+export async function getManager(userId, oOptions) {
+  return _dbgWrap('getManager', [userId, oOptions], async function() {
   if (isUsersObject(userId)) {
-    options = userId;
-    userId = pickUsersValue(options.userId, options.id);
+    oOptions = userId;
+    userId = pickUsersValue(oOptions.userId, oOptions.id);
   }
 
-  const resolvedOptions = normalizeUsersSelectOptions(options);
-  const params = { id: userId };
-  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(resolvedOptions.select, resolvedOptions.$select)));
-  return execOp("Manager_V2", params);
+  const oResolvedOptions = normalizeUsersSelectOptions(oOptions);
+  const params = {
+    id: userId,
+  };
+  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(oResolvedOptions.select, oResolvedOptions.$select)));
+
+  return execUsersOp("Manager_V2", {
+    ...params,
+  });
+  });
 }
 
 // ── Get Direct Reports ─────────────────────────────────────────
-export async function getDirectReports(userId, options) {
+export async function getDirectReports(userId, oOptions) {
+  return _dbgWrap('getDirectReports', [userId, oOptions], async function() {
   if (isUsersObject(userId)) {
-    options = userId;
-    userId = pickUsersValue(options.userId, options.id);
+    oOptions = userId;
+    userId = pickUsersValue(oOptions.userId, oOptions.id);
   }
 
-  const resolvedOptions = normalizeUsersDirectReportsOptions(options);
-  const params = { id: userId };
-  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(resolvedOptions.select, resolvedOptions.$select)));
-  setUsersIfDefined(params, "$top", pickUsersValue(resolvedOptions.top, resolvedOptions.$top));
-  return execOp("DirectReports_V2", params);
+  const oResolvedOptions = normalizeUsersDirectReportsOptions(oOptions);
+  const params = {
+    id: userId,
+  };
+  setUsersIfDefined(params, "$select", normalizeUsersSelect(pickUsersValue(oResolvedOptions.select, oResolvedOptions.$select)));
+  setUsersIfDefined(params, "$top", pickUsersValue(oResolvedOptions.top, oResolvedOptions.$top));
+
+  return execUsersOp("DirectReports_V2", {
+    ...params,
+  });
+  });
 }
 
-export async function getMyTrendingDocuments(options = {}) {
-  const resolvedOptions = normalizeUsersTrendingOptions(options);
+// ── Get My Trending Documents ──────────────────────────────────
+export async function getMyTrendingDocuments(oOptions = {}) {
+  return _dbgWrap('getMyTrendingDocuments', [oOptions], async function() {
+  const oResolvedOptions = normalizeUsersTrendingOptions(oOptions);
   const params = {};
-  setUsersIfDefined(params, "$filter", pickUsersValue(resolvedOptions.filter, resolvedOptions.$filter));
-  setUsersIfDefined(params, "extractSensitivityLabel", resolvedOptions.extractSensitivityLabel);
-  setUsersIfDefined(params, "fetchSensitivityLabelMetadata", resolvedOptions.fetchSensitivityLabelMetadata);
-  return execOp("MyTrendingDocuments", params);
+  setUsersIfDefined(params, "$filter", pickUsersValue(oResolvedOptions.filter, oResolvedOptions.$filter));
+  setUsersIfDefined(params, "extractSensitivityLabel", oResolvedOptions.extractSensitivityLabel);
+  setUsersIfDefined(params, "fetchSensitivityLabelMetadata", oResolvedOptions.fetchSensitivityLabelMetadata);
+  return execUsersOp("MyTrendingDocuments", params);
+  });
 }
 
+// ── Get Relevant People ────────────────────────────────────────
 export async function getRelevantPeople(userId) {
+  return _dbgWrap('getRelevantPeople', [userId], async function() {
   if (isUsersObject(userId)) {
     userId = pickUsersValue(userId.userId, userId.id);
   }
 
-  return execOp("RelevantPeople", { userId });
+  return execUsersOp("RelevantPeople", {
+    userId,
+  });
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
 //  PHOTO
 // ═══════════════════════════════════════════════════════════════
 
-// ── Get User Photo ─────────────────────────────────────────────
-export async function updateMyPhoto(bodyOrOptions, contentType) {
-  if (isUsersObject(bodyOrOptions)) {
-    contentType = pickUsersValue(bodyOrOptions.contentType, bodyOrOptions.Content_Type, bodyOrOptions.mimeType);
-    bodyOrOptions = pickUsersValue(bodyOrOptions.body, bodyOrOptions.content, bodyOrOptions.photo, bodyOrOptions.fileContent);
+// ── Update My Photo ────────────────────────────────────────────
+export async function updateMyPhoto(oBodyOrOptions, sContentType) {
+  return _dbgWrap('updateMyPhoto', [oBodyOrOptions, sContentType], async function() {
+  if (isUsersObject(oBodyOrOptions)) {
+    sContentType = pickUsersValue(
+      oBodyOrOptions.contentType,
+      oBodyOrOptions.Content_Type,
+      oBodyOrOptions.mimeType
+    );
+    oBodyOrOptions = pickUsersValue(
+      oBodyOrOptions.body,
+      oBodyOrOptions.content,
+      oBodyOrOptions.photo,
+      oBodyOrOptions.fileContent
+    );
   }
 
-  return execOp("UpdateMyPhoto", {
-    body: bodyOrOptions,
-    Content_Type: contentType,
+  return execUsersOp("UpdateMyPhoto", {
+    body: oBodyOrOptions,
+    Content_Type: sContentType,
+  });
   });
 }
 
+// ── Get User Photo Metadata ────────────────────────────────────
 export async function getUserPhotoMetadata(userId) {
+  return _dbgWrap('getUserPhotoMetadata', [userId], async function() {
   if (isUsersObject(userId)) {
     userId = pickUsersValue(userId.userId, userId.id);
   }
 
-  return execOp("UserPhotoMetadata", { userId });
+  return execUsersOp("UserPhotoMetadata", {
+    userId,
+  });
+  });
 }
 
+// ── Get User Photo ─────────────────────────────────────────────
 export async function getUserPhoto(userId) {
+  return _dbgWrap('getUserPhoto', [userId], async function() {
   if (isUsersObject(userId)) {
     userId = pickUsersValue(userId.userId, userId.id);
   }
 
-  return execOp("UserPhoto_V2", { id: userId });
+  return execUsersOp("UserPhoto_V2", {
+    id: userId,
+  });
+  });
 }
 
-export async function getTrendingDocuments(userId, options = {}) {
+// ── Get Trending Documents ─────────────────────────────────────
+export async function getTrendingDocuments(userId, oOptions = {}) {
+  return _dbgWrap('getTrendingDocuments', [userId, oOptions], async function() {
   if (isUsersObject(userId)) {
-    options = userId;
-    userId = pickUsersValue(options.userId, options.id);
+    oOptions = userId;
+    userId = pickUsersValue(oOptions.userId, oOptions.id);
   }
 
-  const resolvedOptions = normalizeUsersTrendingOptions(options);
-  const params = { id: userId };
-  setUsersIfDefined(params, "$filter", pickUsersValue(resolvedOptions.filter, resolvedOptions.$filter));
-  setUsersIfDefined(params, "extractSensitivityLabel", resolvedOptions.extractSensitivityLabel);
-  setUsersIfDefined(params, "fetchSensitivityLabelMetadata", resolvedOptions.fetchSensitivityLabelMetadata);
-  return execOp("TrendingDocuments", params);
+  const oResolvedOptions = normalizeUsersTrendingOptions(oOptions);
+  const params = {
+    id: userId,
+  };
+  setUsersIfDefined(params, "$filter", pickUsersValue(oResolvedOptions.filter, oResolvedOptions.$filter));
+  setUsersIfDefined(params, "extractSensitivityLabel", oResolvedOptions.extractSensitivityLabel);
+  setUsersIfDefined(params, "fetchSensitivityLabelMetadata", oResolvedOptions.fetchSensitivityLabelMetadata);
+  return execUsersOp("TrendingDocuments", params);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -428,24 +492,26 @@ export async function getTrendingDocuments(userId, options = {}) {
 // ═══════════════════════════════════════════════════════════════
 
 // ── Search for Users ───────────────────────────────────────────
-export async function searchForUsers(options = {}) {
-  const resolvedOptions = normalizeUsersSearchOptions(options);
+export async function searchForUsers(oOptions = {}) {
+  return _dbgWrap('searchForUsers', [oOptions], async function() {
+  const oResolvedOptions = normalizeUsersSearchOptions(oOptions);
   const params = {};
-  setUsersIfDefined(params, "searchTerm", resolvedOptions.searchTerm);
-  setUsersIfDefined(params, "top", pickUsersValue(resolvedOptions.top, resolvedOptions.$top));
-  setUsersIfDefined(params, "isSearchTermRequired", resolvedOptions.isSearchTermRequired);
+  setUsersIfDefined(params, "searchTerm", oResolvedOptions.searchTerm);
+  setUsersIfDefined(params, "top", pickUsersValue(oResolvedOptions.top, oResolvedOptions.$top));
+  setUsersIfDefined(params, "isSearchTermRequired", oResolvedOptions.isSearchTermRequired);
 
-  const skipToken = pickUsersValue(
-    resolvedOptions.skipToken,
-    resolvedOptions.$skipToken,
-    resolvedOptions.$skiptoken,
-    extractUsersSkipToken(resolvedOptions.nextLink),
-    resolvedOptions.skip
+  const oSkipToken = pickUsersValue(
+    oResolvedOptions.skipToken,
+    oResolvedOptions.$skipToken,
+    oResolvedOptions.$skiptoken,
+    extractUsersSkipToken(oResolvedOptions.nextLink),
+    oResolvedOptions.skip
   );
 
-  if (skipToken !== undefined && skipToken !== null) {
-    params.skipToken = String(skipToken);
+  if (oSkipToken !== undefined && oSkipToken !== null) {
+    params.skipToken = String(oSkipToken);
   }
 
-  return execOp("SearchUserV2", params);
+  return execUsersOp("SearchUserV2", params);
+  });
 }
