@@ -1,8 +1,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────── O365 Groups──────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────
-import { getClient } from "./power-apps-data.js";
-import {_dbgWrap,unwrapResult  } from "./codeapp.js";
+import { getClient } from "../power-apps-data.js";
+import {_dbgWrap,unwrapResult  } from "../codeapp.js";
 // ── Data source names (must match connectionReferences in power.config.json) ──
 const DATA_SOURCE_GROUPS_CANDIDATES = ["office365groups", "Office365Groups"];
 const GROUPS_APIS = {

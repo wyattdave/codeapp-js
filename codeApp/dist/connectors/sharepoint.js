@@ -2,8 +2,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────── SharePoint ─────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────
-import { getClient} from "./power-apps-data.js";
-import {_dbgWrap  } from "./codeapp.js";
+import { getClient} from "../power-apps-data.js";
+import {_dbgWrap  } from "../codeapp.js";
 // ── Data source name (must match connectionReferences in power.config.json) ──
 const DATA_SOURCE_SP = "sharepointonline";
 

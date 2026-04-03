@@ -1,8 +1,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 // ────────────────────────────────── Teams ───────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────
-import { getClient } from "./power-apps-data.js";
-import {_dbgWrap  } from "./codeapp.js";
+import { getClient } from "../power-apps-data.js";
+import {_dbgWrap  } from "../codeapp.js";
 const TEAMS_DATA_SOURCE_CANDIDATES = ["teams", "Teams", "microsoftteams", "MicrosoftTeams"];
 const TEAMS_APIS = {
   GetAllTeams: {

@@ -3,8 +3,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 
 // ── Data source name (must match connectionReferences in power.config.json) ──
-import {unwrapResult,_dbgWrap  } from "./codeapp.js";
-import {getClient } from "./power-apps-data.js";
+import {unwrapResult,_dbgWrap  } from "../codeapp.js";
+import {getClient } from "../power-apps-data.js";
 const DATA_SOURCE_USERS = "office365users";
 
 const USERS_APIS = {

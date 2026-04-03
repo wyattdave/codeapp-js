@@ -1,8 +1,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 // ───────────────────────────── Azure Key Vault ──────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────
-import { getClient } from "./power-apps-data.js";
-import {_dbgWrap  } from "./codeapp.js";
+import { getClient } from "../power-apps-data.js";
+import {_dbgWrap  } from "../codeapp.js";
 const KEY_VAULT_DATA_SOURCE_CANDIDATES = ["keyvault", "KeyVault", "azurekeyvault", "azureKeyVault", "AzureKeyVault"];
 const KEY_VAULT_APIS = {
   ListKeys: {

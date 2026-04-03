@@ -1,8 +1,8 @@
 // ────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────── SQL ────────────────────────────────────
 // ────────────────────────────────────────────────────────────────────────────
-import { getClient } from "./power-apps-data.js";
-import {_dbgWrap  } from "./codeapp.js";
+import { getClient } from "../power-apps-data.js";
+import {_dbgWrap  } from "../codeapp.js";
 const SQL_DATA_SOURCE_CANDIDATES = ["sql", "Sql", "SQL"];
 const SQL_APIS = {
   GetTables_V2: {
