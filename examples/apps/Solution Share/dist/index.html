@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="./icon-512.png" />
+    <title>Solution Share</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "@microsoft/power-apps/data": "./power-apps-data.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>🔗 Solution Share</h1>
+      </header>
+
+      <!-- Solution List View -->
+      <div id="solution-panel">
+        <div class="search-container">
+          <input type="text" id="search-box" placeholder="Search solutions…" />
+        </div>
+        <div id="solution-list">
+          <div class="loading"><div class="spinner"></div><p>Loading solutions…</p></div>
+        </div>
+      </div>
+
+      <!-- Component Detail View -->
+      <div id="component-panel" style="display:none;">
+        <div class="component-header">
+          <button class="back-btn" id="back-btn">← Back</button>
+          <h2 id="solution-title"></h2>
+        </div>
+        <div id="component-loading" class="loading" style="display:none;">
+          <div class="spinner"></div><p>Loading components…</p>
+        </div>
+        <div id="component-sections"></div>
+      </div>
+
+      <!-- Share Modal -->
+      <div id="share-modal" class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Share Component</h3>
+            <button class="modal-close" id="modal-close">×</button>
+          </div>
+          <div class="modal-body">
+            <div id="share-comp-name" class="share-component-name"></div>
+            <div id="share-comp-id" class="share-component-id"></div>
+
+            <label for="access-level">Access Level</label>
+            <select id="access-level">
+              <option value="ReadAccess">Read Only</option>
+              <option value="ReadAccess,WriteAccess">Read &amp; Write</option>
+              <option value="ReadAccess,WriteAccess,AppendAccess,AppendToAccess,DeleteAccess,ShareAccess">Full Access</option>
+            </select>
+
+            <label for="user-search">Search for a User</label>
+            <input type="text" id="user-search" placeholder="Type a name to search…" />
+            <div id="user-results" class="user-results"></div>
+            <button id="share-btn" class="share-btn" disabled>Share</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="index.js"></script>
+  </body>
+</html>
