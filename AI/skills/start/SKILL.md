@@ -1,46 +1,54 @@
 ---
-name: frontend-design
-description: Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics.
+name: start
+aliases: start-codeapp
+description: Start skill for new project setup. Use this skill when starting a fresh app build or UI build so the agent confirms theme direction, offers mockups, and only then implements files.
 ---
 
-# Frontend Design Skill
+# Start: New Project Setup
 
-This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.
+This skill applies only when the project is new (the decision log has no prior decisions). It ensures the agent gathers style and colour preferences and offers mockup creation before building.
 
-The user provides frontend requirements: a component, page, application, or interface to build. They may include context about the purpose, audience, or technical constraints.
+## folder setup
+The current folder should have a power-config.json file and a dist folder. If it does not the run the cap newApp command with a given name or one created by you.
 
-## Design Thinking
+## Style and Colour Direction
 
-Before coding, understand the context and commit to a BOLD aesthetic direction:
+Before building any creative UI (website, app, dashboard, landing page, etc.):
 
-- **Purpose:** What problem does this interface solve? Who uses it?
-- **Tone:** Pick an extreme: brutally minimal, maximalist chaos, retro-futuristic, organic/natural, luxury/refined, playful/toy-like, editorial/magazine, brutalist/raw, art deco/geometric, soft/pastel, industrial/utilitarian, etc. There are so many flavors to choose from. Use these for inspiration but design one that is true to the aesthetic direction.
-- **Constraints:** Technical requirements (framework, performance, accessibility).
-- For CAP code apps, treat workspace configuration and loaded skills as the source of truth for technical constraints. If `power.config.json` or the agent prompt already fixes the stack, connector, or app name, do not ask the user to restate them.
-- **Differentiation:** What makes this UNFORGETTABLE? What's the one thing someone will remember?
+1. Check if the user's message already includes colour, theme, or style direction.
+2. If style direction is **not** provided, ask: _"What colours or overall theme do you want for this site or app? If you do not want to choose, tell me to proceed and I will decide the visual direction myself."_.
+When interactive user input is available, ask through the interactive question flow and continue in the same session after the user answers.
+Only stop and wait for a later run when interactive user input is not available.
+3. If the user says to decide yourself, choose a bold and distinctive visual direction. Do **not** ask again.
+4. Record the chosen style and colour direction in `agent/decision-log.md` under **Custom Requirements**.
+5. Use the frontend-design skill when creating the UI, including for any mockups.
 
-**CRITICAL:** Choose a clear conceptual direction and execute it with precision. Bold maximalism and refined minimalism both work - the key is intentionality, not intensity.
+**Important:** The agent must have colour and style direction before building. Never start building a creative UI without it — either the user provides it or you decide it.
 
-Then implement working code in the project's required stack. Default to plain HTML/CSS/JS when the workspace instructions or agent prompt do not explicitly require a framework. Do not ask the user to choose React, Vue, or another framework unless the project requirements are genuinely ambiguous.
+## Mockup Offer
 
-- Production-grade and functional
-- Visually striking and memorable
-- Cohesive with a clear aesthetic point-of-view
-- Meticulously refined in every detail
+After style direction is established (or if the user's prompt already includes it):
 
-## Frontend Aesthetics Guidelines
+0. If a TODO checklist exists in `agent/decision-log.md`, ensure it includes these setup steps explicitly before any build tasks: theme/colour confirmation, mockup offer, optional mockup creation, then implementation.
+1. Check if mockup files already exist in the `agent/` folder. If they do, skip this step.
+2. If no mockups exist, ask: _"Do you want me to create 5 creative and unique mockups in agent/ for you to pick from? Reply yes or no."_.
+When interactive user input is available, ask through the interactive question flow and continue in the same session after the user answers.
+Only stop and wait for a later run when interactive user input is not available.
+3. If the user says yes, create 5 **CREATIVE** and **DISTINCT** HTML mockup options in `agent/`, using the frontend-design skill, then stop so the user can pick one. Name them clearly, for example `agent/mockup-1.html` through `agent/mockup-5.html`.
+Each mockup must be a self-contained, one-page HTML file that opens directly in a browser, shows the visual design, and includes lightweight interaction such as search filtering, panel toggles, or compose drawer open/close behavior. It is a visual prototype only, not a fully functional app.
+Create the files sequentially as you work: fully write `agent/mockup-1.html` before starting `agent/mockup-2.html`, and continue one mockup at a time instead of batching all file writes at the end.
+4. If the user says no or wants to skip, proceed directly to building in the same session.
+5. Never say a mockup is ready unless the corresponding files have actually been created in `agent/`.
 
-Focus on:
+## Interactive Sessions
 
-- **Typography:** Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts like Arial and Inter; opt instead for distinctive choices that elevate the frontend's aesthetics; unexpected, characterful font choices. Pair a distinctive display font with a refined body font.
-- **Color & Theme:** Commit to a cohesive aesthetic. Use CSS variables for consistency. Dominant colors with sharp accents outperform timid, evenly-distributed palettes.
-- **Motion:** Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML. Only use framework-specific animation libraries when the project already uses that framework. Focus on high-impact moments: one well-orchestrated page load with staggered reveals (animation-delay) creates more delight than scattered micro-interactions. Use scroll-triggering and hover states that surprise.
-- **Spatial Composition:** Unexpected layouts. Asymmetry. Overlap. Diagonal flow. Grid-breaking elements. Generous negative space OR controlled density.
-- **Backgrounds & Visual Details:** Create atmosphere and depth rather than defaulting to solid colors. Add contextual effects and textures that match the overall aesthetic. Apply creative forms like gradient meshes, noise textures, geometric patterns, layered transparencies, dramatic shadows, decorative borders, custom cursors, and grain overlays.
-NEVER use generic AI-generated aesthetics like overused font families (Inter, Roboto, Arial, system fonts), cliched color schemes (particularly purple gradients on white backgrounds), predictable layouts and component patterns, and cookie-cutter design that lacks context-specific character.
+- If the runtime says interactive user input is available, do not end the turn after a required clarification if the answer you need can be gathered through the interactive question flow.
+- After the user answers the required setup questions, continue with planning and implementation immediately.
+- Do not ask optional open-ended follow-up questions such as "let me know if you have more preferences" before producing the first concrete implementation unless the task is still blocked.
+- If the user asks how to view a mockup, point them to the actual generated files in `agent/`. Do not ask them to choose a framework when the project structure already dictates the implementation stack.
 
-Interpret creatively and make unexpected choices that feel genuinely designed for the context. No design should be the same. Vary between light and dark themes, different fonts, different aesthetics. NEVER converge on common choices (Space Grotesk, for example) across generations.
+## When to Skip
 
-IMPORTANT: Match implementation complexity to the aesthetic vision. Maximalist designs need elaborate code with extensive animations and effects. Minimalist or refined designs need restraint, precision, and careful attention to spacing, typography, and subtle details. Elegance comes from executing the vision well.
-
-Remember: Claude is capable of extraordinary creative work. Don't hold back, show what can truly be created when thinking outside the box and committing fully to a distinctive vision.
+- If the user's prompt already contains style guidance **and** they explicitly decline mockups, proceed directly to building.
+- If the user's request is not a creative build (e.g. bug fix, add feature, deploy, refactor), skip this skill entirely.
+- If mockups already exist in the `agent/` folder, skip the mockup offer.
