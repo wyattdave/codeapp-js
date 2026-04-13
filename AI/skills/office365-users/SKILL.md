@@ -5,9 +5,35 @@ description: "Use when: building or debugging Office 365 Users connector flows i
 
 # Office 365 Users Connector Guide
 
-Use `codeApp/dist/connectors/office365users.js` as the repo source of truth.
+Do not use CLI PAC commands to get connecctor models or services,
+use `codeApp/dist/connectors/office365users.js` as the repo source of truth.
 
-Do not use CLI setup flows from chat. Use the built-in Auth, Sync Connections, and Deploy buttons.
+
+## power.config.json
+
+Always read the current `power.config.json` before editing it.
+
+Ensure `"id": "/providers/Microsoft.PowerApps/apis/shared_office365users"` exists.
+
+```json
+"connectionReferences": {
+  "office365users": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365users",
+      "displayName": "Office 365 Users",
+      "dataSources": [
+        "office365users"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": null,
+      "dataSets": {}
+    }
+}
+```
+
+Rules for editing `power.config.json`:
+
+- Preserve existing keys such as `sharedConnectionId`, `authenticationType`, and other working connection metadata.
+- If the app uses Dataverse environment variables, also load the environment-variables skill.
 
 ## Core Rule
 

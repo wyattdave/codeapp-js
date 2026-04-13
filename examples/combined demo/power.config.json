@@ -2,7 +2,7 @@
   "appId": "ea69ae82-53f2-44a8-966b-8338a079ed76",
   "appDisplayName": "test Outlook Skill",
   "description": "Shows the signed-in user's profile, today's emails, and today's meetings.",
-  "environmentId": "<ENVIRONMENT_ID>",
+  "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "./dist/icon-512.png",

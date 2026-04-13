@@ -1,6 +1,3 @@
-import { enableDebugger } from "./codeapp.js";
-
-enableDebugger();
 
 import {
   getCalendarView,
@@ -10,7 +7,7 @@ import {
   listEmails,
   listOutlookCategories,
   markEmailAsRead,
-} from './outlook.js';
+} from './connectors/office365outlook.js';
 
 const eStatusLine = document.getElementById('statusLine');
 const eInboxCount = document.getElementById('inboxCount');

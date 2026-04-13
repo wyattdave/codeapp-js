@@ -5,9 +5,35 @@ description: "Use when: reviewing Power Automate flows with the AutoReview conne
 
 # AutoReview Connector Guide
 
-Use `codeApp/dist/connectors/autoreview.js` as the repo source of truth.
+Do not use CLI PAC commands to get connecctor models or services,
+use `codeApp/dist/connectors/autoreview.js` as the repo source of truth.
 
-Do not use CLI setup flows from chat. Use the built-in Auth, Sync Connections, and Deploy buttons.
+
+## power.config.json
+
+Always read the current `power.config.json` before editing it.
+
+Ensure `"id": "/providers/Microsoft.PowerApps/apis/shared_autoreview"` exists.
+
+```json
+"connectionReferences": {
+  "autoreview": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_autoreview",
+      "displayName": "AutoReview",
+      "dataSources": [
+        "autoreview"
+      ],
+      "dataSets": {},
+      "authenticationType": null,
+      "sharedConnectionId": null
+    }
+}
+```
+
+Rules for editing `power.config.json`:
+
+- Preserve existing keys such as `sharedConnectionId`, `authenticationType`, and other working connection metadata.
+- If the app uses Dataverse environment variables, also load the environment-variables skill.
 
 ## Core Rule
 

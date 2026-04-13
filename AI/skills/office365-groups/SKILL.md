@@ -5,9 +5,34 @@ description: "Use when: building or debugging Office 365 Groups connector flows 
 
 # Office 365 Groups Connector Guide
 
-Use `codeApp/dist/connectors/office365groups.js` as the repo source of truth.
+Do not use CLI PAC commands to get connecctor models or services,
+use `codeApp/dist/connectors/office365groups.js` as the repo source of truth.
 
-Do not use CLI setup flows from chat. Use the built-in Auth, Sync Connections, and Deploy buttons.
+## power.config.json
+
+Always read the current `power.config.json` before editing it.
+
+Ensure `"id": "/providers/Microsoft.PowerApps/apis/shared_office365"` exists.
+
+```json
+"connectionReferences": {
+  "office365groups": {
+    "id": "/providers/Microsoft.PowerApps/apis/shared_office365groups",
+    "displayName": "Office 365 Groups",
+    "dataSources": [
+      "office365groups"
+    ],
+    "authenticationType": null,
+    "sharedConnectionId": null,
+    "dataSets": {}
+  }
+}
+```
+
+Rules for editing `power.config.json`:
+
+- Preserve existing keys such as `sharedConnectionId`, `authenticationType`, and other working connection metadata.
+- If the app uses Dataverse environment variables, also load the environment-variables skill.
 
 ## Core Rule
 

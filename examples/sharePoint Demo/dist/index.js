@@ -3,16 +3,17 @@ import { enableDebugger } from "./codeapp.js";
 enableDebugger();
 
 import {
-  createSpItem,
-  deleteSpItem,
-  getItems,
-  listTables,
-  updateSpItem,
-} from './sharepoint.js';
+  createSpItemByList,
+  deleteSpItemByList,
+  getItemsByList,
+  resolveSharePointList,
+  updateSpItemByList,
+} from './connectors/sharepoint.js';
 
 const oAppConfig = {
   sAppName: 'SharePoint Demo App',
   sSiteUrl: 'https://37wcqv.sharepoint.com/sites/testsite',
+  sListId: '742435b6-7897-4636-ab8e-ec347405b9a6',
   sListName: 'Test List',
 };
 
@@ -89,43 +90,10 @@ async function initializeApp() {
 }
 
 async function resolveListAccess() {
-  try {
-    const oTableAccess = await resolveListAccessFromTables();
-    if (oTableAccess) {
-      return oTableAccess;
-    }
-  } catch (oError) {
-    throw new Error('SharePoint table lookup failed: ' + getErrorMessage(oError));
-  }
-
-  throw new Error('The SharePoint list "' + oAppConfig.sListName + '" could not be resolved through connector table lookup. Configure a real SharePoint list ID or expose a matching list through listTables.');
-}
-
-async function resolveListAccessFromTables() {
-  const oTablesResponse = await listTables(oAppConfig.sSiteUrl);
-  const aTables = normalizeCollection(oTablesResponse);
-  const sTargetName = normalizeString(oAppConfig.sListName);
-  const oMatchedTable = aTables.find(function(oTable) {
-    return getListTableNames(oTable).some(function(sCandidate) {
-      return normalizeString(sCandidate) === sTargetName;
-    });
+  return resolveSharePointList(oAppConfig.sSiteUrl, {
+    listId: oAppConfig.sListId,
+    listName: oAppConfig.sListName,
   });
-
-  if (!oMatchedTable) {
-    return null;
-  }
-
-  const sListId = getTableId(oMatchedTable);
-  if (!sListId) {
-    throw new Error('The SharePoint connector returned the list but did not expose a usable list identifier.');
-  }
-
-  return {
-    sSiteUrl: oAppConfig.sSiteUrl,
-    sListName: getPreferredListName(oMatchedTable),
-    sListId: sListId,
-    sAccessLabel: 'Connector table API',
-  };
 }
 
 async function refreshAppData({ bPreserveSelection } = { bPreserveSelection: true }) {
@@ -139,11 +107,11 @@ async function refreshAppData({ bPreserveSelection } = { bPreserveSelection: tru
     return getItemId(oItem) === iExistingSelection;
   });
 
-  oState.iSelectedItemId = bSelectionStillExists ? iExistingSelection : (oState.aItems[0] ? getItemId(oState.aItems[0]) : null);
+  oState.iSelectedItemId = bSelectionStillExists ? iExistingSelection : null;
 }
 
 async function fetchItems() {
-  const oResponse = await getItems(oState.oListAccess.sSiteUrl, oState.oListAccess.sListId, { top: 200 });
+  const oResponse = await getItemsByList(oState.oListAccess.sSiteUrl, oState.oListAccess, { top: 200 });
   return normalizeCollection(oResponse);
 }
 
@@ -233,7 +201,7 @@ function renderApp() {
           </div>
           <div class="meta-card">
             <span class="meta-label">Demo Focus</span>
-            <span class="meta-value">List items, connector table discovery, and table-ID CRUD forms.</span>
+            <span class="meta-value">List items, reusable list resolution, and connector-backed CRUD forms.</span>
           </div>
         </div>
       </section>
@@ -257,11 +225,11 @@ function renderApp() {
         <article class="panel">
           <div class="panel-header">
             <div>
-              <h2>Add Record</h2>
-              <p>Create a new SharePoint item using discovered fields. Required columns are marked automatically when metadata is available.</p>
+              <h2>${oSelectedItem ? 'Update Record' : 'Add Record'}</h2>
+              <p>${oSelectedItem ? 'The selected SharePoint item is loaded below. Update the values here and save the changes back to the list.' : 'Create a new SharePoint item using discovered fields. Required columns are marked automatically when metadata is available.'}</p>
             </div>
           </div>
-          ${renderCreateForm()}
+          ${renderCreateForm(oSelectedItem)}
         </article>
 
         <section>
@@ -315,23 +283,33 @@ function renderStatusMarkup() {
   `;
 }
 
-function renderCreateForm() {
+function renderCreateForm(oSelectedItem) {
+  const bEditing = Boolean(oSelectedItem);
+  const sFormMode = bEditing ? 'edit' : 'create';
+  const sSubmitLabel = bEditing
+    ? (oState.bSubmittingEdit ? 'Updating...' : 'Update item')
+    : (oState.bSubmittingCreate ? 'Adding...' : 'Add item');
+  const sResetLabel = bEditing ? 'Create new item' : 'Clear form';
+  const sOverrideLabel = bEditing
+    ? 'JSON object merged into the update request'
+    : 'JSON object merged into the create request';
+
   return `
-    <form id="create-form" class="field-grid">
-      ${renderFieldInputs(null, 'create')}
-      <p class="helper-text">Use advanced payload overrides if your list has additional complex columns you want to send manually.</p>
+    <form id="item-form" class="field-grid" data-mode="${sFormMode}" data-item-id="${bEditing ? String(getItemId(oSelectedItem)) : ''}">
+      ${renderFieldInputs(oSelectedItem, sFormMode)}
+      <p class="helper-text">${bEditing ? 'The selected row is loaded into this form. Use advanced payload overrides only when you need to send extra fields manually.' : 'Use advanced payload overrides if your list has additional complex columns you want to send manually.'}</p>
       <details class="details-box">
         <summary>Advanced payload overrides</summary>
         <div class="details-inner">
           <div class="field">
-            <label for="create-overrides">JSON object merged into the create request</label>
-            <textarea id="create-overrides" name="payloadOverrides">{}</textarea>
+            <label for="${sFormMode}-overrides">${sOverrideLabel}</label>
+            <textarea id="${sFormMode}-overrides" name="payloadOverrides">{}</textarea>
           </div>
         </div>
       </details>
       <div class="button-row">
-        <button class="button" type="submit" ${isActionDisabled() ? 'disabled' : ''}>${oState.bSubmittingCreate ? 'Adding...' : 'Add item'}</button>
-        <button class="button-ghost" type="reset" data-action="refresh" ${isActionDisabled() ? 'disabled' : ''}>Reload defaults</button>
+        <button class="button" type="submit" ${isActionDisabled() ? 'disabled' : ''}>${sSubmitLabel}</button>
+        <button class="button-ghost" type="button" data-action="reset-form" ${isActionDisabled() ? 'disabled' : ''}>${sResetLabel}</button>
       </div>
     </form>
   `;
@@ -395,7 +373,7 @@ function renderEditorMarkup(oSelectedItem) {
   if (!oSelectedItem) {
     return `
       <div class="editor-empty">
-        Select a record from the table to inspect and update its fields. Delete is also available here for the active selection.
+        Select a record from the table to load it into the form above. The primary button will switch from Add item to Update item.
       </div>
     `;
   }
@@ -405,30 +383,20 @@ function renderEditorMarkup(oSelectedItem) {
       <div>
         <span class="tag">Selected record</span>
         <h2>${escapeHtml(getPrimaryTitle(oSelectedItem))}</h2>
-        <p>Edit the fields below, then save the record back to SharePoint.</p>
+        <p>This record is currently loaded into the form above. Update it there, or delete it from here.</p>
       </div>
       <div class="muted">Item ID ${String(getItemId(oSelectedItem))}</div>
     </div>
-    <form id="edit-form" class="field-grid" data-item-id="${String(getItemId(oSelectedItem))}">
-      ${renderFieldInputs(oSelectedItem, 'edit')}
-      <details class="details-box">
-        <summary>Advanced payload overrides</summary>
-        <div class="details-inner">
-          <div class="field">
-            <label for="edit-overrides">JSON object merged into the update request</label>
-            <textarea id="edit-overrides" name="payloadOverrides">{}</textarea>
-          </div>
-          <p class="helper-text">Current item snapshot:</p>
-          <div class="field">
-            <textarea readonly>${escapeHtml(JSON.stringify(oSelectedItem, null, 2))}</textarea>
-          </div>
-        </div>
-      </details>
+    <div class="field-grid">
+      <p class="helper-text">Current item snapshot:</p>
+      <div class="field">
+        <textarea readonly>${escapeHtml(JSON.stringify(oSelectedItem, null, 2))}</textarea>
+      </div>
       <div class="button-row">
-        <button class="button" type="submit" ${isActionDisabled() ? 'disabled' : ''}>${oState.bSubmittingEdit ? 'Saving...' : 'Save changes'}</button>
+        <button class="button-ghost" type="button" data-action="reset-form" ${isActionDisabled() ? 'disabled' : ''}>Create new item</button>
         <button class="button-danger" type="button" data-delete-item="${String(getItemId(oSelectedItem))}" ${isActionDisabled() ? 'disabled' : ''}>Delete item</button>
       </div>
-    </form>
+    </div>
   `;
 }
 
@@ -502,7 +470,7 @@ async function handleRootClick(oEvent) {
     if (!Number.isNaN(iItemId)) {
       oState.iSelectedItemId = iItemId;
       oState.sError = '';
-      oState.sNotice = 'Editing item ' + String(iItemId) + '.';
+      oState.sNotice = 'Item ' + String(iItemId) + ' loaded into the form.';
       renderApp();
     }
     return;
@@ -519,6 +487,14 @@ async function handleRootClick(oEvent) {
   const sAction = eAction.getAttribute('data-action');
   if (sAction === 'refresh') {
     await handleRefresh();
+    return;
+  }
+
+  if (sAction === 'reset-form') {
+    oState.iSelectedItemId = null;
+    oState.sError = '';
+    oState.sNotice = 'Ready to add a new SharePoint item.';
+    renderApp();
   }
 }
 
@@ -529,13 +505,13 @@ async function handleRootSubmit(oEvent) {
     return;
   }
 
-  if (eForm.id === 'create-form') {
-    await handleCreateSubmit(eForm);
-    return;
-  }
+  if (eForm.id === 'item-form') {
+    if (eForm.getAttribute('data-mode') === 'edit') {
+      await handleEditSubmit(eForm);
+      return;
+    }
 
-  if (eForm.id === 'edit-form') {
-    await handleEditSubmit(eForm);
+    await handleCreateSubmit(eForm);
   }
 }
 
@@ -575,10 +551,9 @@ async function handleCreateSubmit(eForm) {
     const oResult = await createListItem(oPayload);
     await refreshAppData({ bPreserveSelection: false });
     const iCreatedItemId = getItemId(oResult);
-    if (iCreatedItemId != null) {
-      oState.iSelectedItemId = iCreatedItemId;
-    }
-    oState.sNotice = 'New item created successfully.';
+    oState.sNotice = iCreatedItemId != null
+      ? 'New item ' + String(iCreatedItemId) + ' created successfully.'
+      : 'New item created successfully.';
   } catch (oError) {
     oState.sError = getErrorMessage(oError);
   } finally {
@@ -638,21 +613,25 @@ async function handleDelete(iItemId) {
 }
 
 async function createListItem(oPayload) {
-  return createSpItem(oState.oListAccess.sSiteUrl, oState.oListAccess.sListId, oPayload);
+  return createSpItemByList(oState.oListAccess.sSiteUrl, oState.oListAccess, oPayload);
 }
 
 async function updateListItem(iItemId, oPayload) {
-  return updateSpItem(oState.oListAccess.sSiteUrl, oState.oListAccess.sListId, iItemId, oPayload);
+  return updateSpItemByList(oState.oListAccess.sSiteUrl, oState.oListAccess, iItemId, oPayload);
 }
 
 async function deleteListItem(iItemId) {
-  return deleteSpItem(oState.oListAccess.sSiteUrl, oState.oListAccess.sListId, iItemId);
+  return deleteSpItemByList(oState.oListAccess.sSiteUrl, oState.oListAccess, iItemId);
 }
 
 function buildPayloadFromForm(eForm) {
   const oPayload = {};
 
   oState.aFields.forEach(function(oField) {
+    if (isSystemField(oField.sName)) {
+      return;
+    }
+
     const eField = eForm.elements.namedItem('field:' + oField.sName);
     if (!eField) {
       return;
@@ -812,44 +791,24 @@ function isEditablePrimitive(value) {
 }
 
 function isSystemField(sFieldName) {
-  return aSystemFieldNames.includes(sFieldName);
-}
+  const sName = String(sFieldName || '').trim();
+  if (!sName) {
+    return true;
+  }
 
-function getTableId(oTable) {
-  return oTable.Id
-    || oTable.id
-    || oTable.TableId
-    || oTable.tableId
-    || oTable.TableName
-    || oTable.tableName
-    || oTable.EntitySetName
-    || oTable.entitySetName
-    || oTable.Name
-    || oTable.name
-    || null;
-}
+  const sLowerName = sName.toLowerCase();
+  if (aSystemFieldNames.some(function(sSystemFieldName) {
+    return sSystemFieldName.toLowerCase() === sLowerName;
+  })) {
+    return true;
+  }
 
-function getPreferredListName(oTable) {
-  return oTable.DisplayName || oTable.displayName || oTable.Title || oTable.title || oAppConfig.sListName;
-}
-
-function getListTableNames(oTable) {
-  return [
-    oTable.DisplayName,
-    oTable.displayName,
-    oTable.Title,
-    oTable.title,
-    oTable.TableName,
-    oTable.tableName,
-    oTable.Name,
-    oTable.name,
-    oTable.EntitySetName,
-    oTable.entitySetName,
-  ].filter(Boolean);
-}
-
-function normalizeString(sValue) {
-  return String(sValue || '').trim().toLowerCase();
+  return sName.startsWith('@')
+    || sName.startsWith('{')
+    || sName.includes('}')
+    || sName.includes('#')
+    || sName.startsWith('_')
+    || sLowerName === 'iteminternalid';
 }
 
 function getErrorMessage(oError) {

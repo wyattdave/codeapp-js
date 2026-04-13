@@ -1,8 +1,4 @@
-import { listMyGroups } from './office365groups.js';
-import { enableDebugger } from "./codeapp.js";
-
-enableDebugger();
-
+import { listMyGroups } from './connectors/office365groups.js';
 const eRoot = document.getElementById('root');
 
 const oState = {
