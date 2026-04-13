@@ -32,6 +32,8 @@ Preferred configuration order:
 
 Do not ask for a list name as the primary CRUD identifier. If the user only knows the list name, use it only as a lookup hint.
 
+Schemas are often stored in the 'agent' folder.
+
 ## power.config.json
 
 Always read the current `power.config.json` before editing it.
@@ -54,7 +56,6 @@ Ensure `"id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"` exi
 Rules for editing `power.config.json`:
 
 - Preserve existing keys such as `sharedConnectionId`, `authenticationType`, and other working connection metadata.
-- Do not rename the connection reference key or the data source name away from `sharepointonline`.
 - No Dataverse tables are needed for basic SharePoint-only apps.
 - If the app uses Dataverse environment variables, also load the environment-variables skill and add the two Dataverse environment-variable tables there.
 

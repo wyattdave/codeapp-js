@@ -30,7 +30,8 @@ For the helper in `dev files/codeapp.js`, Dataverse CRUD depends on `databaseRef
 - `entitySetName` is the plural OData collection name.
 - `logicalName` is the singular logical name.
 - Every Dataverse table used by the app must be present here.
-- Schemas are often stored in the 'agent' folder.
+- Schemas are often stored in the `agent` folder, if they are not check `.power\schemas` folder. If required and missing use `pac code add-data-source -a dataverse -t <tableName>` to generate the schema in  `.power\schemas` folder.
+- if schema found copy it to `agent` folder and edit the `.power/schemas/` folder.
 - Do not add unbound actions like `WhoAmI` or `GrantAccess` to `dataSources`.
 
 The helper does not require a separate Dataverse `connectionReferences` entry for CRUD or `callUnboundAction`.
