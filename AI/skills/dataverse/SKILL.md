@@ -9,7 +9,7 @@ description: "Use when: building or debugging Dataverse CRUD in a Power Apps Cod
 
 ## power.config.json
 
-For the helper in `dev files/codeapp-helper.js`, Dataverse CRUD depends on `databaseReferences.default.cds.dataSources`.
+For the helper in `dev files/codeapp.js`, Dataverse CRUD depends on `databaseReferences.default.cds.dataSources`.
 
 ```json
 {
@@ -30,6 +30,8 @@ For the helper in `dev files/codeapp-helper.js`, Dataverse CRUD depends on `data
 - `entitySetName` is the plural OData collection name.
 - `logicalName` is the singular logical name.
 - Every Dataverse table used by the app must be present here.
+- Schemas are often stored in the `agent` folder, if they are not check `.power\schemas` folder. If required and missing use `pac code add-data-source -a dataverse -t <tableName>` to generate the schema in  `.power\schemas` folder.
+- if schema found copy it to `agent` folder and edit the `.power/schemas/` folder.
 - Do not add unbound actions like `WhoAmI` or `GrantAccess` to `dataSources`.
 
 The helper does not require a separate Dataverse `connectionReferences` entry for CRUD or `callUnboundAction`.
@@ -57,7 +59,7 @@ Use `registerTable(tableName, primaryKey)` only when you need to add a table at 
 
 ## CRUD Surface
 
-`codeapp-helper.js` exports:
+`codeapp.js` exports:
 
 - `createItem(tableName, primaryKey, record)`
 - `getItem(tableName, primaryKey, id, select)`

@@ -5,48 +5,79 @@ description: "Use when: building or debugging Outlook connector flows in a Power
 
 # Office 365 Outlook Connector Guide
 
-> Agent limitation: do not use CLI commands directly from chat for Outlook setup. Use the built-in Sync Connections and Deploy buttons instead.
+Do not use CLI PAC commands to get connecctor models or services,
+use `codeApp/dist/connectors/office365outlook.js` as the repo source of truth.
+
+
+## power.config.json
+
+Always read the current `power.config.json` before editing it.
+
+Ensure `"id": "/providers/Microsoft.PowerApps/apis/shared_office365"` exists.
+
+```json
+"connectionReferences": {
+  "office365outlook": {
+    "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
+    "displayName": "Office 365 Outlook",
+    "dataSources": [
+      "office365"
+    ],
+    "authenticationType": null,
+    "sharedConnectionId": null,
+    "dataSets": {}
+  }
+}
+```
+
+Rules for editing `power.config.json`:
+
+- Preserve existing keys such as `sharedConnectionId`, `authenticationType`, and other working connection metadata.
+- If the app uses Dataverse environment variables, also load the environment-variables skill.
 
 ## Core Rule
 
-The wrapper in `dev files/outlook.js` is the repo-local source of truth, and `dev files/outlook-helper-reference.md` documents its accepted aliases.
+Prefer the exported helper layer instead of hard-coding raw operation names in app code.
 
-- It retries `office365outlook`, `Office365Outlook`, and `office365`.
-- It includes inline metadata for the operations the wrapper exposes.
-- Many helpers choose the operation version automatically.
+The helper layer defaults to the latest action versions where the connector exposes them.
 
-Prefer `office365` in `power.config.json`, while keeping the wrapper's candidate names intact.
+## Action Helper Surface
 
-## Public Helper Surface
-
-The wrapper exports helpers for:
-
-- Mail: `sendEmail`, `listEmails`, `getEmail`, `forwardEmail`, `replyToEmail`, `moveEmail`, `deleteEmail`, `draftEmail`, `updateDraftEmail`, `sendDraftEmail`, `markEmailAsRead`, `updateEmailFlag`, `getEmailAttachment`, `assignOutlookCategory`, `assignOutlookCategoryBulk`
+- Mail: `sendEmail`, `listEmails`, `getEmail`, `forwardEmail`, `replyToEmail`, `moveEmail`, `deleteEmail`, `draftEmail`, `updateDraftEmail`, `sendDraftEmail`, `markEmailAsRead`, `updateEmailFlag`, `getEmailAttachment`
+- Categories: `listOutlookCategories`, `assignOutlookCategory`, `assignOutlookCategoryBulk`
 - Shared mailbox: `sendFromSharedMailbox`
-- Calendar: `createEvent`, `listEvents`, `editEvent`, `deleteEvent`, `listCalendars`, `getEvent`, `getCalendarView`, `respondToEventInvite`, `findMeetingTimes`, `listRoomLists`, `listRooms`, `listRoomsInRoomList`, `setAutomaticReplies`, `getMailTips`
+- Calendar: `createEvent`, `listEvents`, `editEvent`, `deleteEvent`, `listCalendars`, `getEvent`, `getCalendarView`, `respondToEventInvite`, `findMeetingTimes`, `setAutomaticReplies`, `getMailTips`, `listRoomLists`, `listRooms`, `listRoomsInRoomList`
 - Contacts: `listContactFolders`, `listContacts`, `getContact`, `createContact`, `updateContact`, `deleteContact`
 - Advanced: `callOutlookOperation`, `callOutlookHttpRequest`, `manageOutlookEmails`, `manageOutlookMeetings`, `manageOutlookContacts`
 
-## Important Wrapper Defaults
+## Latest Action Defaults
 
-- `sendEmail(...)` uses `SendEmailV2` unless `isHtml === false`, in which case it uses the legacy plain-text action.
-- `listEmails(...)` defaults to version 3, folder `Inbox`, and `top: 10`.
-- `replyToEmail(...)` uses `ReplyToV3` unless `isHtml === false`.
-- `getEmail(...)` defaults to the V2 action.
+- `sendEmail(...)` defaults to `SendEmailV2` and only falls back to plain-text `SendEmail` when `isHtml === false`.
+- `listEmails(...)` defaults to `GetEmailsV3`, folder `Inbox`, and `top: 10`.
+- `getEmail(...)` defaults to `GetEmailV2`.
+- `replyToEmail(...)` defaults to `ReplyToV3` and only falls back to `ReplyToV2` for plain-text replies.
+- `moveEmail(...)` uses `MoveV2`.
 - `createEvent(...)`, `listEvents(...)`, and `editEvent(...)` use the V4 calendar actions.
-- `markEmailAsRead(...)` uses the V3 action unless the caller explicitly requests the older legacy pattern.
+- `deleteEvent(...)` uses `CalendarDeleteItem_V2`.
+- `findMeetingTimes(...)` uses `FindMeetingTimes_V2`.
+- `setAutomaticReplies(...)` defaults to `SetAutomaticRepliesSetting_V2`.
+- `getMailTips(...)` defaults to `GetMailTips_V2` when a request body is supplied.
+- Contact helpers use the V2 contact actions.
 
-## Raw HTTP Calls
+## HTTP Escape Hatch
 
-`callOutlookHttpRequest(...)` expects the connector-style field mapping used by the wrapper.
+`callOutlookHttpRequest(...)` maps friendly inputs to connector fields:
 
-- Pass `uri`, `method`, `body`, `contentType`, and `customHeaders`.
-- The wrapper maps them to `Uri`, `Method`, `Body`, `ContentType`, and `CustomHeader1..5`.
+- `uri` -> `Uri`
+- `method` -> `Method`
+- `body` -> `Body`
+- `contentType` -> `ContentType`
+- `customHeaders[0..4]` -> `CustomHeader1..5`
 
-Do not reuse the SharePoint or Teams raw HTTP pattern here.
+Use this only when no helper exists for the action you need.
 
 ## Debugging
 
-- If the failure mentions `Connection reference not found`, verify `power.config.json` exposes one of the wrapper's candidate data-source names.
-- If a versioned mail or calendar call behaves unexpectedly, check the wrapper default before changing the raw operation name.
-- For alias-heavy helpers, consult `dev files/outlook-helper-reference.md` before adding new parameter mapping logic.
+- If a mail helper behaves differently than expected, check its default version before changing the raw connector action.
+- If HTTP calls fail, verify you are passing connector-style fields through `callOutlookHttpRequest(...)`, not fetch-style options.
+- Keep helper names stable and widen alias support instead of introducing another parallel wrapper.

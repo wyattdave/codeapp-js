@@ -1,8 +1,4 @@
-import { getMyProfile, getUserPhoto } from './office365users.js';
-import { enableDebugger } from "./codeapp.js";
-
-enableDebugger();
-
+import { getMyProfile, getUserPhoto } from './connectors/office365users.js';
 const eRoot = document.getElementById('root');
 const aProfileSelect = [
   'id',

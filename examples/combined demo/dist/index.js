@@ -1,9 +1,5 @@
-import { getMyProfile, getUserPhoto } from './office365users.js';
-import { getCalendarView, listEmails } from './outlook.js';
-import { enableDebugger } from "./codeapp.js";
-
-enableDebugger();
-
+import { getMyProfile, getUserPhoto } from './connectors/office365users.js';
+import { getCalendarView, listEmails } from './connectors/office365outlook.js';
 const eRoot = document.getElementById('root');
 
 const oState = {
