@@ -1,0 +1,465 @@
+{
+  "generatedAt": "2026-04-12T14:22:51.567Z",
+  "generator": "cap generate-javascript-data-sources",
+  "kind": "connector",
+  "className": "Office365UsersService",
+  "dataSourceName": "office365users",
+  "sourceService": "C:/dev/test con gen/src/generated/services/Office365UsersService.ts",
+  "schemaSources": [],
+  "modelImports": [
+    {
+      "names": [
+        "ClientPhotoMetadata"
+      ],
+      "source": "../models/Office365UsersModel"
+    },
+    {
+      "names": [
+        "EntityListResponse_IReadOnlyList_User"
+      ],
+      "source": "../models/Office365UsersModel"
+    },
+    {
+      "names": [
+        "GraphTrending"
+      ],
+      "source": "../models/Office365UsersModel"
+    },
+    {
+      "names": [
+        "GraphUserUpdateable_V1"
+      ],
+      "source": "../models/Office365UsersModel"
+    },
+    {
+      "names": [
+        "GraphUser_V1"
+      ],
+      "source": "../models/Office365UsersModel"
+    },
+    {
+      "names": [
+        "IOperationResult"
+      ],
+      "source": "@microsoft/power-apps/data"
+    },
+    {
+      "names": [
+        "LinklessEntityListResponse_List_Person"
+      ],
+      "source": "../models/Office365UsersModel"
+    },
+    {
+      "names": [
+        "ObjectWithoutType"
+      ],
+      "source": "../models/Office365UsersModel"
+    },
+    {
+      "names": [
+        "User"
+      ],
+      "source": "../models/Office365UsersModel"
+    }
+  ],
+  "methods": [
+    {
+      "name": "UpdateMyProfile",
+      "description": "Update my profile\nUpdates the profile of the current user",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "body",
+          "optional": true,
+          "type": "GraphUserUpdateable_V1",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "MyProfile_V2",
+      "description": "Get my profile (V2)\nRetrieves the profile of the current user. Learn more about available fields to select: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user#properties",
+      "returnType": "GraphUser_V1",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "$select",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "UpdateMyPhoto",
+      "description": "Update my profile photo\nUpdates the profile photo of the current user. The size of the photo must be less than 4 MB.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "body",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "Content_Type",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "MyTrendingDocuments",
+      "description": "Get my trending documents\nRetrieves the trending documents for the signed in user",
+      "returnType": "unknown",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "extractSensitivityLabel",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchSensitivityLabelMetadata",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "RelevantPeople",
+      "description": "Get relevant people\nGet relevant people.",
+      "returnType": "LinklessEntityListResponse_List_Person",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "userId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "MyProfile",
+      "description": "Get my profile (V1)\nRetrieves the profile of the current user.",
+      "returnType": "User",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "UserProfile",
+      "description": "Get user profile (V1)\nRetrieves the profile of a specific user.",
+      "returnType": "User",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "userId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "UserPhotoMetadata",
+      "description": "Get user photo metadata\nGet user photo metadata.",
+      "returnType": "ClientPhotoMetadata",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "userId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "UserPhoto",
+      "description": "Get user photo (V1)\nRetrieves the photo of the specified user if they have one.",
+      "returnType": "string",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "userId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "Manager",
+      "description": "Get manager (V1)\nRetrieves the profile of the specified user's manager.",
+      "returnType": "User",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "userId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "DirectReports",
+      "description": "Get direct reports (V1)\nRetrieves the user profiles of the specified user's direct reports.",
+      "returnType": "User[]",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "userId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SearchUser",
+      "description": "Search for users\nRetrieves the user profiles that match the search term.",
+      "returnType": "User[]",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "searchTerm",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SearchUserV2",
+      "description": "Search for users (V2)\nRetrieves the user profiles that match the search term (V2).",
+      "returnType": "EntityListResponse_IReadOnlyList_User",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "searchTerm",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "isSearchTermRequired",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "skipToken",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "TestConnection",
+      "description": "Tests the connection\nTests the connection.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "UserProfile_V2",
+      "description": "Get user profile (V2)\nRetrieves the profile of a specific user. Learn more about available fields to select: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user#properties",
+      "returnType": "GraphUser_V1",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$select",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "Manager_V2",
+      "description": "Get manager (V2)\nRetrieves the profile of the specified user's manager. Learn more about available fields to select: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user#properties",
+      "returnType": "GraphUser_V1",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$select",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "DirectReports_V2",
+      "description": "Get direct reports (V2)\nRetrieves the user profiles of the specified user's direct reports. Learn more about available fields to select: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user#properties",
+      "returnType": "unknown",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$select",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "UserPhoto_V2",
+      "description": "Get user photo (V2)\nRetrieves the photo of the specified user if they have one",
+      "returnType": "string",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "TrendingDocuments",
+      "description": "Get trending documents\nRetrieves the trending documents for a user",
+      "returnType": "unknown",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "extractSensitivityLabel",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchSensitivityLabelMetadata",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "HttpRequest",
+      "description": "Send an HTTP request\nConstruct a Microsoft Graph REST API request to invoke. These segments are supported: 1st segement: /me, /users/<userId> 2nd segment: messages, mailFolders, events, calendar, calendars, outlook, inferenceClassification. Learn more: https://docs.microsoft.com/en-us/graph/use-the-api.",
+      "returnType": "ObjectWithoutType",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "Uri",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "Method",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "Body",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "ContentType",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "CustomHeader1",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "CustomHeader2",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "CustomHeader3",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "CustomHeader4",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "CustomHeader5",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    }
+  ]
+}

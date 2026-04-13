@@ -5,37 +5,19 @@ description: "Use when: building or debugging Office 365 Users connector flows i
 
 # Office 365 Users Connector Guide
 
-> Agent limitation: do not use CLI commands directly from chat for Office 365 Users setup. Use the built-in Sync Connections and Deploy buttons instead.
+Use `codeApp/dist/connectors/office365users.js` as the repo source of truth.
+
+Do not use CLI setup flows from chat. Use the built-in Auth, Sync Connections, and Deploy buttons.
 
 ## Core Rule
 
-The wrapper in `dev files/office365users.js` is the repo-local source of truth.
+Prefer the exported helper layer instead of wiring raw connector operations directly in app code.
 
-- It uses `office365users` as the connector data-source name.
-- It includes inline metadata for the supported operations.
-- It preserves older naming compatibility, but the main search operation used by the wrapper is `SearchUserV2`.
+## Action Helper Surface
 
-## power.config.json
-
-Expose `office365users` in the connection reference `dataSources` array.
-
-```json
-{
-  "connectionReferences": {
-    "usersConnection": {
-      "id": "/providers/Microsoft.PowerApps/apis/shared_office365users",
-      "displayName": "Office 365 Users",
-      "dataSources": ["office365users"],
-      "dataSets": {}
-    }
-  }
-}
-```
-
-## Public Helper Surface
-
-The wrapper exports:
-
+- `callUsersOperation(operationName, parameters)`
+- `openUsersHttpRequest(options)`
+- `updateMyProfile(profile)`
 - `getMyProfile(options)`
 - `getUserProfile(userId, options)`
 - `getManager(userId, options)`
@@ -43,36 +25,33 @@ The wrapper exports:
 - `getMyTrendingDocuments(options)`
 - `getTrendingDocuments(userId, options)`
 - `getRelevantPeople(userId)`
-- `updateMyProfile(profile)`
 - `updateMyPhoto(bodyOrOptions, contentType)`
 - `getUserPhotoMetadata(userId)`
 - `getUserPhoto(userId)`
 - `searchForUsers(options)`
-- `openUsersHttpRequest(options)`
-- `callUsersOperation(operationName, parameters)`
 
-## Important Wrapper Behavior
+## Latest Action Defaults
 
-- `select` can be an array or a comma-separated string.
-- `getDirectReports(...)` supports `top` and select options.
-- `searchForUsers(...)` uses `searchTerm`, `top`, `isSearchTermRequired`, and `skipToken`.
-- `searchForUsers(...)` accepts `nextLink` and legacy `skip` as compatibility inputs that the wrapper converts into `skipToken`.
-- `UserPhoto_V2` returns `image/jpeg`.
+- Profile helpers default to the V2 profile and manager actions.
+- `getDirectReports(...)` defaults to `DirectReports_V2`.
+- `getUserPhoto(...)` uses `UserPhoto_V2`.
+- `searchForUsers(...)` uses `SearchUserV2`.
+- `searchForUsers(...)` accepts `nextLink` and `skip` aliases and converts them into `skipToken`.
 
-## Raw HTTP Calls
+## HTTP Escape Hatch
 
-`openUsersHttpRequest(...)` does not use the simple `headers` object shape directly.
+`openUsersHttpRequest(...)` maps friendly inputs to connector fields:
 
-The wrapper maps friendly inputs into connector fields:
+- `uri` -> `Uri`
+- `method` -> `Method`
+- `body` -> `Body`
+- `contentType` -> `ContentType`
+- `customHeaders[0..4]` -> `CustomHeader1..5`
 
-- `Uri`
-- `Method`
-- `Body`
-- `ContentType`
-- `CustomHeader1..5`
+Use this only when no helper exists for the action you need.
 
 ## Debugging
 
-- If search pagination is broken, verify the code is passing `skipToken` or `nextLink`, not `$skip`.
-- If HTTP requests fail, check whether the wrapper is being fed connector-style fields through `openUsersHttpRequest(...)` rather than raw fetch options.
-- Keep the existing helper names stable and widen input support instead of replacing them.
+- If search pagination fails, pass `skipToken` or `nextLink`, not `$skip`.
+- If HTTP requests fail, verify you are sending connector-style fields through `openUsersHttpRequest(...)`.
+- Keep helper names stable and widen alias support instead of introducing another wrapper.

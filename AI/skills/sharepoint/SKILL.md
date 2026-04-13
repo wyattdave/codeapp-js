@@ -5,73 +5,36 @@ description: "Use when: building or debugging SharePoint list, library, file, or
 
 # SharePoint Connector Guide
 
-> Agent limitation: do not use CLI commands directly from chat for SharePoint setup. Use the built-in Sync Connections and Deploy buttons instead.
+Use `codeApp/dist/connectors/sharepoint.js` as the repo source of truth.
 
-## Workflow
+Do not use CLI setup flows from chat. Use the built-in Auth, Sync Connections, and Deploy buttons.
 
-Before writing code, prefer these connection approaches:
+## Core Rule
 
-- A: site URL + list ID
-- B: environment variables that resolve the site URL and list ID
+Prefer list-ID helpers over raw HTTP when a dedicated action exists.
 
-Do not ask the user for a list name as the primary CRUD identifier. If they only know the list name, use `listTables(...)` once to discover the connector table ID and then continue with list-ID operations.
+Preferred setup patterns:
 
-## power.config.json
+- site URL + list ID
+- environment variables that resolve site URL + list ID
 
-Expose `sharepointonline` in `connectionReferences`.
+If the user only knows a list name, call `listTables(...)` once to discover the table ID and then continue with list-ID helpers.
 
-```json
-{
-  "connectionReferences": {
-    "sharepointonline": {
-      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
-      "displayName": "SharePoint",
-      "dataSources": ["sharepointonline"],
-      "dataSets": {}
-    }
-  }
-}
-```
+## Action Helper Surface
 
-No Dataverse tables are needed unless the app also uses environment variables.
+- Generic: `callSharePointOperation`, `sendHttpRequest`, `listTables`, `listLibrary`
+- List ID CRUD: `getItems`, `getSpItem`, `createSpItem`, `updateSpItem`, `deleteSpItem`
+- Files: `createFile`, `updateFile`, `deleteFile`, `moveFile`, `getFileMetadata`
 
-## Helper Surface
+## Important Behavior
 
-The wrapper in `dev files/sharepoint.js` exports:
+- `getItems(...)` accepts `siteUrl`, `listId`, and optional `{ filter, orderBy, top, skip }`.
+- Site URLs are encoded internally. Do not pre-encode them before passing them in.
+- `sendHttpRequest(...)` expects `siteUrl` or `dataset` plus `method`, `uri`, `headers`, and `body`.
+- `moveFile(...)` uses the connector move-file action and can rename after the move when `newFileName` is supplied.
 
-- List ID pattern: `getItems`, `getSpItem`, `createSpItem`, `updateSpItem`, `deleteSpItem`
-- Generic helpers: `callSharePointOperation`, `sendHttpRequest`, `listTables`, `listLibrary`
-- File helpers: `createFile`, `updateFile`, `deleteFile`, `moveFile`, `getFileMetadata`
+## Debugging
 
-The list-ID helpers use the SharePoint connector table API. `sendHttpRequest(...)` remains available only as an advanced escape hatch when there is no dedicated helper for the operation you need.
-
-## Important Corrections
-
-- The single-item and CRUD helpers for the list-ID path are `getSpItem`, `createSpItem`, `updateSpItem`, and `deleteSpItem` in this repo.
-- `sharepoint.js` encodes `siteUrl` internally with `encodeURIComponent(...)`. Do not pre-encode the URL before passing it in.
-- For environment-variable based setup, import `getEnvironmentVariable(...)` from `./codeapp.js`, not from a separate `environmentVar.js` helper.
-
-## Example Imports
-
-Approach A:
-
-```js
-import { getItems, getSpItem, createSpItem, updateSpItem, deleteSpItem, listTables } from './sharepoint.js';
-```
-
-Approach B:
-
-```js
-import { getItems, getSpItem, createSpItem, updateSpItem, deleteSpItem } from './sharepoint.js';
-```
-
-Approach C:
-
-```js
-import { getEnvironmentVariable } from './codeapp.js';
-import { getItems, createSpItem, updateSpItem, deleteSpItem } from './sharepoint.js';
-```
-
-## Additional Build Nudge
-
-When a SharePoint build introduces or depends on specific lists and columns, create an `agent/listSchema.json` artifact so the user can recreate the list structure correctly.
+- Keep using list IDs for CRUD instead of falling back to list names in app code.
+- Use `sendHttpRequest(...)` only as an escape hatch when no dedicated helper exists.
+- For environment-variable-based setups, read values through `getEnvironmentVariable(...)` from `./codeapp.js`.
