@@ -525,15 +525,26 @@ export const deleteSpItem = async (siteUrl, listId, itemId) => _dbgWrap('deleteS
 });
 
 export const listTables = async (siteUrl) => _dbgWrap('listTables', [siteUrl], async function() {
+  // NOTE: listTables (GetTables) only returns custom lists (Type 100).
+  // System libraries like Site Pages, Shared Documents, Style Library, etc.
+  // are NOT included. To access those, use getItems/getSpItem directly with
+  // either the list display name (e.g. 'Site Pages') or the list GUID.
   return normalizeCollection(await executeConnectorOperation('GetTables', {
     siteUrl: buildSiteUrlParam(siteUrl),
   }));
 });
 
-export const listLibrary = async (siteUrl) => _dbgWrap('listLibrary', [siteUrl], async function() {
-  return executeConnectorOperation('GetDataSetsMetadata', {
-    siteUrl: buildSiteUrlParam(siteUrl),
-  });
+export const listLibrary = async (siteUrl, libraryId, queryOptions = {}) => _dbgWrap('listLibrary', [siteUrl, libraryId, queryOptions], async function() {
+  const sLibraryId = requireNonEmptyString(libraryId, 'library ID');
+  const GUID_PATTERN = /^[{(]?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[})]?$/i;
+  if (!GUID_PATTERN.test(sLibraryId)) {
+    throw new Error(
+      'listLibrary requires a library GUID (e.g. "ecf7e0c2-b862-469a-9eee-8a4aba5395ba"), not a display name. ' +
+      'Display names return 404 for document libraries. ' +
+      'Find the GUID in SharePoint site settings or browser dev tools.'
+    );
+  }
+  return getItems(siteUrl, sLibraryId, queryOptions);
 });
 
 export const resolveSharePointList = async (siteUrl, listReference = {}) => _dbgWrap('resolveSharePointList', [siteUrl, listReference], async function() {
@@ -629,6 +640,34 @@ export const createFile = async (siteUrl, folderPath, fileName, fileContent) => 
   });
 });
 
+export const createRawFile = async (siteUrl, folderPath, fileName, fileContent) => _dbgWrap('createRawFile', [siteUrl, folderPath, fileName, '(raw content)'], async function() {
+  requireNonEmptyString(folderPath, 'folder path');
+  requireNonEmptyString(fileName, 'file name');
+  if (fileContent == null) {
+    throw new Error('SharePoint file content is required.');
+  }
+  var sContent = typeof fileContent === 'string' ? fileContent : String(fileContent);
+  var fnOrigStringify = JSON.stringify;
+  var bIntercepted = false;
+  JSON.stringify = function (oValue) {
+    if (!bIntercepted && typeof oValue === 'string' && oValue === sContent) {
+      bIntercepted = true;
+      return oValue;
+    }
+    return fnOrigStringify.apply(this, arguments);
+  };
+  try {
+    return await executeConnectorOperation('CreateFile', {
+      siteUrl: buildSiteUrlParam(siteUrl),
+      folderPath: folderPath.trim(),
+      name: fileName.trim(),
+      body: sContent,
+    });
+  } finally {
+    JSON.stringify = fnOrigStringify;
+  }
+});
+
 export const updateFile = async (siteUrl, fileId, fileContent) => _dbgWrap('updateFile', [siteUrl, fileId, fileContent], async function() {
   return executeConnectorOperation('UpdateFile', {
     siteUrl: buildSiteUrlParam(siteUrl),
@@ -677,6 +716,7 @@ const SharePointService = {
   listTables,
   listLibrary,
   createFile,
+  createRawFile,
   updateFile,
   deleteFile,
   moveFile,

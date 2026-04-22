@@ -231,6 +231,7 @@ Keep separate loading and submit flags in UI state so refresh, create, update, a
 ### HttpRequest / sendHttpRequest
 - `sendHttpRequest({ method, uri, headers, body })` in `sharepoint.js` calls the connector's `HttpRequest` operation.
 - This operation does **not** include a `siteUrl` dataset parameter in its call — it only passes `method`, `uri`, `headers`, `body`.
+- SharePoint HttpRequest in Code Apps: The uri must be a relative path (e.g. `_api/web/lists/...`) because the connector automatically prepends the site URL from the `datasets/{siteUrl}` path segment; the API definition must use a single body parameter of type object containing method, uri, headers, and body as properties (not four separate in: `body` params), because the SDK's _buildOperationBodyParam only serializes the first in: `body` parameter it finds.
 - In Code Apps, `HttpRequest` returns **404 "Resource not found"** for every call, regardless of URI format (absolute, relative, encoded).
 - `callSharePointOperation('HttpRequest', { siteUrl: ..., method, uri, headers, body })` also fails with 404 — the `siteUrl` is not a valid parameter for this operation's path template.
 - **Conclusion: `HttpRequest` is not usable in Code Apps.** Do not rely on it. Use only the standard CRUD operations (`GetItems`, `GetItem`, `PostItem`, `PatchItem`, `DeleteItem`) and file operations (`CreateFile`, `UpdateFile`, `DeleteFile`, `MoveFile`, `GetFileMetadata`).
