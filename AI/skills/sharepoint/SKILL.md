@@ -197,6 +197,69 @@ The wrapper already converts many connector failures into readable errors such a
 
 Keep separate loading and submit flags in UI state so refresh, create, update, and delete actions do not overlap silently.
 
+## Learnings
+
+### listTables limitations
+- `listTables(siteUrl)` only returns **custom lists** (Type 100).
+- It does **not** return system libraries like Site Pages, Shared Documents, Style Library, Form Templates, etc.
+- It is still the best way to **verify a site URL is reachable** — if it returns without error, the site exists and the connector is authenticated.
+
+### Accessing hidden/system lists (Site Pages, Documents)
+- Even though `listTables` doesn't return them, `getItems(siteUrl, 'Site Pages', { top: N })` **works** using the list's **display name** as the table identifier.
+- The display name must match exactly (case-sensitive, with space): `'Site Pages'`, `'Shared Documents'`, `'Documents'`.
+- `resolveSharePointList(siteUrl, { listName: 'SitePages' })` will **fail** because it internally calls `listTables` and tries to match — the list isn't in that result set. Do not use `resolveSharePointList` for system libraries.
+- Use `getItems` and `getSpItem` directly with the display name string as the table parameter instead.
+
+### Field names in connector responses
+- The SharePoint connector returns fields with different names than the REST API:
+  - `ID` (uppercase) not `Id`
+  - `ItemInternalId` — string version of the ID
+  - `{Link}` — full URL to the item (replaces `FileRef`)
+  - `{Name}` — display name without extension
+  - `{FilenameWithExtension}` — e.g. `Home.aspx`
+  - `{Path}` — folder path e.g. `SitePages/`
+  - `{FullPath}` — e.g. `SitePages/Home.aspx`
+  - `{Identifier}` — URL-encoded relative path
+  - `{IsFolder}` — boolean
+  - `{ContentType}` — object with `Id` and `Name`
+  - `{VersionNumber}` — e.g. `"18.8"`
+  - `{Thumbnail}` — object with Large/Medium/Small
+  - `BannerImageUrl` — direct string URL (not an object like REST API returns)
+  - `Editor`, `Author` — expanded user objects with `Claims`, `DisplayName`, `Email`, `Picture`, `Department`, `JobTitle`
+- **`CanvasContent1` is NOT returned by `getItems`** on the Site Pages list. It must be fetched per-page via `getSpItem(siteUrl, 'Site Pages', itemId)`.
+
+### HttpRequest / sendHttpRequest
+- `sendHttpRequest({ method, uri, headers, body })` in `sharepoint.js` calls the connector's `HttpRequest` operation.
+- This operation does **not** include a `siteUrl` dataset parameter in its call — it only passes `method`, `uri`, `headers`, `body`.
+- In Code Apps, `HttpRequest` returns **404 "Resource not found"** for every call, regardless of URI format (absolute, relative, encoded).
+- `callSharePointOperation('HttpRequest', { siteUrl: ..., method, uri, headers, body })` also fails with 404 — the `siteUrl` is not a valid parameter for this operation's path template.
+- **Conclusion: `HttpRequest` is not usable in Code Apps.** Do not rely on it. Use only the standard CRUD operations (`GetItems`, `GetItem`, `PostItem`, `PatchItem`, `DeleteItem`) and file operations (`CreateFile`, `UpdateFile`, `DeleteFile`, `MoveFile`, `GetFileMetadata`).
+
+### createFile behavior
+- `createFile(siteUrl, folderPath, fileName, content)` works even for folders/libraries not visible in `listTables`.
+- The `folderPath` must be the server-relative path: e.g. `/sites/IntelligentAutomation/PowerPlatform/Shared Documents/md`.
+- Content is passed as a string (for text files like .md).
+
+### Site discovery pattern
+- Use `listTables(siteUrl)` purely as a connectivity probe — if it returns without error, the site URL is valid.
+- Derive `activeSiteRelative` from the URL pathname: `new URL(siteUrl).pathname`.
+- Do not attempt to call `/_api/web` or any REST endpoint — it won't work without `HttpRequest`.
+
+### Recommended discovery approach for Code Apps
+```js
+// 1. Probe site reachability
+await listTables(siteUrl); // throws if site is unreachable
+
+// 2. Try getItems with known list display names directly
+const pages = await getItems(siteUrl, 'Site Pages', { top: 1 });
+// If this works, 'Site Pages' is the table token
+
+// 3. For per-item detail (e.g. CanvasContent1)
+const page = await getSpItem(siteUrl, 'Site Pages', itemId);
+
+// 4. For file operations
+await createFile(siteUrl, serverRelativeFolderPath, fileName, content);
+
 ## Debugging Checklist
 
 - If the failure happens before any connector call, verify `initSharePointClient()` returns `getClient(dataSourcesInfo)` and the wrapper was not replaced with a stub.
