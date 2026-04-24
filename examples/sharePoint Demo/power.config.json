@@ -1,11 +1,11 @@
 {
-  "appId": "1979e40c-021e-457e-b0b5-a5bc009596c8",
-  "appDisplayName": "SharePoint DemoApp",
-  "description": "",
+  "appId": "4dc1bf79-8c47-4ff4-b5f3-384c0fe2163c",
+  "appDisplayName": "Test List Bureau",
+  "description": "SharePoint CRUD app for the Test list.",
   "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
-  "logoPath": "default",
+  "logoPath": "./dist/icon-512.png",
   "localAppUrl": "http://localhost:3000",
   "region": "prod",
   "connectionReferences": {
@@ -16,7 +16,7 @@
         "sharepointonline"
       ],
       "authenticationType": null,
-      "sharedConnectionId": "shared-sharepointonl-f5f8159f-628c-4796-b123-bce62d995bfb",
+      "sharedConnectionId": null,
       "dataSets": {}
     }
   },

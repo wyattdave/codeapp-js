@@ -1,0 +1,4469 @@
+{
+  "generatedAt": "2026-04-12T14:22:51.560Z",
+  "generator": "cap generate-javascript-data-sources",
+  "kind": "connector",
+  "className": "Office365OutlookService",
+  "dataSourceName": "office365",
+  "sourceService": "C:/dev/test con gen/src/generated/services/Office365OutlookService.ts",
+  "schemaSources": [],
+  "modelImports": [
+    {
+      "names": [
+        "ApprovalEmailSubscription"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "AutomaticRepliesSettingClient"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "BatchOperationResult"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "BatchResponse_ClientReceiveMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "BatchResponse_GraphClientReceiveMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "BatchResponse_SensitivityLabel"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "CalendarEventBackend"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "CalendarEventClient"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "CalendarEventClientReceiveStringEnums"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "CalendarEventHtmlClient"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "CalendarEventList"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "CalendarEventListClientReceive"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "CalendarEventListWithActionType"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ClientDraftHtmlMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ClientReceiveMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ClientReceiveMessageStringEnums"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ClientSendHtmlMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ClientSendMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ClientSubscription"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "Contact"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ContactResponse"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ContactResponse_V2"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "Contact_V2"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "DataSetsList"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "DataSetsMetadata"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "DirectForwardMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "EntityListResponse_CalendarEventBackend"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "EntityListResponse_CalendarEventClientReceiveStringEnums"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "EntityListResponse_ContactResponse"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "EntityListResponse_ContactResponse_V2"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "EntityListResponse_FilePickerFile"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "EntityListResponse_GraphCalendarEventClientReceive"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "EntityListResponse_GraphContactFolder"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "EntityListResponse_Table"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "GraphCalendarEventClient"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "GraphCalendarEventClientReceive"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "GraphCalendarEventListClientReceive"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "GraphCalendarEventListWithActionType"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "GraphClientReceiveMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "GraphOutlookCategory"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "IOperationResult"
+      ],
+      "source": "@microsoft/power-apps/data"
+    },
+    {
+      "names": [
+        "MCPQueryRequest"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "MCPQueryResponse"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "MailTipsClientReceive"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "MailTipsClientReceive_V2"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ObjectWithoutType"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "OptionsEmailSubscription"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "OutlookReceiveMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "PaginatedListResponse_CalendarEventClientReceiveStringEnums"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ReplyHtmlMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ReplyMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "ResponseToEventInvite"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "SharedMailboxClientSendHtmlMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "SharedMailboxClientSendMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "SubscriptionPayload_OutlookReceiveMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "SubscriptionPayload_SubscriptionEvent"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "TableMetadata"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "TriggerBatchResponse_ClientReceiveMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "TriggerBatchResponse_GraphClientReceiveMessage"
+      ],
+      "source": "../models/Office365OutlookModel"
+    },
+    {
+      "names": [
+        "UpdateEmailFlag"
+      ],
+      "source": "../models/Office365OutlookModel"
+    }
+  ],
+  "methods": [
+    {
+      "name": "CalendarGetTable",
+      "description": "Get calendar metadata\nThis operation gets metadata for a calendar.",
+      "returnType": "TableMetadata",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactGetTable",
+      "description": "Get folder metadata\nThis operation gets metadata for a contacts folder.",
+      "returnType": "TableMetadata",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnUpcomingEvents",
+      "description": "When an upcoming event is starting soon\nThis operation triggers a flow when an upcoming calendar event is starting.",
+      "returnType": "CalendarEventList",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "lookAheadTimeInMinutes",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnUpcomingEventsV2",
+      "description": "When an upcoming event is starting soon (V2)\nThis operation triggers a flow when an upcoming calendar event is starting.",
+      "returnType": "CalendarEventListClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "lookAheadTimeInMinutes",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnUpcomingEventsV3",
+      "description": "When an upcoming event is starting soon (V3)\nThis operation triggers a flow when an upcoming calendar event is starting.",
+      "returnType": "GraphCalendarEventListClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "lookAheadTimeInMinutes",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetEventsCalendarView",
+      "description": "Get calendar view of events\nGet calendar view of events.",
+      "returnType": "PaginatedListResponse_CalendarEventClientReceiveStringEnums",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "startDateTimeOffset",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "endDateTimeOffset",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CreateOnChangedEventPokeSubscription",
+      "description": "When an event is added, updated or deleted in a calendar - Outlook subscription\nCreate an Outlook webhook subscription for the trigger when an event is added, updated or deleted in a calendar.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        },
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "incomingDays",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "pastDays",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CreateGraphOnChangedEventPokeSubscription",
+      "description": "When an event is added, updated or deleted in a calendar - Graph subscription\nCreate a Graph webhook subscription for the trigger when an event is added, updated or deleted in a calendar.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        },
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "incomingDays",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "pastDays",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "DeleteEventSubscription",
+      "description": "Delete event subscription\nThis operation deletes an event subscription.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "options",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "RenewEventSubscription",
+      "description": "Update web hook\nUpdate web hook with renew interval.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "options",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnFilePickerOpen",
+      "description": "When the file picker is opened for the first time\nWhen the file picker is opened for the first time.",
+      "returnType": "EntityListResponse_FilePickerFile",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "operation",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnFilePickerBrowse",
+      "description": "When the file picker is open and being browsed\nWhen the file picker is open and being browsed.",
+      "returnType": "EntityListResponse_FilePickerFile",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "operation",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetEmails",
+      "description": "Get emails\nThis operation gets emails from a folder.",
+      "returnType": "ClientReceiveMessageStringEnums[]",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyUnread",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "searchQuery",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SendEmail",
+      "description": "Send an email\nThis operation sends an email message.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "emailMessage",
+          "optional": false,
+          "type": "ClientSendMessage",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetOutlookCategoryNames",
+      "description": "Get Outlook category names\nThis operation gets Outlook category display names.",
+      "returnType": "GraphOutlookCategory[]",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "DraftEmail",
+      "description": "Draft an email message\nThis operation drafts an email message.",
+      "returnType": "OutlookReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "draftMessage",
+          "optional": false,
+          "type": "ClientDraftHtmlMessage",
+          "defaultValue": null
+        },
+        {
+          "name": "messageId",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "draftType",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "comment",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "UpdateDraftEmail",
+      "description": "Updates an email Draft message\nThis operation updates an an email Draft message.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "draftMessage",
+          "optional": false,
+          "type": "ClientDraftHtmlMessage",
+          "defaultValue": null
+        },
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SendDraftEmail",
+      "description": "Send a Draft message\nThis operation sends a Draft message.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "AssignCategory",
+      "description": "Assigns an Outlook category\nThis operation assigns an Outlook category to an email.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "category",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "AssignCategoryBulk",
+      "description": "Assign a category to multiple emails\nThis operation assigns an Outlook category to multiple emails.",
+      "returnType": "BatchOperationResult",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageIds",
+          "optional": false,
+          "type": "unknown",
+          "defaultValue": null
+        },
+        {
+          "name": "categoryName",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetEmailsV2",
+      "description": "Get emails (V2)\nThis operation gets emails from a folder.",
+      "returnType": "BatchResponse_ClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyUnread",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyFlagged",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "searchQuery",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SendEmailV2",
+      "description": "Send an email (V2)\nThis operation sends an email message.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "emailMessage",
+          "optional": false,
+          "type": "ClientSendHtmlMessage",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetEmail",
+      "description": "Get email\nThis operation gets an email by id.",
+      "returnType": "ClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "internetMessageId",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "DeleteEmail",
+      "description": "Delete email\nThis operation deletes an email by id.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetEmailV2",
+      "description": "Get email (V2)\nThis operation gets an email by id.",
+      "returnType": "GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "internetMessageId",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "extractSensitivityLabel",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchSensitivityLabelMetadata",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetEmailsV3",
+      "description": "Get emails (V3)\nThis operation gets emails from a folder via graph apis. Please note that filtering related to these fields: To, Cc, To Or Cc, From, Importance, Fetch Only With Attachments, Subject Filter, is performed using first 250 items in a given mail folder. To avoid that limitation you can use 'Search Query' field.",
+      "returnType": "BatchResponse_GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyUnread",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyFlagged",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "searchQuery",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "Move",
+      "description": "Move email\nThis operation moves an email to the specified folder within the same mailbox.",
+      "returnType": "ClientReceiveMessageStringEnums",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "MoveV2",
+      "description": "Move email (V2)\nThis operation moves an email to the specified folder within the same mailbox.",
+      "returnType": "GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "Flag",
+      "description": "Flag email\nThis operation flags an email.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "MarkAsRead",
+      "description": "Mark as read\nThis operation marks an email as having been read.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ReplyTo",
+      "description": "Reply to email\nThis operation replies to an email.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "comment",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "replyAll",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ReplyToV2",
+      "description": "Reply to email (V2)\nThis operation replies to an email.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "replyParameters",
+          "optional": false,
+          "type": "ReplyMessage",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ReplyToV3",
+      "description": "Reply to email (V3)\nThis operation replies to an email.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "replyParameters",
+          "optional": false,
+          "type": "ReplyHtmlMessage",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetAttachment",
+      "description": "Get attachment\nThis operation gets an email attachment by id.",
+      "returnType": "string",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "attachmentId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnNewEmail",
+      "description": "When a new email arrives\nThis operation triggers a flow when a new email arrives. It will skip any email that has a total message size greater than the limit put by your Exchange Admin or 50 MB, whichever is less. It may also skip protected emails and emails with invalid body or attachments.",
+      "returnType": "TriggerBatchResponse_ClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "x_ms_operation_context",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnNewEmailV2",
+      "description": "When a new email arrives (V2)\nThis operation triggers a flow when a new email arrives. It will skip any email that has a total message size greater than the limit put by your Exchange Admin or 50 MB, whichever is less. It may also skip protected emails and emails with invalid body or attachments.",
+      "returnType": "TriggerBatchResponse_GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "x_ms_operation_context",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnNewEmailV3",
+      "description": "When a new email arrives (V3)\nThis operation triggers a flow when a new email arrives. It will skip any email that has a total message size greater than the limit put by your Exchange Admin or 50 MB, whichever is less. It may also skip protected emails and emails with invalid body or attachments.",
+      "returnType": "TriggerBatchResponse_GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "x_ms_operation_context",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnFlaggedEmail",
+      "description": "When an email is flagged\nThis operation triggers a flow when an email is flagged.",
+      "returnType": "TriggerBatchResponse_ClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "x_ms_operation_context",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnFlaggedEmailV2",
+      "description": "When an email is flagged (V2)\nThis operation triggers a flow when an email is flagged.",
+      "returnType": "TriggerBatchResponse_GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnFlaggedEmailV3",
+      "description": "When an email is flagged (V3)\nThis operation triggers a flow when an email is flagged.",
+      "returnType": "TriggerBatchResponse_GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnFlaggedEmailV4",
+      "description": "When an email is flagged (V4)\nThis operation triggers a flow when an email is flagged.",
+      "returnType": "TriggerBatchResponse_GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnNewMentionMeEmail",
+      "description": "When a new email mentioning me arrives\nThis operation triggers a flow when a new email mentioning me arrives. It will skip any email that has a total message size greater than the limit put by your Exchange Admin or 50 MB, whichever is less. It may also skip protected emails and emails with invalid body or attachments.",
+      "returnType": "TriggerBatchResponse_ClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageIdToFireOnFirstTriggerRun",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnNewMentionMeEmailV2",
+      "description": "When a new email mentioning me arrives (V2)\nThis operation triggers a flow when a new email mentioning me arrives. It will skip any email that has a total message size greater than the limit put by your Exchange Admin or 50 MB, whichever is less. It may also skip protected emails and emails with invalid body or attachments.",
+      "returnType": "TriggerBatchResponse_GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageIdToFireOnFirstTriggerRun",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "OnNewMentionMeEmailV3",
+      "description": "When a new email mentioning me arrives (V3)\nThis operation triggers a flow when a new email mentioning me arrives. It will skip any email that has a total message size greater than the limit put by your Exchange Admin or 50 MB, whichever is less. It may also skip protected emails and emails with invalid body or attachments.",
+      "returnType": "TriggerBatchResponse_GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageIdToFireOnFirstTriggerRun",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SetAutomaticRepliesSetting",
+      "description": "Set up automatic replies\nSet the automatic replies setting for your mailbox.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "clientSetting",
+          "optional": false,
+          "type": "AutomaticRepliesSettingClient",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetMailTips",
+      "description": "Get mail tips for a mailbox\nGet mail tips for a mailbox such as automatic replies / OOF message or if the mailbox is full.",
+      "returnType": "MailTipsClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "mailboxAddress",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetSensitivityLabels",
+      "description": "Get sensitivity labels\nGet a collection of information protection labels available to the user.",
+      "returnType": "BatchResponse_SensitivityLabel",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "CreateOnNewEmailSubscription",
+      "description": "When a new email arrives (webhook)\nThis operation triggers a flow when a new email arrives.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "hasAttachment",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CreateOnNewEmailPokeSubscription",
+      "description": "Create a webhook subscription for the trigger when a new email arrives\nCreate a webhook subscription for the trigger when a new email arrives.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CreateGraphOnNewEmailPokeSubscription",
+      "description": "Create a Graph webhook subscription for the trigger when a new email arrives\nCreate a Graph webhook subscription for the trigger when a new email arrives.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CreateOnNewMentionMeEmailPokeSubscription",
+      "description": "When a new mentioning me email arrives - Outlook subscription\nCreate an Outlook webhook subscription for the trigger when a new mentioning me email arrives.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CreateGraphOnNewMentionMeEmailPokeSubscription",
+      "description": "When a new mentioning me email arrives - Graph subscription\nCreate a Graph webhook subscription for the trigger when a new mentioning me email arrives.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CreateOnFlaggedEmailPokeSubscription",
+      "description": "Create an Outlook webhook subscription for the trigger when an email is flagged\nCreate an Outlook webhook subscription for the trigger when an email is flagged.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CreateGraphOnFlaggedEmailPokeSubscription",
+      "description": "Create a Graph webhook subscription for the trigger when an email is flagged\nCreate a Graph webhook subscription for the trigger when an email is flagged.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        },
+        {
+          "name": "folderPath",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchOnlyWithAttachment",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "DeleteOnNewEmailSubscription",
+      "description": "Delete mail subscription\nThis operation deletes a mail subscription.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "options",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "RenewOnNewEmailSubscription",
+      "description": "Update web hook\nUpdate web hook with renew interval.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "options",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "subscription",
+          "optional": false,
+          "type": "ClientSubscription",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetDataSetsMetadata",
+      "description": "",
+      "returnType": "DataSetsMetadata",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "SendMailWithOptions",
+      "description": "Send email with options\nThis operation sends an email with multiple options and waits for the recipient to respond back with one of the options. Please refer to the following link regarding the support of actionable messages in different mail clients: https://docs.microsoft.com/outlook/actionable-messages/#outlook-version-requirements-for-actionable-messages.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "optionsEmailSubscription",
+          "optional": false,
+          "type": "OptionsEmailSubscription",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SendApprovalMail",
+      "description": "Send approval email\nThis operation sends an approval email and waits for a response from the recipient. Please refer to the following link regarding the support of actionable messages in different mail clients: https://docs.microsoft.com/outlook/actionable-messages/#outlook-version-requirements-for-actionable-messages.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "approvalEmailSubscription",
+          "optional": false,
+          "type": "ApprovalEmailSubscription",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "DeleteApprovalMailSubscription",
+      "description": "Delete approval email subscription\nThis operation deletes a subscription of approval email.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "DeleteOptionsMailSubscription",
+      "description": "Delete options email subscription\nThis operation deletes a subscription of options email.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SharedMailboxSendEmail",
+      "description": "Send an email from a shared mailbox\nThis operation sends an email from a shared mailbox. Your account should have permission to access the mailbox for this operation to succeed.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "emailMessage",
+          "optional": false,
+          "type": "SharedMailboxClientSendMessage",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SharedMailboxSendEmailV2",
+      "description": "Send an email from a shared mailbox (V2)\nThis operation sends an email from a shared mailbox. Your account should have permission to access the mailbox for this operation to succeed.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "emailMessage",
+          "optional": false,
+          "type": "SharedMailboxClientSendHtmlMessage",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SharedMailboxOnNewEmail",
+      "description": "When a new email arrives in a shared mailbox\nThis operation triggers a flow when a new email arrives in a shared mailbox. Your account should have permission to access the mailbox for this operation to succeed. It will skip any email that has a total message size greater than the limit put by your Exchange Admin or 50 MB, whichever is less. It may also skip protected emails and emails with invalid body or attachments.",
+      "returnType": "TriggerBatchResponse_ClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "mailboxAddress",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "folderId",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "hasAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "x_ms_operation_context",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SharedMailboxOnNewEmailV2",
+      "description": "When a new email arrives in a shared mailbox (V2)\nThis operation triggers a flow when a new email arrives in a shared mailbox. Your account should have permission to access the mailbox for this operation to succeed. It will skip any email that has a total message size greater than the limit put by your Exchange Admin or 50 MB, whichever is less. It may also skip protected emails and emails with invalid body or attachments.",
+      "returnType": "TriggerBatchResponse_GraphClientReceiveMessage",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "mailboxAddress",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "folderId",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "cc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "toOrCc",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "from",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "importance",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "hasAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "includeAttachments",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "subjectFilter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "x_ms_operation_context",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "TestConnection",
+      "description": "Tests the connection\nTests the connection.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "CalendarGetTables",
+      "description": "Get calendars\nThis operation lists available calendars.",
+      "returnType": "EntityListResponse_Table",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "CalendarGetItems",
+      "description": "Get events (V1)\nThis operation gets events from a calendar. (V1)",
+      "returnType": "EntityListResponse_CalendarEventBackend",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarPostItem",
+      "description": "Create event (V1)\nThis operation creates a new event in a calendar. (V1)",
+      "returnType": "CalendarEventBackend",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "CalendarEventBackend",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetItem",
+      "description": "Get event (V1)\nThis operation gets a specific event from a calendar. (V1)",
+      "returnType": "CalendarEventBackend",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarDeleteItem",
+      "description": "Delete event\nThis operation deletes an event in a calendar.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarPatchItem",
+      "description": "Update event (V1)\nThis operation updates an event in a calendar. (V1)",
+      "returnType": "CalendarEventBackend",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "CalendarEventBackend",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V3CalendarGetItems",
+      "description": "Get events (V3)\nThis operation gets events from a calendar. (V3)",
+      "returnType": "CalendarEventListClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V3CalendarPostItem",
+      "description": "Create event (V3)\nThis operation creates a new event in a calendar.",
+      "returnType": "CalendarEventClientReceiveStringEnums",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "CalendarEventHtmlClient",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V4CalendarGetItems",
+      "description": "Get events (V4)\nThis operation gets events from a calendar using Graph API. (V4)",
+      "returnType": "GraphCalendarEventListClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V4CalendarPostItem",
+      "description": "Create event (V4)\nThis operation creates a new event in a calendar.",
+      "returnType": "GraphCalendarEventClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "GraphCalendarEventClient",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V2CalendarGetItems",
+      "description": "Get events (V2)\nThis operation gets events from a calendar. (V2)",
+      "returnType": "EntityListResponse_CalendarEventClientReceiveStringEnums",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V2CalendarPostItem",
+      "description": "Create event (V2)\nThis operation creates a new event in a calendar. (V2)",
+      "returnType": "CalendarEventClientReceiveStringEnums",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "CalendarEventClient",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetEventsCalendarViewV2",
+      "description": "Get calendar view of events (V2)\nThis operation gets all events (including instances of recurrences) in a calendar. Recurrence property is null in this case.",
+      "returnType": "EntityListResponse_CalendarEventClientReceiveStringEnums",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "startDateTimeOffset",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "endDateTimeOffset",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "search",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetEventsCalendarViewV3",
+      "description": "Get calendar view of events (V3)\nThis operation gets all events (including instances of recurrences) in a calendar using Graph API. Recurrence property is null in this case.",
+      "returnType": "EntityListResponse_GraphCalendarEventClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "startDateTimeUtc",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "endDateTimeUtc",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "search",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V2CalendarGetItem",
+      "description": "Get event (V2)\nThis operation gets a specific event from a calendar. (V2)",
+      "returnType": "CalendarEventClientReceiveStringEnums",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V2CalendarPatchItem",
+      "description": "Update event (V2)\nThis operation updates an event in a calendar. (V2)",
+      "returnType": "CalendarEventClientReceiveStringEnums",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "CalendarEventClient",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V3CalendarGetItem",
+      "description": "Get event (V3)\nThis operation gets a specific event from a calendar using Graph API. (V3)",
+      "returnType": "GraphCalendarEventClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V3CalendarPatchItem",
+      "description": "Update event (V3)\nThis operation updates an event in a calendar.",
+      "returnType": "CalendarEventClientReceiveStringEnums",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "CalendarEventHtmlClient",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "V4CalendarPatchItem",
+      "description": "Update event (V4)\nThis operation updates an event in a calendar using Graph API.",
+      "returnType": "GraphCalendarEventClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "GraphCalendarEventClient",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetOnNewItems",
+      "description": "When a new event is created (V1)\nThis operation triggers a flow when a new event is created in a calendar. (V1)",
+      "returnType": "CalendarEventList",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "x_ms_operation_context",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetOnUpdatedItems",
+      "description": "When an event is modified (V1)\nThis operation triggers a flow when an event is modified in a calendar. (V1)",
+      "returnType": "CalendarEventList",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ODataStyleGetOnNewItems",
+      "description": "When a new item is created in a table\nThis operation triggers a flow when a new item is created in a table.",
+      "returnType": "CalendarEventList",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "dataset",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ODataStyleCalendarGetOnUpdatedItems",
+      "description": "When an item is modified\nThis operation triggers a flow when an item is modified in a table.",
+      "returnType": "CalendarEventList",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "dataset",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetOnNewItemsV2",
+      "description": "When a new event is created (V2)\nThis operation triggers a flow when a new event is created in a calendar. (V2)",
+      "returnType": "CalendarEventListClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "x_ms_operation_context",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetOnNewItemsV3",
+      "description": "When a new event is created (V3)\nThis operation triggers a flow when a new event is created in a calendar. (V3)",
+      "returnType": "GraphCalendarEventListClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "x_ms_operation_context",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetOnUpdatedItemsV2",
+      "description": "When an event is modified (V2)\nThis operation triggers a flow when an event is modified in a calendar. (V2)",
+      "returnType": "CalendarEventListClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetOnUpdatedItemsV3",
+      "description": "When an event is modified (V3)\nThis operation triggers a flow when an event is modified in a calendar. (V3)",
+      "returnType": "GraphCalendarEventListClientReceive",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetOnChangedItems",
+      "description": "When an event is added, updated or deleted\nThis operation triggers a flow when an event is added, updated or deleted in a calendar.",
+      "returnType": "CalendarEventListWithActionType",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "incomingDays",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "pastDays",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetOnChangedItemsV2",
+      "description": "When an event is added, updated or deleted (V2)\nThis operation triggers a flow when an event is added, updated or deleted in a calendar. (V2)",
+      "returnType": "GraphCalendarEventListWithActionType",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "incomingDays",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "pastDays",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetOnChangedItemsV3",
+      "description": "When an event is added, updated or deleted (V3)\nThis operation triggers a flow when an event is added, updated or deleted in a calendar. (V3) This is not available in Mooncake.",
+      "returnType": "GraphCalendarEventListWithActionType",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "incomingDays",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "pastDays",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactGetTables",
+      "description": "Get contact folders\nThis operation lists available contacts folders.",
+      "returnType": "EntityListResponse_Table",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "ContactGetTablesV2",
+      "description": "Get contact folders (V2)\nThis operation lists available contacts folders using Graph API",
+      "returnType": "EntityListResponse_GraphContactFolder",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "ContactGetItems",
+      "description": "Get contacts\nThis operation gets contacts from a contacts folder.",
+      "returnType": "EntityListResponse_ContactResponse",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactPostItem",
+      "description": "Create contact\nThis operation creates a new contact in a contacts folder.",
+      "returnType": "ContactResponse",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "Contact",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactGetItem",
+      "description": "Get contact\nThis operation gets a specific contact from a contacts folder.",
+      "returnType": "ContactResponse",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactDeleteItem",
+      "description": "Delete contact\nThis operation deletes a contact from a contacts folder.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactPatchItem",
+      "description": "Update contact\nThis operation updates a contact in a contacts folder.",
+      "returnType": "ContactResponse",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "table",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "Contact",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetDataSets",
+      "description": "Get datasets\nThis operation gets Contacts or Calendars",
+      "returnType": "DataSetsList",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "ExportEmail",
+      "description": "Export email\nExport the content of the email.",
+      "returnType": "string",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ExportEmail_V2",
+      "description": "Export email (V2)\nExport the content of the email in the EML file format.",
+      "returnType": "string",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "Flag_V2",
+      "description": "Flag email (V2)\nThis operation updates an email flag.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "type": "UpdateEmailFlag",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "MarkAsRead_V2",
+      "description": "Mark as read or unread (V2)\nThis operation marks an email as read/unread.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "type": "Record<string, unknown>",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "MarkAsRead_V3",
+      "description": "Mark as read or unread (V3)\nThis operation marks an email as read/unread.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "type": "Record<string, unknown>",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "DeleteEmail_V2",
+      "description": "Delete email (V2)\nThis operation deletes an email by id.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetAttachment_V2",
+      "description": "Get Attachment (V2)\nThis operation gets an email attachment by id.",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "messageId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "attachmentId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "extractSensitivityLabel",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        },
+        {
+          "name": "fetchSensitivityLabelMetadata",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "RespondToEvent",
+      "description": "Respond to an event invite\nRespond to an event invite.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "event_id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "response",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "type": "ResponseToEventInvite",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "RespondToEvent_V2",
+      "description": "Respond to an event invite (V2)\nRespond to an event invite.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "event_id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "response",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "type": "ResponseToEventInvite",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ForwardEmail",
+      "description": "Forward an email\nForward an email.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "message_id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "body",
+          "optional": false,
+          "type": "DirectForwardMessage",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ForwardEmail_V2",
+      "description": "Forward an email (V2)\nForward an email.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "message_id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "body",
+          "optional": false,
+          "type": "DirectForwardMessage",
+          "defaultValue": null
+        },
+        {
+          "name": "mailboxAddress",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetRoomLists",
+      "description": "Get room lists\nGet all the room lists defined in the user's tenant",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "GetRoomLists_V2",
+      "description": "Get room lists (V2)\nGet all the room lists defined in the user's tenant",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "GetRooms",
+      "description": "Get rooms\nGet all the meeting rooms defined in the user's tenant",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "GetRooms_V2",
+      "description": "Get rooms (V2)\nGet all the meeting rooms defined in the user's tenant",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": []
+    },
+    {
+      "name": "GetRoomsInRoomList",
+      "description": "Get rooms in room list\nGet the meeting rooms in a specific room list",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "room_list",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetRoomsInRoomList_V2",
+      "description": "Get rooms in room list (V2)\nGet the meeting rooms in a specific room list",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "room_list",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "FindMeetingTimes",
+      "description": "Find meeting times\nFind meeting time suggestions based on organizer, attendee availability, and time or location constraints",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "body",
+          "optional": false,
+          "type": "Record<string, unknown>",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "FindMeetingTimes_V2",
+      "description": "Find meeting times (V2)\nFind meeting time suggestions based on organizer, attendee availability, and time or location constraints",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "body",
+          "optional": false,
+          "type": "Record<string, unknown>",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "SetAutomaticRepliesSetting_V2",
+      "description": "Set up automatic replies (V2)\nSet the automatic replies setting for your mailbox.",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "body",
+          "optional": false,
+          "type": "Record<string, unknown>",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "GetMailTips_V2",
+      "description": "Get mail tips for a mailbox (V2)\nGet mail tips for a mailbox such as automatic replies / OOF message or if the mailbox is full. This is not available in GccHigh and Mooncake.",
+      "returnType": "unknown",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "body",
+          "optional": false,
+          "type": "Record<string, unknown>",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarGetTables_V2",
+      "description": "Get calendars (V2)\nThis operation lists available calendars.",
+      "returnType": "Record<string, unknown>",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "orderBy",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "CalendarDeleteItem_V2",
+      "description": "Delete event (V2)\nThis operation deletes an event in a calendar.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "calendar",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "event",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactGetItem_V2",
+      "description": "Get contact (V2)\nThis operation gets a specific contact from a contacts folder.",
+      "returnType": "ContactResponse_V2",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folder",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactDeleteItem_V2",
+      "description": "Delete contact (V2)\nThis operation deletes a contact from a contacts folder.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folder",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactPatchItem_V2",
+      "description": "Update contact (V2)\nThis operation updates a contact in a contacts folder.",
+      "returnType": "ContactResponse_V2",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folder",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "Contact_V2",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactGetItems_V2",
+      "description": "Get contacts (V2)\nThis operation gets contacts from a contacts folder.",
+      "returnType": "EntityListResponse_ContactResponse_V2",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folder",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$filter",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$orderby",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "$top",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        },
+        {
+          "name": "$skip",
+          "optional": true,
+          "type": "number",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ContactPostItem_V2",
+      "description": "Create contact (V2)\nThis operation creates a new contact in a contacts folder.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folder",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "item",
+          "optional": false,
+          "type": "Contact_V2",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "UpdateMyContactPhoto",
+      "description": "Update my contact's photo\nUpdates the photo of the specified contact of the current user. The size of the photo must be less than 4 MB.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "folder",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "body",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "Content_Type",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "HttpRequest",
+      "description": "Send an HTTP request\nConstruct a Microsoft Graph REST API request to invoke. These segments are supported: 1st segement: /me, /users/<userId> 2nd segment: messages, mailFolders, events, calendar, calendars, outlook, inferenceClassification. Learn more: https://docs.microsoft.com/en-us/graph/use-the-api.",
+      "returnType": "ObjectWithoutType",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "Uri",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "Method",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "Body",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "ContentType",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "CustomHeader1",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "CustomHeader2",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "CustomHeader3",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "CustomHeader4",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "CustomHeader5",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "mcp_EmailsManagement",
+      "description": "Email Management MCP Server (deprecated)\nThis MCP server manages email messages from your Office 365 account",
+      "returnType": "MCPQueryResponse",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "queryRequest",
+          "optional": true,
+          "type": "MCPQueryRequest",
+          "defaultValue": null
+        },
+        {
+          "name": "sessionId",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "mcp_MeetingManagement",
+      "description": "Meeting Management MCP Server (deprecated)\nThis MCP server manages events, calendars and meetings",
+      "returnType": "MCPQueryResponse",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "queryRequest",
+          "optional": true,
+          "type": "MCPQueryRequest",
+          "defaultValue": null
+        },
+        {
+          "name": "sessionId",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "mcp_ContactsManagement",
+      "description": "Contact Management MCP Server\nThis MCP server manages contacts",
+      "returnType": "MCPQueryResponse",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "queryRequest",
+          "optional": true,
+          "type": "MCPQueryRequest",
+          "defaultValue": null
+        },
+        {
+          "name": "sessionId",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ReceiveResponseGet",
+      "description": "Receives response from user\nThis operation gets a response from the user.",
+      "returnType": "string",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "state",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "sig",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "showConfirm",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ReceiveResponsePost",
+      "description": "Receives response from user\nThis operation gets a response from the user.",
+      "returnType": "string",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "state",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "sig",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "fromConfirm",
+          "optional": true,
+          "type": "boolean",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ReceiveMailFromSubscription",
+      "description": "Receive mail\nThis operation validates the subscription request.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "state",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "subscriptionPayload",
+          "optional": false,
+          "type": "SubscriptionPayload_OutlookReceiveMessage",
+          "defaultValue": null
+        },
+        {
+          "name": "validationtoken",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ReceiveMailFromSubscriptionV2",
+      "description": "Receive mail (V2)\nThis operation validates the subscription request.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "state",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "subscriptionPayload",
+          "optional": false,
+          "type": "SubscriptionPayload_OutlookReceiveMessage",
+          "defaultValue": null
+        },
+        {
+          "name": "subscribedConnectionId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "validationtoken",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ReceiveEventFromSubscription",
+      "description": "Receive event\nThis operation validates the subscription request.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "state",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "subscriptionPayload",
+          "optional": false,
+          "type": "SubscriptionPayload_SubscriptionEvent",
+          "defaultValue": null
+        },
+        {
+          "name": "validationtoken",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    },
+    {
+      "name": "ReceiveEventFromSubscriptionV2",
+      "description": "Receive event (V2)\nThis operation validates the subscription request.",
+      "returnType": "void",
+      "runtimePattern": "connectorOperation",
+      "parameters": [
+        {
+          "name": "state",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "subscriptionPayload",
+          "optional": false,
+          "type": "SubscriptionPayload_SubscriptionEvent",
+          "defaultValue": null
+        },
+        {
+          "name": "subscribedConnectionId",
+          "optional": false,
+          "type": "string",
+          "defaultValue": null
+        },
+        {
+          "name": "validationtoken",
+          "optional": true,
+          "type": "string",
+          "defaultValue": null
+        }
+      ]
+    }
+  ]
+}

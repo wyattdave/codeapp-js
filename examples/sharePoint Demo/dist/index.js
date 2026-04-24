@@ -1,5 +1,4 @@
-import { enableDebugger } from "./codeapp.js";
-
+import { enableDebugger } from './codeapp.js';
 enableDebugger();
 
 import {
@@ -10,849 +9,555 @@ import {
   updateSpItemByList,
 } from './connectors/sharepoint.js';
 
-const oAppConfig = {
-  sAppName: 'SharePoint Demo App',
-  sSiteUrl: 'https://37wcqv.sharepoint.com/sites/testsite',
-  sListId: '742435b6-7897-4636-ab8e-ec347405b9a6',
-  sListName: 'Test List',
+const APP_CONFIG = {
+  appName: 'Test List Bureau',
+  siteUrl: 'https://37wcqv.sharepoint.com/sites/testsite/',
+  listId: '742435b6-7897-4636-ab8e-ec347405b9a6',
+  listName: 'Test list',
 };
 
-const aSystemFieldNames = [
-  'ID',
-  'Id',
-  'GUID',
-  'Modified',
-  'Created',
-  'Author',
-  'AuthorId',
-  'Editor',
-  'EditorId',
-  'Attachments',
-  'FileRef',
-  'FileLeafRef',
-  'ContentType',
-  'ContentTypeId',
-  'ComplianceAssetId',
-  'FolderChildCount',
-  'ItemChildCount',
-  '_UIVersionString',
-  '_ModerationStatus',
-  '_ModerationComments',
-  'AppAuthor',
-  'AppEditor',
-  'LinkTitleNoMenu',
-  'LinkTitle',
-  'Edit',
-  'DocIcon',
-  'Order',
-  'SortBehavior',
-  'WorkflowVersion',
-];
-
-const oState = {
-  eRoot: null,
-  oListAccess: null,
-  aItems: [],
-  aFields: [],
-  sError: '',
-  sNotice: '',
-  bLoading: true,
-  bRefreshing: false,
-  bSubmittingCreate: false,
-  bSubmittingEdit: false,
-  iSelectedItemId: null,
+const FIELDS = {
+  title: 'Title',
+  date: 'date',
+  text: 'text',
+  choice: 'choice',
+  lookup: 'lookup',
+  signOffStatus: 'Sign_x002d_off_x0020_status',
 };
 
-async function boot() {
-  oState.eRoot = document.getElementById('root');
-  if (!oState.eRoot) {
-    throw new Error('Root element not found.');
+const READY_STATUSES = ['approved', 'complete', 'completed', 'ready'];
+
+const state = {
+  listAccess: null,
+  items: [],
+  selectedId: null,
+  formMode: 'create',
+  form: createEmptyForm(),
+  isLoading: true,
+  isSaving: false,
+  isDeleting: false,
+  searchTerm: '',
+  spotlight: false,
+  notice: null,
+  toastTimer: null,
+};
+
+const ui = {};
+
+function createEmptyForm() {
+  return {
+    title: '',
+    date: '',
+    text: '',
+    choice: '',
+    signOffStatus: '',
+    lookup: '',
+  };
+}
+
+function cacheElements() {
+  ui.connectionLabel = document.getElementById('connectionLabel');
+  ui.totalCount = document.getElementById('totalCount');
+  ui.readyCount = document.getElementById('readyCount');
+  ui.missingDateCount = document.getElementById('missingDateCount');
+  ui.search = document.getElementById('search');
+  ui.refreshButton = document.getElementById('refreshButton');
+  ui.toggleSpotlight = document.getElementById('toggleSpotlight');
+  ui.createButton = document.getElementById('createButton');
+  ui.resultCount = document.getElementById('resultCount');
+  ui.notice = document.getElementById('notice');
+  ui.loadingState = document.getElementById('loadingState');
+  ui.emptyState = document.getElementById('emptyState');
+  ui.tableScroll = document.getElementById('tableScroll');
+  ui.rows = document.getElementById('rows');
+  ui.panelTitle = document.getElementById('panelTitle');
+  ui.panelCopy = document.getElementById('panelCopy');
+  ui.itemForm = document.getElementById('itemForm');
+  ui.titleField = document.getElementById('titleField');
+  ui.dateField = document.getElementById('dateField');
+  ui.textField = document.getElementById('textField');
+  ui.choiceField = document.getElementById('choiceField');
+  ui.signOffField = document.getElementById('signOffField');
+  ui.lookupField = document.getElementById('lookupField');
+  ui.deleteButton = document.getElementById('deleteButton');
+  ui.saveButton = document.getElementById('saveButton');
+  ui.toast = document.getElementById('toast');
+}
+
+function bindEvents() {
+  ui.search.addEventListener('input', (event) => {
+    state.searchTerm = event.target.value.trim().toLowerCase();
+    render();
+  });
+
+  ui.refreshButton.addEventListener('click', async () => {
+    await refreshItems({ preserveSelection: true, preserveCreateMode: state.formMode === 'create' });
+    showToast('List refreshed.', 'success');
+  });
+
+  ui.toggleSpotlight.addEventListener('click', () => {
+    state.spotlight = !state.spotlight;
+    document.body.classList.toggle('spotlight-mode', state.spotlight);
+  });
+
+  ui.createButton.addEventListener('click', () => {
+    beginCreate();
+  });
+
+  ui.rows.addEventListener('click', (event) => {
+    const row = event.target.closest('tr[data-item-id]');
+    if (!row) {
+      return;
+    }
+
+    selectItemById(row.dataset.itemId);
+  });
+
+  ui.itemForm.addEventListener('input', syncFormFromInputs);
+  ui.itemForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    await saveItem();
+  });
+
+  ui.deleteButton.addEventListener('click', async () => {
+    await deleteSelectedItem();
+  });
+}
+
+function normalizeCollection(payload) {
+  if (Array.isArray(payload)) {
+    return payload;
   }
 
-  oState.eRoot.addEventListener('click', handleRootClick);
-  oState.eRoot.addEventListener('submit', handleRootSubmit);
+  const candidates = [
+    payload && payload.value,
+    payload && payload.items,
+    payload && payload.results,
+    payload && payload.body,
+    payload && payload.data,
+    payload && payload.result,
+    payload && payload.response,
+    payload && payload.d && payload.d.results,
+  ];
 
-  renderApp();
-  await initializeApp();
+  return candidates.find(Array.isArray) || [];
 }
 
-async function initializeApp() {
-  try {
-    oState.oListAccess = await resolveListAccess();
-    await refreshAppData({ bPreserveSelection: false });
-    oState.sNotice = 'Connected to ' + oState.oListAccess.sListName + ' and ready for CRUD operations.';
-  } catch (oError) {
-    oState.sError = getErrorMessage(oError);
-  } finally {
-    oState.bLoading = false;
-    renderApp();
-  }
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
-async function resolveListAccess() {
-  return resolveSharePointList(oAppConfig.sSiteUrl, {
-    listId: oAppConfig.sListId,
-    listName: oAppConfig.sListName,
-  });
+function extractItemId(item) {
+  const id = item && (item.ID ?? item.Id ?? item.id);
+  return id == null ? '' : String(id);
 }
 
-async function refreshAppData({ bPreserveSelection } = { bPreserveSelection: true }) {
-  const aItems = await fetchItems();
-  const aFields = await loadFieldDefinitions(aItems);
-  oState.aItems = sortItemsDescending(aItems);
-  oState.aFields = aFields;
-
-  const iExistingSelection = bPreserveSelection ? oState.iSelectedItemId : null;
-  const bSelectionStillExists = iExistingSelection != null && oState.aItems.some(function(oItem) {
-    return getItemId(oItem) === iExistingSelection;
-  });
-
-  oState.iSelectedItemId = bSelectionStillExists ? iExistingSelection : null;
-}
-
-async function fetchItems() {
-  const oResponse = await getItemsByList(oState.oListAccess.sSiteUrl, oState.oListAccess, { top: 200 });
-  return normalizeCollection(oResponse);
-}
-
-async function loadFieldDefinitions(aItems) {
-  return ensureTitleField(sortFields(deriveFieldsFromItems(aItems)));
-}
-
-function deriveFieldsFromItems(aItems) {
-  const oFieldMap = new Map();
-
-  aItems.forEach(function(oItem) {
-    Object.entries(oItem || {}).forEach(function([sName, value]) {
-      if (isSystemField(sName) || !isEditablePrimitive(value)) {
-        return;
-      }
-
-      if (!oFieldMap.has(sName)) {
-        oFieldMap.set(sName, {
-          sName: sName,
-          sLabel: toLabel(sName),
-          sType: inferFieldTypeFromValue(value),
-          bRequired: sName === 'Title',
-          aChoices: [],
-          sDefaultValue: '',
-        });
-      }
-    });
-  });
-
-  return Array.from(oFieldMap.values());
-}
-
-function ensureTitleField(aFields) {
-  const bHasTitle = aFields.some(function(oField) {
-    return oField.sName === 'Title';
-  });
-
-  if (!bHasTitle) {
-    aFields.unshift({
-      sName: 'Title',
-      sLabel: 'Title',
-      sType: 'Text',
-      bRequired: true,
-      aChoices: [],
-      sDefaultValue: '',
-    });
-  }
-
-  return aFields;
-}
-
-function sortFields(aFields) {
-  return aFields.slice().sort(function(oLeft, oRight) {
-    if (oLeft.sName === 'Title') return -1;
-    if (oRight.sName === 'Title') return 1;
-    if (oLeft.bRequired !== oRight.bRequired) return oLeft.bRequired ? -1 : 1;
-    return oLeft.sLabel.localeCompare(oRight.sLabel);
-  });
-}
-
-function renderApp() {
-  const oSelectedItem = getSelectedItem();
-  const aPreviewFields = getPreviewFields();
-
-  oState.eRoot.innerHTML = `
-    <main class="app-shell">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">SharePoint Integration Demo</p>
-          <h1>${escapeHtml(oAppConfig.sAppName)}</h1>
-          <p>Browse live list items, add a new record, edit the selected entry, and delete records without leaving the page. The form adapts to your list fields when SharePoint metadata is available.</p>
-          ${renderStatusMarkup()}
-          <div class="pill-row">
-            <span class="pill"><b>Mode</b>${escapeHtml(oState.oListAccess ? oState.oListAccess.sAccessLabel : 'Connecting')}</span>
-            <span class="pill"><b>List</b>${escapeHtml(oState.oListAccess ? oState.oListAccess.sListName : oAppConfig.sListName)}</span>
-            <span class="pill"><b>Editable Fields</b>${String(oState.aFields.length)}</span>
-          </div>
-        </div>
-        <div class="hero-meta">
-          <div class="meta-card">
-            <span class="meta-label">SharePoint Site</span>
-            <span class="meta-value mono">${escapeHtml(oAppConfig.sSiteUrl)}</span>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Configured List</span>
-            <span class="meta-value">${escapeHtml(oAppConfig.sListName)}</span>
-          </div>
-          <div class="meta-card">
-            <span class="meta-label">Demo Focus</span>
-            <span class="meta-value">List items, reusable list resolution, and connector-backed CRUD forms.</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="metrics">
-        <article class="metric">
-          <span class="metric-label">Total Items</span>
-          <span class="metric-value">${String(oState.aItems.length)}</span>
-        </article>
-        <article class="metric">
-          <span class="metric-label">Selected Item</span>
-          <span class="metric-value">${oSelectedItem ? String(getItemId(oSelectedItem)) : '0'}</span>
-        </article>
-        <article class="metric">
-          <span class="metric-label">Connection State</span>
-          <span class="metric-value">${oState.bLoading ? '...' : 'Live'}</span>
-        </article>
-      </section>
-
-      <section class="panel-grid">
-        <article class="panel">
-          <div class="panel-header">
-            <div>
-              <h2>${oSelectedItem ? 'Update Record' : 'Add Record'}</h2>
-              <p>${oSelectedItem ? 'The selected SharePoint item is loaded below. Update the values here and save the changes back to the list.' : 'Create a new SharePoint item using discovered fields. Required columns are marked automatically when metadata is available.'}</p>
-            </div>
-          </div>
-          ${renderCreateForm(oSelectedItem)}
-        </article>
-
-        <section>
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <h2>List Items</h2>
-                <p>All fetched records are shown below. Select a row to edit it or delete it directly from the table.</p>
-              </div>
-              <div class="button-row">
-                <button class="button-ghost" type="button" data-action="refresh" ${isActionDisabled() ? 'disabled' : ''}>${oState.bRefreshing ? 'Refreshing...' : 'Refresh list'}</button>
-              </div>
-            </div>
-            ${renderTableMarkup(aPreviewFields)}
-          </article>
-
-          <article class="editor-panel">
-            ${renderEditorMarkup(oSelectedItem)}
-          </article>
-        </section>
-      </section>
-    </main>
-  `;
-}
-
-function renderStatusMarkup() {
-  if (!oState.sError && !oState.sNotice && !oState.bLoading) {
+function formatLookupValue(value) {
+  if (!value) {
     return '';
   }
 
-  if (oState.sError) {
-    return `
-      <div class="status" data-tone="error">
-        <div>!</div>
-        <div>
-          <strong>Connection or operation error</strong>
-          <div>${escapeHtml(oState.sError)}</div>
-        </div>
-      </div>
-    `;
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
   }
 
-  return `
-    <div class="status" data-tone="success">
-      <div>${oState.bLoading ? '...' : 'OK'}</div>
-      <div>
-        <strong>${oState.bLoading ? 'Connecting to SharePoint' : 'Ready'}</strong>
-        <div>${escapeHtml(oState.bLoading ? 'Loading list configuration and items.' : oState.sNotice)}</div>
-      </div>
-    </div>
-  `;
+  const candidate = value.Value ?? value.Title ?? value.title ?? value.DisplayName ?? value.displayName ?? value.LookupValue ?? value.lookupValue;
+  return candidate == null ? '' : String(candidate);
 }
 
-function renderCreateForm(oSelectedItem) {
-  const bEditing = Boolean(oSelectedItem);
-  const sFormMode = bEditing ? 'edit' : 'create';
-  const sSubmitLabel = bEditing
-    ? (oState.bSubmittingEdit ? 'Updating...' : 'Update item')
-    : (oState.bSubmittingCreate ? 'Adding...' : 'Add item');
-  const sResetLabel = bEditing ? 'Create new item' : 'Clear form';
-  const sOverrideLabel = bEditing
-    ? 'JSON object merged into the update request'
-    : 'JSON object merged into the create request';
+function formatChoiceValue(value) {
+  if (!value) {
+    return '';
+  }
 
-  return `
-    <form id="item-form" class="field-grid" data-mode="${sFormMode}" data-item-id="${bEditing ? String(getItemId(oSelectedItem)) : ''}">
-      ${renderFieldInputs(oSelectedItem, sFormMode)}
-      <p class="helper-text">${bEditing ? 'The selected row is loaded into this form. Use advanced payload overrides only when you need to send extra fields manually.' : 'Use advanced payload overrides if your list has additional complex columns you want to send manually.'}</p>
-      <details class="details-box">
-        <summary>Advanced payload overrides</summary>
-        <div class="details-inner">
-          <div class="field">
-            <label for="${sFormMode}-overrides">${sOverrideLabel}</label>
-            <textarea id="${sFormMode}-overrides" name="payloadOverrides">{}</textarea>
-          </div>
-        </div>
-      </details>
-      <div class="button-row">
-        <button class="button" type="submit" ${isActionDisabled() ? 'disabled' : ''}>${sSubmitLabel}</button>
-        <button class="button-ghost" type="button" data-action="reset-form" ${isActionDisabled() ? 'disabled' : ''}>${sResetLabel}</button>
-      </div>
-    </form>
-  `;
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
+  }
+
+  const candidate = value.Value ?? value.Label ?? value.label ?? value.Name ?? value.name;
+  return candidate == null ? '' : String(candidate);
 }
 
-function renderTableMarkup(aPreviewFields) {
-  if (oState.bLoading) {
-    return '<div class="empty-state">Loading list items from SharePoint.</div>';
+function formatDateForInput(value) {
+  if (!value) {
+    return '';
   }
 
-  if (oState.aItems.length === 0) {
-    return '<div class="empty-state">No items were returned from the list yet. Use the create form to add the first record.</div>';
+  if (typeof value === 'string') {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) {
+      return match[1];
+    }
   }
 
-  const sHeaderCells = aPreviewFields.map(function(oField) {
-    return '<th scope="col">' + escapeHtml(oField.sLabel) + '</th>';
-  }).join('');
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
 
-  const sRows = oState.aItems.map(function(oItem) {
-    const iItemId = getItemId(oItem);
-    const bIsSelected = iItemId === oState.iSelectedItemId;
-    const sTitle = getPrimaryTitle(oItem);
-    const sPreviewCells = aPreviewFields.map(function(oField) {
-      return '<td data-label="' + escapeHtml(oField.sLabel) + '">' + escapeHtml(formatPreviewValue(oItem[oField.sName])) + '</td>';
-    }).join('');
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateForTable(value) {
+  const normalized = formatDateForInput(value);
+  if (!normalized) {
+    return '<span class="muted">No date</span>';
+  }
+
+  return escapeHtml(normalized);
+}
+
+function mapSharePointItem(item) {
+  return {
+    id: extractItemId(item),
+    title: String(item?.[FIELDS.title] ?? ''),
+    date: formatDateForInput(item?.[FIELDS.date]),
+    text: String(item?.[FIELDS.text] ?? ''),
+    choice: formatChoiceValue(item?.[FIELDS.choice]),
+    signOffStatus: String(item?.[FIELDS.signOffStatus] ?? ''),
+    lookup: formatLookupValue(item?.[FIELDS.lookup]),
+    raw: item,
+  };
+}
+
+function getFilteredItems() {
+  if (!state.searchTerm) {
+    return state.items;
+  }
+
+  return state.items.filter((item) => {
+    return [item.title, item.text, item.choice, item.signOffStatus, item.lookup, item.date]
+      .some((value) => String(value || '').toLowerCase().includes(state.searchTerm));
+  });
+}
+
+function findItemById(itemId) {
+  return state.items.find((item) => item.id === String(itemId)) || null;
+}
+
+function populateFormFromItem(item) {
+  state.form = {
+    title: item?.title ?? '',
+    date: item?.date ?? '',
+    text: item?.text ?? '',
+    choice: item?.choice ?? '',
+    signOffStatus: item?.signOffStatus ?? '',
+    lookup: item?.lookup ?? '',
+  };
+}
+
+function syncFormFromInputs() {
+  state.form = {
+    title: ui.titleField.value,
+    date: ui.dateField.value,
+    text: ui.textField.value,
+    choice: ui.choiceField.value,
+    signOffStatus: ui.signOffField.value,
+    lookup: ui.lookupField.value,
+  };
+}
+
+function setNotice(message, type = 'info') {
+  state.notice = message ? { message, type } : null;
+}
+
+function showToast(message, type = 'success') {
+  if (!message) {
+    return;
+  }
+
+  window.clearTimeout(state.toastTimer);
+  ui.toast.textContent = message;
+  ui.toast.dataset.type = type;
+  ui.toast.classList.add('is-visible');
+  state.toastTimer = window.setTimeout(() => {
+    ui.toast.classList.remove('is-visible');
+  }, 3200);
+}
+
+function updateStats() {
+  const totalCount = state.items.length;
+  const readyCount = state.items.filter((item) => READY_STATUSES.includes(item.signOffStatus.trim().toLowerCase())).length;
+  const missingDateCount = state.items.filter((item) => !item.date).length;
+
+  ui.totalCount.textContent = String(totalCount);
+  ui.readyCount.textContent = String(readyCount);
+  ui.missingDateCount.textContent = String(missingDateCount);
+}
+
+function renderRows() {
+  const filteredItems = getFilteredItems();
+  ui.resultCount.textContent = `${filteredItems.length} visible rows`;
+
+  if (state.isLoading) {
+    ui.loadingState.classList.add('is-visible');
+    ui.emptyState.classList.remove('is-visible');
+    ui.tableScroll.style.display = 'none';
+    ui.rows.innerHTML = '';
+    return;
+  }
+
+  ui.loadingState.classList.remove('is-visible');
+
+  if (filteredItems.length === 0) {
+    ui.emptyState.classList.add('is-visible');
+    ui.tableScroll.style.display = 'none';
+    ui.rows.innerHTML = '';
+    return;
+  }
+
+  ui.emptyState.classList.remove('is-visible');
+  ui.tableScroll.style.display = 'block';
+  ui.rows.innerHTML = filteredItems.map((item) => {
+    const rowClass = item.id === state.selectedId ? ' class="active"' : '';
+    const textValue = item.text || '<span class="muted">No text</span>';
+    const choiceValue = item.choice ? `<span class="pill">${escapeHtml(item.choice)}</span>` : '<span class="muted">No choice</span>';
+    const signOffValue = item.signOffStatus || '<span class="muted">No status</span>';
 
     return `
-      <tr class="item-row ${bIsSelected ? 'is-selected' : ''}" data-select-item="${String(iItemId)}">
-        <td data-label="Record">
-          <span class="row-title">${escapeHtml(sTitle)}</span>
-          <span class="row-subtitle">ID ${String(iItemId)}</span>
-        </td>
-        ${sPreviewCells}
-        <td data-label="Actions">
-          <div class="table-actions">
-            <button class="button-ghost" type="button" data-select-item="${String(iItemId)}">Edit</button>
-            <button class="button-danger" type="button" data-delete-item="${String(iItemId)}" ${isActionDisabled() ? 'disabled' : ''}>Delete</button>
-          </div>
-        </td>
+      <tr data-item-id="${escapeHtml(item.id)}"${rowClass}>
+        <td>${escapeHtml(item.title || 'Untitled')}</td>
+        <td>${formatDateForTable(item.date)}</td>
+        <td>${textValue}</td>
+        <td>${choiceValue}</td>
+        <td>${escapeHtml(signOffValue)}</td>
       </tr>
     `;
   }).join('');
-
-  return `
-    <div class="table-wrap">
-      <table class="item-table">
-        <thead>
-          <tr>
-            <th scope="col">Record</th>
-            ${sHeaderCells}
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody>${sRows}</tbody>
-      </table>
-    </div>
-  `;
 }
 
-function renderEditorMarkup(oSelectedItem) {
-  if (!oSelectedItem) {
-    return `
-      <div class="editor-empty">
-        Select a record from the table to load it into the form above. The primary button will switch from Add item to Update item.
-      </div>
-    `;
-  }
-
-  return `
-    <div class="editor-head">
-      <div>
-        <span class="tag">Selected record</span>
-        <h2>${escapeHtml(getPrimaryTitle(oSelectedItem))}</h2>
-        <p>This record is currently loaded into the form above. Update it there, or delete it from here.</p>
-      </div>
-      <div class="muted">Item ID ${String(getItemId(oSelectedItem))}</div>
-    </div>
-    <div class="field-grid">
-      <p class="helper-text">Current item snapshot:</p>
-      <div class="field">
-        <textarea readonly>${escapeHtml(JSON.stringify(oSelectedItem, null, 2))}</textarea>
-      </div>
-      <div class="button-row">
-        <button class="button-ghost" type="button" data-action="reset-form" ${isActionDisabled() ? 'disabled' : ''}>Create new item</button>
-        <button class="button-danger" type="button" data-delete-item="${String(getItemId(oSelectedItem))}" ${isActionDisabled() ? 'disabled' : ''}>Delete item</button>
-      </div>
-    </div>
-  `;
+function renderForm() {
+  const isEditing = state.formMode === 'edit' && !!state.selectedId;
+  ui.panelTitle.textContent = isEditing ? `Edit: ${state.form.title || 'Item'}` : 'Create new item';
+  ui.panelCopy.textContent = isEditing
+    ? 'Update the selected row, then save changes or delete it from the list.'
+    : 'Fill in the fields below to create a new SharePoint list item.';
+  ui.titleField.value = state.form.title;
+  ui.dateField.value = state.form.date;
+  ui.textField.value = state.form.text;
+  ui.choiceField.value = state.form.choice;
+  ui.signOffField.value = state.form.signOffStatus;
+  ui.lookupField.value = state.form.lookup;
+  ui.deleteButton.style.visibility = isEditing ? 'visible' : 'hidden';
+  ui.deleteButton.disabled = !isEditing || state.isDeleting || state.isSaving;
+  ui.saveButton.textContent = isEditing ? 'Save changes' : 'Create item';
+  ui.saveButton.disabled = state.isSaving || state.isDeleting;
+  ui.titleField.disabled = state.isSaving || state.isDeleting;
+  ui.dateField.disabled = state.isSaving || state.isDeleting;
+  ui.textField.disabled = state.isSaving || state.isDeleting;
+  ui.choiceField.disabled = state.isSaving || state.isDeleting;
+  ui.signOffField.disabled = state.isSaving || state.isDeleting;
 }
 
-function renderFieldInputs(oItem, sFormMode) {
-  return oState.aFields.map(function(oField) {
-    const value = oItem ? oItem[oField.sName] : (oField.sDefaultValue || '');
-    return renderFieldMarkup(oField, value, sFormMode);
-  }).join('');
-}
-
-function renderFieldMarkup(oField, value, sFormMode) {
-  const sFieldName = 'field:' + oField.sName;
-  const sId = sFormMode + '-' + oField.sName;
-  const sRequired = oField.bRequired ? 'required' : '';
-  const sLabel = escapeHtml(oField.sLabel);
-
-  if (oField.sType === 'Boolean') {
-    return `
-      <div class="field">
-        <label for="${escapeHtml(sId)}"><span>${sLabel}${oField.bRequired ? '<em>required</em>' : ''}</span></label>
-        <label class="checkbox-field" for="${escapeHtml(sId)}">
-          <input id="${escapeHtml(sId)}" name="${escapeHtml(sFieldName)}" type="checkbox" ${value ? 'checked' : ''} />
-          <span>${value ? 'Enabled' : 'Disabled'}</span>
-        </label>
-      </div>
-    `;
-  }
-
-  if (oField.sType === 'Choice' && oField.aChoices.length > 0) {
-    const sOptions = ['<option value="">Select a value</option>'].concat(oField.aChoices.map(function(sChoice) {
-      const bSelected = String(value || '') === String(sChoice);
-      return '<option value="' + escapeHtml(String(sChoice)) + '" ' + (bSelected ? 'selected' : '') + '>' + escapeHtml(String(sChoice)) + '</option>';
-    })).join('');
-
-    return `
-      <div class="field">
-        <label for="${escapeHtml(sId)}"><span>${sLabel}${oField.bRequired ? '<em>required</em>' : ''}</span></label>
-        <select id="${escapeHtml(sId)}" name="${escapeHtml(sFieldName)}" ${sRequired}>${sOptions}</select>
-      </div>
-    `;
-  }
-
-  if (oField.sType === 'Note') {
-    return `
-      <div class="field">
-        <label for="${escapeHtml(sId)}"><span>${sLabel}${oField.bRequired ? '<em>required</em>' : ''}</span></label>
-        <textarea id="${escapeHtml(sId)}" name="${escapeHtml(sFieldName)}" ${sRequired}>${escapeHtml(formatInputValue(oField, value))}</textarea>
-      </div>
-    `;
-  }
-
-  const sType = oField.sType === 'Number' ? 'number' : (oField.sType === 'DateTime' ? 'datetime-local' : 'text');
-  const sStep = oField.sType === 'Number' ? 'step="any"' : '';
-
-  return `
-    <div class="field">
-      <label for="${escapeHtml(sId)}"><span>${sLabel}${oField.bRequired ? '<em>required</em>' : ''}</span></label>
-      <input id="${escapeHtml(sId)}" name="${escapeHtml(sFieldName)}" type="${sType}" value="${escapeAttribute(formatInputValue(oField, value))}" ${sRequired} ${sStep} />
-    </div>
-  `;
-}
-
-async function handleRootClick(oEvent) {
-  const eAction = oEvent.target.closest('[data-action], [data-select-item], [data-delete-item]');
-  if (!eAction) {
+function renderNotice() {
+  if (!state.notice) {
+    ui.notice.classList.remove('is-visible');
+    ui.notice.textContent = '';
+    ui.notice.dataset.type = 'info';
     return;
   }
 
-  if (eAction.hasAttribute('data-select-item')) {
-    const iItemId = Number(eAction.getAttribute('data-select-item'));
-    if (!Number.isNaN(iItemId)) {
-      oState.iSelectedItemId = iItemId;
-      oState.sError = '';
-      oState.sNotice = 'Item ' + String(iItemId) + ' loaded into the form.';
-      renderApp();
+  ui.notice.classList.add('is-visible');
+  ui.notice.dataset.type = state.notice.type;
+  ui.notice.textContent = state.notice.message;
+}
+
+function render() {
+  document.title = APP_CONFIG.appName;
+  ui.connectionLabel.textContent = state.listAccess
+    ? `Connected to ${state.listAccess.listName} on SharePoint`
+    : 'Connecting to SharePoint...';
+  updateStats();
+  renderRows();
+  renderForm();
+  renderNotice();
+}
+
+function beginCreate() {
+  state.formMode = 'create';
+  state.selectedId = null;
+  state.form = createEmptyForm();
+  setNotice(null);
+  render();
+  ui.titleField.focus();
+}
+
+function selectItemById(itemId) {
+  const item = findItemById(itemId);
+  if (!item) {
+    return;
+  }
+
+  state.formMode = 'edit';
+  state.selectedId = item.id;
+  populateFormFromItem(item);
+  setNotice(null);
+  render();
+}
+
+function buildPayloadFromForm() {
+  const payload = {
+    [FIELDS.title]: state.form.title.trim(),
+  };
+
+  if (!payload[FIELDS.title]) {
+    throw new Error('Title is required.');
+  }
+
+  if (state.form.date) {
+    payload[FIELDS.date] = state.form.date;
+  }
+
+  if (state.form.text.trim()) {
+    payload[FIELDS.text] = state.form.text.trim();
+  }
+
+  if (state.form.choice.trim()) {
+    payload[FIELDS.choice] = state.form.choice.trim();
+  }
+
+  if (state.form.signOffStatus.trim()) {
+    payload[FIELDS.signOffStatus] = state.form.signOffStatus.trim();
+  }
+
+  return payload;
+}
+
+async function refreshItems({ preferredSelection = null, preserveSelection = true, preserveCreateMode = false } = {}) {
+  state.isLoading = true;
+  setNotice(null);
+  render();
+
+  try {
+    const response = await getItemsByList(APP_CONFIG.siteUrl, state.listAccess || {
+      listId: APP_CONFIG.listId,
+      listName: APP_CONFIG.listName,
+    }, {
+      top: 200,
+      orderBy: 'ID desc',
+    });
+
+    state.items = normalizeCollection(response)
+      .map(mapSharePointItem)
+      .filter((item) => item.id);
+
+    const nextSelectedId = preferredSelection && findItemIdInCollection(state.items, preferredSelection)
+      ? String(preferredSelection)
+      : preserveSelection && state.selectedId && findItemIdInCollection(state.items, state.selectedId)
+        ? state.selectedId
+        : null;
+
+    if (nextSelectedId) {
+      state.selectedId = nextSelectedId;
+      state.formMode = 'edit';
+      populateFormFromItem(findItemById(nextSelectedId));
+    } else if (preserveCreateMode) {
+      state.selectedId = null;
+      state.formMode = 'create';
+    } else if (state.items.length > 0) {
+      state.selectedId = state.items[0].id;
+      state.formMode = 'edit';
+      populateFormFromItem(state.items[0]);
+    } else {
+      state.selectedId = null;
+      state.formMode = 'create';
+      state.form = createEmptyForm();
     }
-    return;
-  }
-
-  if (eAction.hasAttribute('data-delete-item')) {
-    const iItemId = Number(eAction.getAttribute('data-delete-item'));
-    if (!Number.isNaN(iItemId)) {
-      await handleDelete(iItemId);
-    }
-    return;
-  }
-
-  const sAction = eAction.getAttribute('data-action');
-  if (sAction === 'refresh') {
-    await handleRefresh();
-    return;
-  }
-
-  if (sAction === 'reset-form') {
-    oState.iSelectedItemId = null;
-    oState.sError = '';
-    oState.sNotice = 'Ready to add a new SharePoint item.';
-    renderApp();
+  } catch (error) {
+    setNotice(error.message, 'error');
+  } finally {
+    state.isLoading = false;
+    render();
   }
 }
 
-async function handleRootSubmit(oEvent) {
-  oEvent.preventDefault();
-  const eForm = oEvent.target;
-  if (!(eForm instanceof HTMLFormElement)) {
-    return;
-  }
+function findItemIdInCollection(items, itemId) {
+  return items.some((item) => item.id === String(itemId));
+}
 
-  if (eForm.id === 'item-form') {
-    if (eForm.getAttribute('data-mode') === 'edit') {
-      await handleEditSubmit(eForm);
+async function saveItem() {
+  syncFormFromInputs();
+  state.isSaving = true;
+  setNotice(null);
+  render();
+
+  try {
+    const payload = buildPayloadFromForm();
+
+    if (state.formMode === 'edit' && state.selectedId) {
+      await updateSpItemByList(APP_CONFIG.siteUrl, state.listAccess, state.selectedId, payload);
+      showToast('Item updated.', 'success');
+      await refreshItems({ preferredSelection: state.selectedId, preserveSelection: true });
       return;
     }
 
-    await handleCreateSubmit(eForm);
-  }
-}
-
-async function handleRefresh() {
-  oState.bRefreshing = true;
-  oState.sError = '';
-  oState.sNotice = 'Refreshing items from SharePoint.';
-  renderApp();
-
-  try {
-    await refreshAppData({ bPreserveSelection: true });
-    oState.sNotice = 'List refreshed successfully.';
-  } catch (oError) {
-    oState.sError = getErrorMessage(oError);
+    const created = await createSpItemByList(APP_CONFIG.siteUrl, state.listAccess, payload);
+    const createdId = extractItemId(created);
+    showToast('Item created.', 'success');
+    await refreshItems({ preferredSelection: createdId || null, preserveSelection: false });
+  } catch (error) {
+    setNotice(error.message, 'error');
+    showToast(error.message, 'error');
   } finally {
-    oState.bRefreshing = false;
-    renderApp();
+    state.isSaving = false;
+    render();
   }
 }
 
-async function handleCreateSubmit(eForm) {
-  let oPayload;
-  try {
-    oPayload = buildPayloadFromForm(eForm);
-  } catch (oError) {
-    oState.sError = getErrorMessage(oError);
-    renderApp();
+async function deleteSelectedItem() {
+  if (!(state.formMode === 'edit' && state.selectedId)) {
     return;
   }
 
-  oState.bSubmittingCreate = true;
-  oState.sError = '';
-  oState.sNotice = 'Creating a new SharePoint item.';
-  renderApp();
-
-  try {
-    const oResult = await createListItem(oPayload);
-    await refreshAppData({ bPreserveSelection: false });
-    const iCreatedItemId = getItemId(oResult);
-    oState.sNotice = iCreatedItemId != null
-      ? 'New item ' + String(iCreatedItemId) + ' created successfully.'
-      : 'New item created successfully.';
-  } catch (oError) {
-    oState.sError = getErrorMessage(oError);
-  } finally {
-    oState.bSubmittingCreate = false;
-    renderApp();
-  }
-}
-
-async function handleEditSubmit(eForm) {
-  const iItemId = Number(eForm.getAttribute('data-item-id'));
-  let oPayload;
-  try {
-    oPayload = buildPayloadFromForm(eForm);
-  } catch (oError) {
-    oState.sError = getErrorMessage(oError);
-    renderApp();
+  const selectedItem = findItemById(state.selectedId);
+  const itemName = selectedItem?.title || 'this item';
+  const confirmed = window.confirm(`Delete ${itemName}?`);
+  if (!confirmed) {
     return;
   }
 
-  oState.bSubmittingEdit = true;
-  oState.sError = '';
-  oState.sNotice = 'Saving changes to item ' + String(iItemId) + '.';
-  renderApp();
+  state.isDeleting = true;
+  setNotice(null);
+  render();
 
   try {
-    await updateListItem(iItemId, oPayload);
-    await refreshAppData({ bPreserveSelection: true });
-    oState.sNotice = 'Item ' + String(iItemId) + ' updated successfully.';
-  } catch (oError) {
-    oState.sError = getErrorMessage(oError);
+    await deleteSpItemByList(APP_CONFIG.siteUrl, state.listAccess, state.selectedId);
+    showToast('Item deleted.', 'success');
+    beginCreate();
+    await refreshItems({ preserveSelection: false, preserveCreateMode: false });
+  } catch (error) {
+    setNotice(error.message, 'error');
+    showToast(error.message, 'error');
   } finally {
-    oState.bSubmittingEdit = false;
-    renderApp();
+    state.isDeleting = false;
+    render();
   }
 }
 
-async function handleDelete(iItemId) {
-  if (!window.confirm('Delete SharePoint item ' + String(iItemId) + '?')) {
-    return;
-  }
-
-  oState.bSubmittingEdit = true;
-  oState.sError = '';
-  oState.sNotice = 'Deleting item ' + String(iItemId) + '.';
-  renderApp();
+async function boot() {
+  cacheElements();
+  bindEvents();
+  render();
 
   try {
-    await deleteListItem(iItemId);
-    await refreshAppData({ bPreserveSelection: false });
-    oState.sNotice = 'Item ' + String(iItemId) + ' deleted successfully.';
-  } catch (oError) {
-    oState.sError = getErrorMessage(oError);
-  } finally {
-    oState.bSubmittingEdit = false;
-    renderApp();
+    state.listAccess = await resolveSharePointList(APP_CONFIG.siteUrl, {
+      listId: APP_CONFIG.listId,
+      listName: APP_CONFIG.listName,
+    });
+    await refreshItems({ preserveSelection: false, preserveCreateMode: false });
+  } catch (error) {
+    state.isLoading = false;
+    setNotice(error.message, 'error');
+    render();
   }
 }
 
-async function createListItem(oPayload) {
-  return createSpItemByList(oState.oListAccess.sSiteUrl, oState.oListAccess, oPayload);
-}
-
-async function updateListItem(iItemId, oPayload) {
-  return updateSpItemByList(oState.oListAccess.sSiteUrl, oState.oListAccess, iItemId, oPayload);
-}
-
-async function deleteListItem(iItemId) {
-  return deleteSpItemByList(oState.oListAccess.sSiteUrl, oState.oListAccess, iItemId);
-}
-
-function buildPayloadFromForm(eForm) {
-  const oPayload = {};
-
-  oState.aFields.forEach(function(oField) {
-    if (isSystemField(oField.sName)) {
-      return;
-    }
-
-    const eField = eForm.elements.namedItem('field:' + oField.sName);
-    if (!eField) {
-      return;
-    }
-    oPayload[oField.sName] = readFieldValue(oField, eField);
-  });
-
-  const eOverridesField = eForm.elements.namedItem('payloadOverrides');
-  const sOverrides = eOverridesField && 'value' in eOverridesField ? String(eOverridesField.value || '').trim() : '';
-  if (sOverrides) {
-    const oOverrides = JSON.parse(sOverrides);
-    if (!oOverrides || Array.isArray(oOverrides) || typeof oOverrides !== 'object') {
-      throw new Error('Advanced payload overrides must be a JSON object.');
-    }
-    return Object.assign(oPayload, oOverrides);
-  }
-
-  return oPayload;
-}
-
-function readFieldValue(oField, eField) {
-  if (oField.sType === 'Boolean' && eField instanceof HTMLInputElement) {
-    return eField.checked;
-  }
-
-  const sValue = 'value' in eField ? String(eField.value || '') : '';
-  if (oField.sType === 'Number') {
-    return sValue === '' ? null : Number(sValue);
-  }
-  if (oField.sType === 'DateTime') {
-    return sValue === '' ? null : new Date(sValue).toISOString();
-  }
-  return sValue;
-}
-
-function getSelectedItem() {
-  return oState.aItems.find(function(oItem) {
-    return getItemId(oItem) === oState.iSelectedItemId;
-  }) || null;
-}
-
-function getPreviewFields() {
-  return oState.aFields.filter(function(oField) {
-    return oField.sName !== 'Title';
-  }).slice(0, 3);
-}
-
-function normalizeCollection(oPayload) {
-  if (oPayload && typeof oPayload === 'object') {
-    const aNestedCandidates = [
-      oPayload.value,
-      oPayload.items,
-      oPayload.results,
-      oPayload.body,
-      oPayload.data,
-      oPayload.result,
-      oPayload.d,
-      oPayload.response,
-    ];
-
-    for (const oCandidate of aNestedCandidates) {
-      const aNormalizedCandidate = normalizeCollectionCandidate(oCandidate);
-      if (aNormalizedCandidate) {
-        return aNormalizedCandidate;
-      }
-    }
-  }
-
-  return normalizeCollectionCandidate(oPayload) || [];
-}
-
-function normalizeCollectionCandidate(oPayload) {
-  if (Array.isArray(oPayload)) {
-    return oPayload;
-  }
-  if (oPayload && Array.isArray(oPayload.value)) {
-    return oPayload.value;
-  }
-  if (oPayload && oPayload.d && Array.isArray(oPayload.d.results)) {
-    return oPayload.d.results;
-  }
-  if (oPayload && Array.isArray(oPayload.items)) {
-    return oPayload.items;
-  }
-  if (oPayload && Array.isArray(oPayload.results)) {
-    return oPayload.results;
-  }
-  return null;
-}
-
-function sortItemsDescending(aItems) {
-  return aItems.slice().sort(function(oLeft, oRight) {
-    return Number(getItemId(oRight) || 0) - Number(getItemId(oLeft) || 0);
-  });
-}
-
-function getItemId(oItem) {
-  if (!oItem || typeof oItem !== 'object') {
-    return null;
-  }
-  return oItem.ID ?? oItem.Id ?? oItem.id ?? null;
-}
-
-function getPrimaryTitle(oItem) {
-  return String(oItem.Title || oItem.title || 'Untitled item');
-}
-
-function formatPreviewValue(value) {
-  if (value == null || value === '') {
-    return '—';
-  }
-  if (typeof value === 'boolean') {
-    return value ? 'Yes' : 'No';
-  }
-  if (typeof value === 'object') {
-    return '[complex value]';
-  }
-  return String(value);
-}
-
-function formatInputValue(oField, value) {
-  if (value == null) {
-    return '';
-  }
-  if (oField.sType === 'DateTime') {
-    const oDate = new Date(value);
-    if (Number.isNaN(oDate.getTime())) {
-      return '';
-    }
-    const iTimezoneOffset = oDate.getTimezoneOffset();
-    const oLocalDate = new Date(oDate.getTime() - (iTimezoneOffset * 60000));
-    return oLocalDate.toISOString().slice(0, 16);
-  }
-  return String(value);
-}
-
-function normalizeChoices(choices) {
-  if (Array.isArray(choices)) {
-    return choices;
-  }
-  if (choices && Array.isArray(choices.results)) {
-    return choices.results;
-  }
-  return [];
-}
-
-function inferFieldTypeFromValue(value) {
-  if (typeof value === 'boolean') return 'Boolean';
-  if (typeof value === 'number') return 'Number';
-  if (typeof value === 'string' && value.length > 80) return 'Note';
-  if (typeof value === 'string' && !Number.isNaN(new Date(value).getTime()) && value.includes('T')) return 'DateTime';
-  return 'Text';
-}
-
-function isEditablePrimitive(value) {
-  return value == null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
-}
-
-function isSystemField(sFieldName) {
-  const sName = String(sFieldName || '').trim();
-  if (!sName) {
-    return true;
-  }
-
-  const sLowerName = sName.toLowerCase();
-  if (aSystemFieldNames.some(function(sSystemFieldName) {
-    return sSystemFieldName.toLowerCase() === sLowerName;
-  })) {
-    return true;
-  }
-
-  return sName.startsWith('@')
-    || sName.startsWith('{')
-    || sName.includes('}')
-    || sName.includes('#')
-    || sName.startsWith('_')
-    || sLowerName === 'iteminternalid';
-}
-
-function getErrorMessage(oError) {
-  if (!oError) {
-    return 'Unknown error';
-  }
-  if (typeof oError === 'string') {
-    return oError;
-  }
-  if (typeof oError.message === 'string' && oError.message) {
-    return oError.message;
-  }
-  try {
-    return JSON.stringify(oError);
-  } catch (oStringifyError) {
-    return String(oError);
-  }
-}
-
-function toLabel(sFieldName) {
-  return String(sFieldName)
-    .replace(new RegExp('_x0020_', 'g'), ' ')
-    .replace(new RegExp('([a-z])([A-Z])', 'g'), '$1 $2');
-}
-
-function escapeHtml(sValue) {
-  return String(sValue)
-    .replace(new RegExp('&', 'g'), '&amp;')
-    .replace(new RegExp('<', 'g'), '&lt;')
-    .replace(new RegExp('>', 'g'), '&gt;')
-    .replace(new RegExp('"', 'g'), '&quot;');
-}
-
-function escapeAttribute(sValue) {
-  return escapeHtml(sValue).replace(new RegExp("'", 'g'), '&#39;');
-}
-
-function isActionDisabled() {
-  return oState.bLoading || oState.bRefreshing || oState.bSubmittingCreate || oState.bSubmittingEdit;
-}
-
-boot().catch(function(oError) {
-  console.error(oError);
-  oState.sError = getErrorMessage(oError);
-  oState.bLoading = false;
-  renderApp();
-});
+boot();
