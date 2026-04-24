@@ -130,6 +130,15 @@ const dataSourcesInfo = {
           { name: 'id', in: 'path', required: true, type: 'string' },
         ],
       },
+      GetFileContent: {
+        path: '/{connectionId}/datasets/{siteUrl}/files/{id}/content',
+        method: 'GET',
+        parameters: [
+          { name: 'connectionId', in: 'path', required: true, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'id', in: 'path', required: true, type: 'string' },
+        ],
+      },
       HttpRequest: {
         path: '/{connectionId}/httprequest',
         method: 'POST',
@@ -699,6 +708,13 @@ export const getFileMetadata = async (siteUrl, fileId) => _dbgWrap('getFileMetad
   });
 });
 
+export const getFileContent = async (siteUrl, fileId) => _dbgWrap('getFileContent', [siteUrl, fileId], async function() {
+  return executeConnectorOperation('GetFileContent', {
+    siteUrl: buildSiteUrlParam(siteUrl),
+    id: requireNonEmptyString(String(fileId || ''), 'file ID'),
+  });
+});
+
 const SharePointService = {
   callSharePointOperation,
   sendHttpRequest,
@@ -721,6 +737,7 @@ const SharePointService = {
   deleteFile,
   moveFile,
   getFileMetadata,
+  getFileContent,
 };
 
 export { SharePointService };
