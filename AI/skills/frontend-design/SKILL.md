@@ -14,9 +14,8 @@ The user provides frontend requirements: a component, page, application, or inte
 Before coding, understand the context and commit to a BOLD aesthetic direction:
 
 - **Purpose:** What problem does this interface solve? Who uses it?
-- **Tone:** Pick an extreme: modern minimal, maximalist chaos, Microsoft's Fluent design language, organic/natural, luxury/refined, playful/toy-like, editorial/magazine, brutalist/raw, art deco/geometric, soft/pastel, industrial/utilitarian, etc. There are so many flavors to choose from. Use these for inspiration but design one that is true to the aesthetic direction.
+- **Tone:** Pick an extreme: modern minimal, maximalist chaos, Microsoft's Fluent design language, organic/natural, luxury/refined, playful/toy-like, editorial/magazine, brutalist/raw, art deco/geometric, soft/pastel, industrial/utilitarian, sketch/wipe board, etc. There are so many flavors to choose from. Use these for inspiration but design one that is true to the aesthetic direction.
 - **Constraints:** Technical requirements (framework, performance, accessibility).
-- For CAP code apps, treat workspace configuration and loaded skills as the source of truth for technical constraints. If `power.config.json` or the agent prompt already fixes the stack, connector, or app name, do not ask the user to restate them.
 - **Differentiation:** What makes this UNFORGETTABLE? What's the one thing someone will remember?
 
 **CRITICAL:** Choose a clear conceptual direction and execute it with precision. Bold maximalism and refined minimalism both work - the key is intentionality, not intensity.
@@ -27,6 +26,7 @@ Then implement working code in the project's required stack. Default to plain HT
 - Visually striking and memorable
 - Cohesive with a clear aesthetic point-of-view
 - Meticulously refined in every detail
+- Leverage horizontal space for text heavy layouts, vertical space for media-heavy layouts, or break the grid for a dynamic feel
 
 ## Frontend Aesthetics Guidelines
 

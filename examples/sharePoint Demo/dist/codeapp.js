@@ -48,9 +48,30 @@ let _eDebugIcon = null;
 let _eDebugList = null;
 let _iDebugCounter = 0;
 
-export function _dbgWrap(sName, aArgs, fnBody) {
-  if (!_bDebugActive) return fnBody();
+function _dbgCreateEntry(sName, aArgs, oMetadata) {
   let oEntry = { iId: ++_iDebugCounter, sName: sName, aArgs: _dbgClone(aArgs), iTime: Date.now() };
+
+  if (oMetadata && typeof oMetadata === 'object' && !Array.isArray(oMetadata)) {
+    if (Array.isArray(oMetadata.aCallerChain) && oMetadata.aCallerChain.length > 0) {
+      oEntry.aCallerChain = _dbgClone(oMetadata.aCallerChain);
+    }
+    if (typeof oMetadata.sRootName === 'string' && oMetadata.sRootName) {
+      oEntry.sRootName = oMetadata.sRootName;
+    }
+    if (Object.prototype.hasOwnProperty.call(oMetadata, 'aRootArgs')) {
+      oEntry.aRootArgs = _dbgClone(oMetadata.aRootArgs);
+    }
+    if (typeof oMetadata.sGroupId === 'string' && oMetadata.sGroupId) {
+      oEntry.sGroupId = oMetadata.sGroupId;
+    }
+  }
+
+  return oEntry;
+}
+
+export function _dbgTrack(sName, aArgs, fnBody, oMetadata = null) {
+  if (!_bDebugActive) return fnBody();
+  let oEntry = _dbgCreateEntry(sName, aArgs, oMetadata);
   _aDebugEntries.unshift(oEntry);
   _dbgRenderEntry(oEntry, true);
   let oResult;
@@ -79,6 +100,10 @@ export function _dbgWrap(sName, aArgs, fnBody) {
   oEntry.iDuration = Date.now() - oEntry.iTime;
   _dbgRenderEntry(oEntry, false);
   return oResult;
+}
+
+export function _dbgWrap(sName, aArgs, fnBody) {
+  return _dbgTrack(sName, aArgs, fnBody);
 }
 
 function _dbgClone(oVal) {
@@ -112,14 +137,21 @@ function _dbgRenderEntry(oEntry, bPending) {
   }
   let sStatus = bPending ? '\u23F3' : (oEntry.oError ? '\u274C' : '\u2705');
   let sDuration = bPending ? '\u2026' : oEntry.iDuration + 'ms';
+  let sCallerChain = Array.isArray(oEntry.aCallerChain) && oEntry.aCallerChain.length > 0 ? oEntry.aCallerChain.join(' -> ') : '';
+  let sCallerHtml = sCallerChain ? '<div style="color:#888;font-size:11px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">via ' + _dbgEscapeHtml(sCallerChain) + '</div>' : '';
   eRow.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">'
     + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;"><strong>' + sStatus + ' ' + _dbgEscapeHtml(oEntry.sName) + '</strong></span>'
     + '<span style="color:#888;font-size:11px;white-space:nowrap;">' + _dbgFormatTime(oEntry.iTime) + ' | ' + sDuration + '</span>'
     + '<button class="dbg-copy" style="background:#333;color:#e0e0e0;border:1px solid #555;border-radius:3px;padding:1px 6px;cursor:pointer;font-size:11px;white-space:nowrap;" title="Copy to clipboard">⎘</button>'
-    + '</div>';
+    + '</div>'
+    + sCallerHtml;
   eRow.querySelector('.dbg-copy').onclick = function(e) {
     e.stopPropagation();
     let oData = { name: oEntry.sName, args: oEntry.aArgs, time: _dbgFormatTime(oEntry.iTime) };
+    if (oEntry.aCallerChain) { oData.callerChain = oEntry.aCallerChain; }
+    if (oEntry.sRootName) { oData.rootName = oEntry.sRootName; }
+    if (oEntry.aRootArgs !== undefined) { oData.rootArgs = oEntry.aRootArgs; }
+    if (oEntry.sGroupId) { oData.groupId = oEntry.sGroupId; }
     if (oEntry.oError) { oData.error = oEntry.oError; }
     else if (oEntry.oResult !== undefined) { oData.result = oEntry.oResult; }
     if (oEntry.iDuration !== undefined) { oData.duration = oEntry.iDuration + 'ms'; }
@@ -135,6 +167,15 @@ function _dbgRenderEntry(oEntry, bPending) {
     eDetail = document.createElement('div');
     eDetail.className = 'dbg-detail';
     eDetail.style.cssText = 'margin-top:4px;padding:4px;background:#1a1a2e;border-radius:4px;font-size:11px;overflow:auto;max-height:300px;';
+    let sCallerHtml = '';
+    if (Array.isArray(oEntry.aCallerChain) && oEntry.aCallerChain.length > 0) {
+      sCallerHtml = '<div style="color:#ffd166;margin-bottom:4px;"><b>Caller chain:</b> <pre style="margin:2px 0;white-space:pre-wrap;word-break:break-all;">' + _dbgEscapeHtml(oEntry.aCallerChain.join(' -> ')) + '</pre></div>';
+    }
+    let sRootHtml = '';
+    if (oEntry.sRootName) {
+      let sRootArgs = oEntry.aRootArgs === undefined ? '' : _dbgEscapeHtml(JSON.stringify(oEntry.aRootArgs, null, 2));
+      sRootHtml = '<div style="color:#f4a261;margin-bottom:4px;"><b>Root call:</b> <pre style="margin:2px 0;white-space:pre-wrap;word-break:break-all;">' + _dbgEscapeHtml(oEntry.sRootName) + (sRootArgs ? '\n' + sRootArgs : '') + '</pre></div>';
+    }
     let sArgsHtml = '<div style="color:#61dafb;margin-bottom:4px;"><b>Args:</b> <pre style="margin:2px 0;white-space:pre-wrap;word-break:break-all;">' + _dbgEscapeHtml(JSON.stringify(oEntry.aArgs, null, 2)) + '</pre></div>';
     let sResultHtml = '';
     if (oEntry.oError) {
@@ -142,7 +183,7 @@ function _dbgRenderEntry(oEntry, bPending) {
     } else if (!bPending) {
       sResultHtml = '<div style="color:#a8e6cf;"><b>Result:</b> <pre style="margin:2px 0;white-space:pre-wrap;word-break:break-all;">' + _dbgEscapeHtml(JSON.stringify(oEntry.oResult, null, 2)) + '</pre></div>';
     }
-    eDetail.innerHTML = sArgsHtml + sResultHtml;
+    eDetail.innerHTML = sCallerHtml + sRootHtml + sArgsHtml + sResultHtml;
     eRow.appendChild(eDetail);
   };
   if (_eDebugIcon) {

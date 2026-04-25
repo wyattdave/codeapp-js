@@ -1,5 +1,5 @@
 import { getClient } from '../power-apps-data.js';
-import { _dbgWrap } from '../codeapp.js';
+import { _dbgTrack } from '../codeapp.js';
 
 const DATA_SOURCE_NAME = 'sharepointonline';
 
@@ -62,6 +62,50 @@ const dataSourcesInfo = {
           { name: 'siteUrl', in: 'path', required: true, type: 'string' },
           { name: 'table', in: 'path', required: true, type: 'string' },
           { name: 'id', in: 'path', required: true, type: 'string' },
+        ],
+      },
+      GetItemAttachments: {
+        path: '/{connectionId}/datasets/{siteUrl}/tables/{table}/items/{itemId}/attachments',
+        method: 'GET',
+        parameters: [
+          { name: 'connectionId', in: 'path', required: true, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'table', in: 'path', required: true, type: 'string' },
+          { name: 'itemId', in: 'path', required: true, type: 'string' },
+        ],
+      },
+      CreateAttachment: {
+        path: '/{connectionId}/datasets/{siteUrl}/tables/{table}/items/{itemId}/attachments',
+        method: 'POST',
+        parameters: [
+          { name: 'connectionId', in: 'path', required: true, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'table', in: 'path', required: true, type: 'string' },
+          { name: 'itemId', in: 'path', required: true, type: 'string' },
+          { name: 'displayName', in: 'query', required: true, type: 'string' },
+          { name: 'body', in: 'body', required: true, type: 'string' },
+        ],
+      },
+      DeleteAttachment: {
+        path: '/{connectionId}/datasets/{siteUrl}/tables/{table}/items/{itemId}/attachments/{attachmentId}',
+        method: 'DELETE',
+        parameters: [
+          { name: 'connectionId', in: 'path', required: true, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'table', in: 'path', required: true, type: 'string' },
+          { name: 'itemId', in: 'path', required: true, type: 'string' },
+          { name: 'attachmentId', in: 'path', required: true, type: 'string' },
+        ],
+      },
+      GetAttachmentContent: {
+        path: '/{connectionId}/datasets/{siteUrl}/tables/{table}/items/{itemId}/attachments/{attachmentId}/content',
+        method: 'GET',
+        parameters: [
+          { name: 'connectionId', in: 'path', required: true, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'table', in: 'path', required: true, type: 'string' },
+          { name: 'itemId', in: 'path', required: true, type: 'string' },
+          { name: 'attachmentId', in: 'path', required: true, type: 'string' },
         ],
       },
       GetTables: {
@@ -130,15 +174,13 @@ const dataSourcesInfo = {
           { name: 'id', in: 'path', required: true, type: 'string' },
         ],
       },
-      HttpRequest: {
-        path: '/{connectionId}/httprequest',
-        method: 'POST',
+      GetFileContent: {
+        path: '/{connectionId}/datasets/{siteUrl}/files/{id}/content',
+        method: 'GET',
         parameters: [
           { name: 'connectionId', in: 'path', required: true, type: 'string' },
-          { name: 'method', in: 'body', required: true, type: 'string' },
-          { name: 'uri', in: 'body', required: true, type: 'string' },
-          { name: 'headers', in: 'body', required: false, type: 'object' },
-          { name: 'body', in: 'body', required: false, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'id', in: 'path', required: true, type: 'string' },
         ],
       },
     },
@@ -146,34 +188,77 @@ const dataSourcesInfo = {
 };
 
 const sharePointListCache = new Map();
+let iSharePointDebugGroupId = 0;
+
+function isSharePointDebugContext(oValue) {
+  return !!oValue
+    && typeof oValue === 'object'
+    && !Array.isArray(oValue)
+    && Array.isArray(oValue.aCallerChain)
+    && typeof oValue.sRootName === 'string'
+    && oValue.sRootName.trim() !== '';
+}
+
+function createSharePointDebugContext(sFunctionName, aArgs, oParentContext) {
+  if (isSharePointDebugContext(oParentContext)) {
+    return {
+      sRootName: oParentContext.sRootName,
+      aRootArgs: oParentContext.aRootArgs,
+      aCallerChain: oParentContext.aCallerChain.concat(sFunctionName),
+      sGroupId: oParentContext.sGroupId,
+    };
+  }
+
+  return {
+    sRootName: sFunctionName,
+    aRootArgs: aArgs,
+    aCallerChain: [sFunctionName],
+    sGroupId: 'sharepoint-' + String(++iSharePointDebugGroupId),
+  };
+}
+
+function buildSharePointDebugMetadata(oDebugContext) {
+  if (!isSharePointDebugContext(oDebugContext)) {
+    return null;
+  }
+
+  return {
+    aCallerChain: oDebugContext.aCallerChain,
+    sRootName: oDebugContext.sRootName,
+    aRootArgs: oDebugContext.aRootArgs,
+    sGroupId: oDebugContext.sGroupId,
+  };
+}
 
 function initSharePointClient() {
   return getClient(dataSourcesInfo);
 }
 
-async function executeConnectorOperation(operationName, parameters = {}) {
-  try {
-    const oClient = await initSharePointClient();
-    const oResult = await oClient.executeAsync({
-      connectorOperation: {
-        tableName: DATA_SOURCE_NAME,
-        operationName,
-        parameters,
-      },
-    });
+async function executeConnectorOperation(operationName, parameters = {}, oDebugContext = null, aDebugArgs = null) {
+  return _dbgTrack('SharePoint ' + operationName, aDebugArgs || [parameters], async function() {
+    try {
+      const oClient = await initSharePointClient();
+      const oResult = await oClient.executeAsync({
+        connectorOperation: {
+          tableName: DATA_SOURCE_NAME,
+          operationName,
+          parameters,
+        },
+      });
 
-    if (!oResult) {
-      throw new Error('No result returned');
+      if (!oResult) {
+        throw new Error('No result returned');
+      }
+
+      if (oResult.success === false) {
+        throw new Error(getSpErrorMessage(oResult.error));
+      }
+
+      return Object.prototype.hasOwnProperty.call(oResult, 'data') ? oResult.data : oResult;
+    } catch (oError) {
+      throw new Error('SharePoint ' + operationName + ' failed: ' + getSpErrorMessage(oError));
     }
-
-    if (oResult.success === false) {
-      throw new Error(getSpErrorMessage(oResult.error));
-    }
-
-    return Object.prototype.hasOwnProperty.call(oResult, 'data') ? oResult.data : oResult;
-  } catch (oError) {
-    throw new Error('SharePoint ' + operationName + ' failed: ' + getSpErrorMessage(oError));
-  }
+  }, buildSharePointDebugMetadata(oDebugContext));
 }
 
 function pickSharePointValue() {
@@ -304,6 +389,18 @@ function buildItemQueryParameters(siteUrl, listId, { filter, orderBy, top, skip 
   }
 
   return oParameters;
+}
+
+function buildAttachmentContext(siteUrl, listId, itemId) {
+  return Object.assign(buildListContext(siteUrl, listId), {
+    itemId: requireItemId(itemId),
+  });
+}
+
+function buildAttachmentItemContext(siteUrl, listId, itemId, attachmentId) {
+  return Object.assign(buildAttachmentContext(siteUrl, listId, itemId), {
+    attachmentId: requireNonEmptyString(String(attachmentId || ''), 'attachment ID'),
+  });
 }
 
 function normalizeCollection(oPayload) {
@@ -482,61 +579,76 @@ function findSharePointTable(aTables, { listId, listName } = {}) {
   }) || null;
 }
 
-export const callSharePointOperation = async (operationName, parameters = {}) => _dbgWrap('callSharePointOperation', [operationName, parameters], async function() {
-  return executeConnectorOperation(operationName, parameters);
-});
+export const callSharePointOperation = async (operationName, parameters = {}, oDebugContext = null) => {
+  if (String(operationName || '') === 'HttpRequest') {
+    throw new Error('SharePoint HttpRequest is not supported in Code Apps. Use dedicated SharePoint helpers instead.');
+  }
+  const oCallContext = createSharePointDebugContext('callSharePointOperation', [operationName, parameters], oDebugContext);
+  return executeConnectorOperation(operationName, parameters, oCallContext);
+};
 
-export const sendHttpRequest = async ({ method = 'GET', uri, headers, body } = {}) => _dbgWrap('sendHttpRequest', [{ method, uri, headers, body }], async function() {
-  return executeConnectorOperation('HttpRequest', {
-    method: String(method || 'GET').toUpperCase(),
-    uri: requireNonEmptyString(uri, 'request URI'),
-    headers: normalizeHeaders(headers),
-    body: body == null ? '' : body,
-  });
-});
+export const getItems = async (siteUrl, listId, { filter, orderBy, top, skip } = {}, oDebugContext = null) => {
+  const oQueryOptions = { filter, orderBy, top, skip };
+  const oCallContext = createSharePointDebugContext('getItems', [siteUrl, listId, oQueryOptions], oDebugContext);
+  return executeConnectorOperation('GetItems', buildItemQueryParameters(siteUrl, listId, oQueryOptions), oCallContext);
+};
 
-export const getItems = async (siteUrl, listId, { filter, orderBy, top, skip } = {}) => _dbgWrap('getItems', [siteUrl, listId, { filter, orderBy, top, skip }], async function() {
-  return executeConnectorOperation('GetItems', buildItemQueryParameters(siteUrl, listId, { filter, orderBy, top, skip }));
-});
-
-export const getSpItem = async (siteUrl, listId, itemId) => _dbgWrap('getSpItem', [siteUrl, listId, itemId], async function() {
+export const getSpItem = async (siteUrl, listId, itemId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('getSpItem', [siteUrl, listId, itemId], oDebugContext);
   return executeConnectorOperation('GetItem', Object.assign(buildListContext(siteUrl, listId), {
     id: requireItemId(itemId),
-  }));
-});
+  }), oCallContext);
+};
 
-export const createSpItem = async (siteUrl, listId, fields) => _dbgWrap('createSpItem', [siteUrl, listId, fields], async function() {
+export const createSpItem = async (siteUrl, listId, fields, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('createSpItem', [siteUrl, listId, fields], oDebugContext);
   return executeConnectorOperation('PostItem', Object.assign(buildListContext(siteUrl, listId), {
     item: requireRecord(fields, 'item payload'),
-  }));
-});
+  }), oCallContext);
+};
 
-export const updateSpItem = async (siteUrl, listId, itemId, changedFields) => _dbgWrap('updateSpItem', [siteUrl, listId, itemId, changedFields], async function() {
+export const updateSpItem = async (siteUrl, listId, itemId, changedFields, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('updateSpItem', [siteUrl, listId, itemId, changedFields], oDebugContext);
   return executeConnectorOperation('PatchItem', Object.assign(buildListContext(siteUrl, listId), {
     id: requireItemId(itemId),
     item: requireRecord(changedFields, 'item payload'),
-  }));
-});
+  }), oCallContext);
+};
 
-export const deleteSpItem = async (siteUrl, listId, itemId) => _dbgWrap('deleteSpItem', [siteUrl, listId, itemId], async function() {
+export const deleteSpItem = async (siteUrl, listId, itemId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('deleteSpItem', [siteUrl, listId, itemId], oDebugContext);
   return executeConnectorOperation('DeleteItem', Object.assign(buildListContext(siteUrl, listId), {
     id: requireItemId(itemId),
-  }));
-});
+  }), oCallContext);
+};
 
-export const listTables = async (siteUrl) => _dbgWrap('listTables', [siteUrl], async function() {
+export const listTables = async (siteUrl, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('listTables', [siteUrl], oDebugContext);
+  // NOTE: listTables (GetTables) only returns custom lists (Type 100).
+  // System libraries like Site Pages, Shared Documents, Style Library, etc.
+  // are NOT included. To access those, use getItems/getSpItem directly with
+  // either the list display name (e.g. 'Site Pages') or the list GUID.
   return normalizeCollection(await executeConnectorOperation('GetTables', {
     siteUrl: buildSiteUrlParam(siteUrl),
-  }));
-});
+  }, oCallContext));
+};
 
-export const listLibrary = async (siteUrl) => _dbgWrap('listLibrary', [siteUrl], async function() {
-  return executeConnectorOperation('GetDataSetsMetadata', {
-    siteUrl: buildSiteUrlParam(siteUrl),
-  });
-});
+export const listLibrary = async (siteUrl, libraryId, queryOptions = {}, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('listLibrary', [siteUrl, libraryId, queryOptions], oDebugContext);
+  const sLibraryId = requireNonEmptyString(libraryId, 'library ID');
+  const GUID_PATTERN = /^[{(]?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[})]?$/i;
+  if (!GUID_PATTERN.test(sLibraryId)) {
+    throw new Error(
+      'listLibrary requires a library GUID (e.g. "ecf7e0c2-b862-469a-9eee-8a4aba5395ba"), not a display name. ' +
+      'Display names return 404 for document libraries. ' +
+      'Find the GUID in SharePoint site settings or browser dev tools.'
+    );
+  }
+  return getItems(siteUrl, sLibraryId, queryOptions, oCallContext);
+};
 
-export const resolveSharePointList = async (siteUrl, listReference = {}) => _dbgWrap('resolveSharePointList', [siteUrl, listReference], async function() {
+export const resolveSharePointList = async (siteUrl, listReference = {}, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('resolveSharePointList', [siteUrl, listReference], oDebugContext);
   const sSiteUrl = requireNonEmptyString(siteUrl, 'site URL');
   const oReference = normalizeSharePointListReference(listReference);
   const sListId = typeof pickSharePointValue(oReference.listId, oReference.sListId, oReference.table) === 'string' ? pickSharePointValue(oReference.listId, oReference.sListId, oReference.table).trim() : '';
@@ -558,7 +670,7 @@ export const resolveSharePointList = async (siteUrl, listReference = {}) => _dbg
 
   if (!bSkipTableLookup) {
     try {
-      const aTables = await listTables(sSiteUrl);
+      const aTables = await listTables(sSiteUrl, oCallContext);
       const oMatchedTable = findSharePointTable(aTables, {
         listId: sListId,
         listName: sListName,
@@ -593,76 +705,188 @@ export const resolveSharePointList = async (siteUrl, listReference = {}) => _dbg
 
   sharePointListCache.set(sCacheKey, oResolvedList);
   return oResolvedList;
-});
+};
 
-export const getItemsByList = async (siteUrl, listReference, queryOptions = {}) => _dbgWrap('getItemsByList', [siteUrl, listReference, queryOptions], async function() {
-  const oResolvedList = await resolveSharePointList(siteUrl, listReference);
-  return getItems(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), queryOptions);
-});
+export const getItemsByList = async (siteUrl, listReference, queryOptions = {}, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('getItemsByList', [siteUrl, listReference, queryOptions], oDebugContext);
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference, oCallContext);
+  return getItems(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), queryOptions, oCallContext);
+};
 
-export const getSpItemByList = async (siteUrl, listReference, itemId) => _dbgWrap('getSpItemByList', [siteUrl, listReference, itemId], async function() {
-  const oResolvedList = await resolveSharePointList(siteUrl, listReference);
-  return getSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId);
-});
+export const getSpItemByList = async (siteUrl, listReference, itemId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('getSpItemByList', [siteUrl, listReference, itemId], oDebugContext);
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference, oCallContext);
+  return getSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, oCallContext);
+};
 
-export const createSpItemByList = async (siteUrl, listReference, fields) => _dbgWrap('createSpItemByList', [siteUrl, listReference, fields], async function() {
-  const oResolvedList = await resolveSharePointList(siteUrl, listReference);
-  return createSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), fields);
-});
+export const createSpItemByList = async (siteUrl, listReference, fields, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('createSpItemByList', [siteUrl, listReference, fields], oDebugContext);
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference, oCallContext);
+  return createSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), fields, oCallContext);
+};
 
-export const updateSpItemByList = async (siteUrl, listReference, itemId, changedFields) => _dbgWrap('updateSpItemByList', [siteUrl, listReference, itemId, changedFields], async function() {
-  const oResolvedList = await resolveSharePointList(siteUrl, listReference);
-  return updateSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, changedFields);
-});
+export const updateSpItemByList = async (siteUrl, listReference, itemId, changedFields, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('updateSpItemByList', [siteUrl, listReference, itemId, changedFields], oDebugContext);
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference, oCallContext);
+  return updateSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, changedFields, oCallContext);
+};
 
-export const deleteSpItemByList = async (siteUrl, listReference, itemId) => _dbgWrap('deleteSpItemByList', [siteUrl, listReference, itemId], async function() {
-  const oResolvedList = await resolveSharePointList(siteUrl, listReference);
-  return deleteSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId);
-});
+export const deleteSpItemByList = async (siteUrl, listReference, itemId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('deleteSpItemByList', [siteUrl, listReference, itemId], oDebugContext);
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference, oCallContext);
+  return deleteSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, oCallContext);
+};
 
-export const createFile = async (siteUrl, folderPath, fileName, fileContent) => _dbgWrap('createFile', [siteUrl, folderPath, fileName, fileContent], async function() {
+export const getItemAttachments = async (siteUrl, listId, itemId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('getItemAttachments', [siteUrl, listId, itemId], oDebugContext);
+  return normalizeCollection(await executeConnectorOperation('GetItemAttachments', buildAttachmentContext(siteUrl, listId, itemId), oCallContext));
+};
+
+export const getAttachmentContent = async (siteUrl, listId, itemId, attachmentId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('getAttachmentContent', [siteUrl, listId, itemId, attachmentId], oDebugContext);
+  return executeConnectorOperation('GetAttachmentContent', buildAttachmentItemContext(siteUrl, listId, itemId, attachmentId), oCallContext);
+};
+
+export const createAttachment = async (siteUrl, listId, itemId, displayName, fileContent, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('createAttachment', [siteUrl, listId, itemId, displayName, '(attachment content)'], oDebugContext);
+  if (fileContent == null) {
+    throw new Error('SharePoint attachment content is required.');
+  }
+
+  const sContent = typeof fileContent === 'string' ? fileContent : String(fileContent);
+  const oParameters = Object.assign(buildAttachmentContext(siteUrl, listId, itemId), {
+    displayName: requireNonEmptyString(displayName, 'attachment display name'),
+    body: sContent,
+  });
+
+  return executeConnectorOperation('CreateAttachment', oParameters, oCallContext, [{
+    siteUrl: oParameters.siteUrl,
+    table: oParameters.table,
+    itemId: oParameters.itemId,
+    displayName: oParameters.displayName,
+    body: '(attachment content)',
+  }]);
+};
+
+export const deleteAttachment = async (siteUrl, listId, itemId, attachmentId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('deleteAttachment', [siteUrl, listId, itemId, attachmentId], oDebugContext);
+  return executeConnectorOperation('DeleteAttachment', buildAttachmentItemContext(siteUrl, listId, itemId, attachmentId), oCallContext);
+};
+
+export const getItemAttachmentsByList = async (siteUrl, listReference, itemId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('getItemAttachmentsByList', [siteUrl, listReference, itemId], oDebugContext);
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference, oCallContext);
+  return getItemAttachments(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, oCallContext);
+};
+
+export const getAttachmentContentByList = async (siteUrl, listReference, itemId, attachmentId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('getAttachmentContentByList', [siteUrl, listReference, itemId, attachmentId], oDebugContext);
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference, oCallContext);
+  return getAttachmentContent(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, attachmentId, oCallContext);
+};
+
+export const createAttachmentByList = async (siteUrl, listReference, itemId, displayName, fileContent, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('createAttachmentByList', [siteUrl, listReference, itemId, displayName, '(attachment content)'], oDebugContext);
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference, oCallContext);
+  return createAttachment(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, displayName, fileContent, oCallContext);
+};
+
+export const deleteAttachmentByList = async (siteUrl, listReference, itemId, attachmentId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('deleteAttachmentByList', [siteUrl, listReference, itemId, attachmentId], oDebugContext);
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference, oCallContext);
+  return deleteAttachment(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, attachmentId, oCallContext);
+};
+
+export const createFile = async (siteUrl, folderPath, fileName, fileContent, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('createFile', [siteUrl, folderPath, fileName, fileContent], oDebugContext);
   return executeConnectorOperation('CreateFile', {
     siteUrl: buildSiteUrlParam(siteUrl),
     folderPath: requireNonEmptyString(folderPath, 'folder path'),
     name: requireNonEmptyString(fileName, 'file name'),
     body: fileContent,
-  });
-});
+  }, oCallContext);
+};
 
-export const updateFile = async (siteUrl, fileId, fileContent) => _dbgWrap('updateFile', [siteUrl, fileId, fileContent], async function() {
+export const createRawFile = async (siteUrl, folderPath, fileName, fileContent, oDebugContext = null) => {
+  const aCallArgs = [siteUrl, folderPath, fileName, '(raw content)'];
+  const oCallContext = createSharePointDebugContext('createRawFile', aCallArgs, oDebugContext);
+  requireNonEmptyString(folderPath, 'folder path');
+  requireNonEmptyString(fileName, 'file name');
+  if (fileContent == null) {
+    throw new Error('SharePoint file content is required.');
+  }
+  var sContent = typeof fileContent === 'string' ? fileContent : String(fileContent);
+  var fnOrigStringify = JSON.stringify;
+  var bIntercepted = false;
+  JSON.stringify = function (oValue) {
+    if (!bIntercepted && typeof oValue === 'string' && oValue === sContent) {
+      bIntercepted = true;
+      return oValue;
+    }
+    return fnOrigStringify.apply(this, arguments);
+  };
+  try {
+    return await executeConnectorOperation('CreateFile', {
+      siteUrl: buildSiteUrlParam(siteUrl),
+      folderPath: folderPath.trim(),
+      name: fileName.trim(),
+      body: sContent,
+    }, oCallContext, [{
+      siteUrl: buildSiteUrlParam(siteUrl),
+      folderPath: folderPath.trim(),
+      name: fileName.trim(),
+      body: '(raw content)',
+    }]);
+  } finally {
+    JSON.stringify = fnOrigStringify;
+  }
+};
+
+export const updateFile = async (siteUrl, fileId, fileContent, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('updateFile', [siteUrl, fileId, fileContent], oDebugContext);
   return executeConnectorOperation('UpdateFile', {
     siteUrl: buildSiteUrlParam(siteUrl),
     id: requireNonEmptyString(String(fileId || ''), 'file ID'),
     body: fileContent,
-  });
-});
+  }, oCallContext);
+};
 
-export const deleteFile = async (siteUrl, fileId) => _dbgWrap('deleteFile', [siteUrl, fileId], async function() {
+export const deleteFile = async (siteUrl, fileId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('deleteFile', [siteUrl, fileId], oDebugContext);
   return executeConnectorOperation('DeleteFile', {
     siteUrl: buildSiteUrlParam(siteUrl),
     id: requireNonEmptyString(String(fileId || ''), 'file ID'),
-  });
-});
+  }, oCallContext);
+};
 
-export const moveFile = async (siteUrl, sourceFileId, destinationFolderPath, newFileName) => _dbgWrap('moveFile', [siteUrl, sourceFileId, destinationFolderPath, newFileName], async function() {
+export const moveFile = async (siteUrl, sourceFileId, destinationFolderPath, newFileName, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('moveFile', [siteUrl, sourceFileId, destinationFolderPath, newFileName], oDebugContext);
   return executeConnectorOperation('MoveFile', {
     siteUrl: buildSiteUrlParam(siteUrl),
     id: requireNonEmptyString(String(sourceFileId || ''), 'source file ID'),
     destinationFolderPath: requireNonEmptyString(destinationFolderPath, 'destination folder path'),
     newFileName: newFileName || '',
-  });
-});
+  }, oCallContext);
+};
 
-export const getFileMetadata = async (siteUrl, fileId) => _dbgWrap('getFileMetadata', [siteUrl, fileId], async function() {
+export const getFileMetadata = async (siteUrl, fileId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('getFileMetadata', [siteUrl, fileId], oDebugContext);
   return executeConnectorOperation('GetFileMetadata', {
     siteUrl: buildSiteUrlParam(siteUrl),
     id: requireNonEmptyString(String(fileId || ''), 'file ID'),
-  });
-});
+  }, oCallContext);
+};
+
+export const getFileContent = async (siteUrl, fileId, oDebugContext = null) => {
+  const oCallContext = createSharePointDebugContext('getFileContent', [siteUrl, fileId], oDebugContext);
+  return executeConnectorOperation('GetFileContent', {
+    siteUrl: buildSiteUrlParam(siteUrl),
+    id: requireNonEmptyString(String(fileId || ''), 'file ID'),
+  }, oCallContext);
+};
 
 const SharePointService = {
   callSharePointOperation,
-  sendHttpRequest,
   resolveSharePointList,
   getItems,
   getSpItem,
@@ -674,13 +898,23 @@ const SharePointService = {
   createSpItemByList,
   updateSpItemByList,
   deleteSpItemByList,
+  getItemAttachments,
+  getAttachmentContent,
+  createAttachment,
+  deleteAttachment,
+  getItemAttachmentsByList,
+  getAttachmentContentByList,
+  createAttachmentByList,
+  deleteAttachmentByList,
   listTables,
   listLibrary,
   createFile,
+  createRawFile,
   updateFile,
   deleteFile,
   moveFile,
   getFileMetadata,
+  getFileContent,
 };
 
 export { SharePointService };
