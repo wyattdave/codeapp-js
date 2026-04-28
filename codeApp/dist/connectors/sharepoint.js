@@ -132,6 +132,7 @@ const dataSourcesInfo = {
           { name: 'siteUrl', in: 'path', required: true, type: 'string' },
           { name: 'folderPath', in: 'query', required: true, type: 'string' },
           { name: 'name', in: 'query', required: true, type: 'string' },
+          { name: 'Content-Type', in: 'header', required: false, type: 'string' },
           { name: 'body', in: 'body', required: true, type: 'object' },
         ],
       },
@@ -142,6 +143,7 @@ const dataSourcesInfo = {
           { name: 'connectionId', in: 'path', required: true, type: 'string' },
           { name: 'siteUrl', in: 'path', required: true, type: 'string' },
           { name: 'id', in: 'path', required: true, type: 'string' },
+          { name: 'Content-Type', in: 'header', required: false, type: 'string' },
           { name: 'body', in: 'body', required: true, type: 'object' },
         ],
       },
@@ -422,6 +424,107 @@ function normalizeCollection(oPayload) {
 
   const aMatch = aCandidates.find((oCandidate) => Array.isArray(oCandidate));
   return aMatch || [];
+}
+
+function normalizeFileOperationOptions(optionsOrContentType) {
+  if (typeof optionsOrContentType === 'string' && optionsOrContentType.trim() !== '') {
+    return { contentType: optionsOrContentType.trim() };
+  }
+
+  if (isSharePointRecord(optionsOrContentType)) {
+    const sContentType = pickSharePointValue(optionsOrContentType.contentType, optionsOrContentType.ContentType);
+    if (typeof sContentType === 'string' && sContentType.trim() !== '') {
+      return { contentType: sContentType.trim() };
+    }
+  }
+
+  return {};
+}
+
+function toUint8Array(oValue) {
+  if (oValue instanceof ArrayBuffer) {
+    return new Uint8Array(oValue);
+  }
+
+  if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(oValue)) {
+    return new Uint8Array(oValue.buffer, oValue.byteOffset, oValue.byteLength);
+  }
+
+  return null;
+}
+
+function decodeBase64ToBytes(sBase64Content) {
+  const sBase64 = requireNonEmptyString(sBase64Content, 'file content').replace(/\s+/g, '');
+  const sBinary = atob(sBase64);
+  const aBytes = new Uint8Array(sBinary.length);
+  for (let iIndex = 0; iIndex < sBinary.length; iIndex += 1) {
+    aBytes[iIndex] = sBinary.charCodeAt(iIndex);
+  }
+  return aBytes;
+}
+
+async function normalizeFileContent(fileContent, optionsOrContentType) {
+  if (fileContent == null) {
+    throw new Error('SharePoint file content is required.');
+  }
+
+  const oOptions = normalizeFileOperationOptions(optionsOrContentType);
+  if (typeof fileContent === 'string') {
+    return {
+      body: fileContent,
+      contentType: oOptions.contentType || null,
+      rawString: true,
+    };
+  }
+
+  if (typeof Blob !== 'undefined' && fileContent instanceof Blob) {
+    const oBuffer = await fileContent.arrayBuffer();
+    return {
+      body: new Uint8Array(oBuffer),
+      contentType: oOptions.contentType || fileContent.type || 'application/octet-stream',
+      rawString: false,
+    };
+  }
+
+  const aBytes = toUint8Array(fileContent);
+  if (aBytes) {
+    return {
+      body: aBytes,
+      contentType: oOptions.contentType || 'application/octet-stream',
+      rawString: false,
+    };
+  }
+
+  return {
+    body: fileContent,
+    contentType: oOptions.contentType || null,
+    rawString: false,
+  };
+}
+
+async function executeFileContentOperation(operationName, parameters, fileContent, optionsOrContentType) {
+  const oNormalized = await normalizeFileContent(fileContent, optionsOrContentType);
+  const oParameters = {
+    ...parameters,
+    ...oNormalized.contentType ? { 'Content-Type': oNormalized.contentType } : {},
+    body: oNormalized.body,
+  };
+
+  const oContent = oNormalized.body;
+  const fnOrigStringify = JSON.stringify;
+  let bIntercepted = false;
+  JSON.stringify = function (oValue) {
+    if (!bIntercepted && oValue === oContent) {
+      bIntercepted = true;
+      return oContent;
+    }
+    return fnOrigStringify.apply(this, arguments);
+  };
+  try {
+    return await executeConnectorOperation(operationName, oParameters);
+  } finally {
+    JSON.stringify = fnOrigStringify;
+  }
 }
 
 function normalizeSharePointLookupValue(value) {
@@ -737,6 +840,7 @@ export const deleteSpItemByList = async (siteUrl, listReference, itemId, oDebugC
   return deleteSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, oCallContext);
 };
 
+<<<<<<< Updated upstream
 export const getItemAttachments = async (siteUrl, listId, itemId, oDebugContext = null) => {
   const oCallContext = createSharePointDebugContext('getItemAttachments', [siteUrl, listId, itemId], oDebugContext);
   return normalizeCollection(await executeConnectorOperation('GetItemAttachments', buildAttachmentContext(siteUrl, listId, itemId), oCallContext));
@@ -850,6 +954,45 @@ export const updateFile = async (siteUrl, fileId, fileContent, oDebugContext = n
     body: fileContent,
   }, oCallContext);
 };
+=======
+export const createFile = async (siteUrl, folderPath, fileName, fileContent, optionsOrContentType) => _dbgWrap('createFile', [siteUrl, folderPath, fileName, fileContent, optionsOrContentType], async function() {
+  var sFolderPath = requireNonEmptyString(folderPath, 'folder path');
+  var sFileName = requireNonEmptyString(fileName, 'file name');
+  return executeFileContentOperation('CreateFile', {
+    siteUrl: buildSiteUrlParam(siteUrl),
+    folderPath: sFolderPath,
+    name: sFileName,
+  }, fileContent, optionsOrContentType);
+});
+
+export const createRawFile = async (siteUrl, folderPath, fileName, fileContent) => _dbgWrap('createRawFile', [siteUrl, folderPath, fileName, '(raw content)'], async function() {
+  return createFile(siteUrl, folderPath, fileName, typeof fileContent === 'string' ? fileContent : String(fileContent));
+});
+
+export const createBinaryFile = async (siteUrl, folderPath, fileName, base64Content, contentType) => _dbgWrap('createBinaryFile', [siteUrl, folderPath, fileName, '(binary content)', contentType], async function() {
+  return createFile(siteUrl, folderPath, fileName, decodeBase64ToBytes(base64Content), contentType);
+});
+
+export const createBase64File = async (siteUrl, folderPath, fileName, base64Content, contentType) => _dbgWrap('createBase64File', [siteUrl, folderPath, fileName, '(base64 content)', contentType], async function() {
+  return createFile(siteUrl, folderPath, fileName, decodeBase64ToBytes(base64Content), contentType);
+});
+
+export const createByteFile = async (siteUrl, folderPath, fileName, byteContent, contentType) => _dbgWrap('createByteFile', [siteUrl, folderPath, fileName, '(byte content)', contentType], async function() {
+  return createFile(siteUrl, folderPath, fileName, byteContent, contentType);
+});
+
+export const createBlobFile = async (siteUrl, folderPath, fileName, fileContent, contentType) => _dbgWrap('createBlobFile', [siteUrl, folderPath, fileName, '(blob content)', contentType], async function() {
+  return createFile(siteUrl, folderPath, fileName, fileContent, contentType);
+});
+
+export const updateFile = async (siteUrl, fileId, fileContent, optionsOrContentType) => _dbgWrap('updateFile', [siteUrl, fileId, fileContent, optionsOrContentType], async function() {
+  var sFileId = requireNonEmptyString(String(fileId || ''), 'file ID');
+  return executeFileContentOperation('UpdateFile', {
+    siteUrl: buildSiteUrlParam(siteUrl),
+    id: sFileId,
+  }, fileContent, optionsOrContentType);
+});
+>>>>>>> Stashed changes
 
 export const deleteFile = async (siteUrl, fileId, oDebugContext = null) => {
   const oCallContext = createSharePointDebugContext('deleteFile', [siteUrl, fileId], oDebugContext);
@@ -910,6 +1053,10 @@ const SharePointService = {
   listLibrary,
   createFile,
   createRawFile,
+  createBinaryFile,
+  createBase64File,
+  createByteFile,
+  createBlobFile,
   updateFile,
   deleteFile,
   moveFile,
