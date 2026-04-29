@@ -51,6 +51,7 @@ When the user picks a mockup from `agent/` to implement:
 - Use writeFile for JSON config files after reading them.
 - For ordered multi-file work, perform tool calls sequentially in creation order. If you are making five mockups, create mockup 1 before starting mockup 2, and continue one file at a time.
 - Keep persistent memory short and precise. Prefer replacing stale bullets over adding noisy ones.
+- Do not add the debugger unless specifically asked to. If you do always add it as its own import line: `import { enableDebugger } from './codeapp.js';`
 
 ## Response Format
 - Start with a one-line summary, then include tool blocks.
