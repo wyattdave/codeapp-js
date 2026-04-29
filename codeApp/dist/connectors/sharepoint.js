@@ -840,7 +840,6 @@ export const deleteSpItemByList = async (siteUrl, listReference, itemId, oDebugC
   return deleteSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, oCallContext);
 };
 
-<<<<<<< Updated upstream
 export const getItemAttachments = async (siteUrl, listId, itemId, oDebugContext = null) => {
   const oCallContext = createSharePointDebugContext('getItemAttachments', [siteUrl, listId, itemId], oDebugContext);
   return normalizeCollection(await executeConnectorOperation('GetItemAttachments', buildAttachmentContext(siteUrl, listId, itemId), oCallContext));
@@ -901,60 +900,6 @@ export const deleteAttachmentByList = async (siteUrl, listReference, itemId, att
   return deleteAttachment(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, attachmentId, oCallContext);
 };
 
-export const createFile = async (siteUrl, folderPath, fileName, fileContent, oDebugContext = null) => {
-  const oCallContext = createSharePointDebugContext('createFile', [siteUrl, folderPath, fileName, fileContent], oDebugContext);
-  return executeConnectorOperation('CreateFile', {
-    siteUrl: buildSiteUrlParam(siteUrl),
-    folderPath: requireNonEmptyString(folderPath, 'folder path'),
-    name: requireNonEmptyString(fileName, 'file name'),
-    body: fileContent,
-  }, oCallContext);
-};
-
-export const createRawFile = async (siteUrl, folderPath, fileName, fileContent, oDebugContext = null) => {
-  const aCallArgs = [siteUrl, folderPath, fileName, '(raw content)'];
-  const oCallContext = createSharePointDebugContext('createRawFile', aCallArgs, oDebugContext);
-  requireNonEmptyString(folderPath, 'folder path');
-  requireNonEmptyString(fileName, 'file name');
-  if (fileContent == null) {
-    throw new Error('SharePoint file content is required.');
-  }
-  var sContent = typeof fileContent === 'string' ? fileContent : String(fileContent);
-  var fnOrigStringify = JSON.stringify;
-  var bIntercepted = false;
-  JSON.stringify = function (oValue) {
-    if (!bIntercepted && typeof oValue === 'string' && oValue === sContent) {
-      bIntercepted = true;
-      return oValue;
-    }
-    return fnOrigStringify.apply(this, arguments);
-  };
-  try {
-    return await executeConnectorOperation('CreateFile', {
-      siteUrl: buildSiteUrlParam(siteUrl),
-      folderPath: folderPath.trim(),
-      name: fileName.trim(),
-      body: sContent,
-    }, oCallContext, [{
-      siteUrl: buildSiteUrlParam(siteUrl),
-      folderPath: folderPath.trim(),
-      name: fileName.trim(),
-      body: '(raw content)',
-    }]);
-  } finally {
-    JSON.stringify = fnOrigStringify;
-  }
-};
-
-export const updateFile = async (siteUrl, fileId, fileContent, oDebugContext = null) => {
-  const oCallContext = createSharePointDebugContext('updateFile', [siteUrl, fileId, fileContent], oDebugContext);
-  return executeConnectorOperation('UpdateFile', {
-    siteUrl: buildSiteUrlParam(siteUrl),
-    id: requireNonEmptyString(String(fileId || ''), 'file ID'),
-    body: fileContent,
-  }, oCallContext);
-};
-=======
 export const createFile = async (siteUrl, folderPath, fileName, fileContent, optionsOrContentType) => _dbgWrap('createFile', [siteUrl, folderPath, fileName, fileContent, optionsOrContentType], async function() {
   var sFolderPath = requireNonEmptyString(folderPath, 'folder path');
   var sFileName = requireNonEmptyString(fileName, 'file name');
@@ -992,7 +937,7 @@ export const updateFile = async (siteUrl, fileId, fileContent, optionsOrContentT
     id: sFileId,
   }, fileContent, optionsOrContentType);
 });
->>>>>>> Stashed changes
+
 
 export const deleteFile = async (siteUrl, fileId, oDebugContext = null) => {
   const oCallContext = createSharePointDebugContext('deleteFile', [siteUrl, fileId], oDebugContext);

@@ -1,12 +1,12 @@
 ---
 name: start
 aliases: start-codeapp
-description: Start skill for new project setup. Use this skill when starting a fresh app build or UI build so the agent confirms theme direction, offers mockups, and only then implements files.
+description: Start skill for new Code App project setup. Use this skill when starting a fresh app build or UI build so the agent confirms theme direction, offers mockups, and only then implements files.
 ---
 
-# Start: New Project Setup
+# Start: New Code App Project Setup
 
-This skill applies only when the project is new (the decision log has no prior decisions). It ensures the agent gathers style and colour preferences and offers mockup creation before building.
+This skill applies only when the project is a Code App and new (the decision log has no prior decisions). It ensures the agent gathers style and colour preferences and offers mockup creation before building.
 
 ## folder setup
 The current folder should have a power-config.json file and a dist folder. If it does not the run the cap newApp command with a given name or one created by you.

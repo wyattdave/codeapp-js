@@ -115,7 +115,7 @@ Generic helpers:
 
 - `callSharePointOperation(operationName, parameters)`
 - `listTables(siteUrl)`
-- `listLibrary(siteUrl)`
+- `listLibrary(siteUrl, libraryId, queryOptions)`
 - `resolveSharePointList(siteUrl, listReference)`
 
 Attachment helpers:
@@ -150,9 +150,13 @@ By-list CRUD helpers:
 
 File helpers:
 
-- `createFile(siteUrl, folderPath, fileName, fileContent)`
-- `createRawFile(siteUrl, folderPath, fileName, fileContent)` - accepts content as a Blob or ArrayBuffer instead of string
-- `updateFile(siteUrl, fileId, fileContent)`
+- `createFile(siteUrl, folderPath, fileName, fileContent, optionsOrContentType)`
+- `createRawFile(siteUrl, folderPath, fileName, fileContent)` - coerces non-string content to a string before upload
+- `createBinaryFile(siteUrl, folderPath, fileName, base64Content, contentType)`
+- `createBase64File(siteUrl, folderPath, fileName, base64Content, contentType)`
+- `createByteFile(siteUrl, folderPath, fileName, byteContent, contentType)`
+- `createBlobFile(siteUrl, folderPath, fileName, fileContent, contentType)`
+- `updateFile(siteUrl, fileId, fileContent, optionsOrContentType)`
 - `deleteFile(siteUrl, fileId)`
 - `moveFile(siteUrl, sourceFileId, destinationFolderPath, newFileName)`
 - `getFileMetadata(siteUrl, fileId)`
@@ -167,7 +171,12 @@ Important behavior:
 - Item IDs can be strings or numbers.
 - Attachment IDs and attachment display names must be non-empty strings.
 - Query options such as `top` and `skip` must be numeric if supplied.
+- `listLibrary(...)` requires a document library GUID, not a display name.
 - `moveFile(...)` can rename during the move when `newFileName` is supplied.
+- `createFile(...)` and `updateFile(...)` accept either a content-type string or an options object with `contentType`.
+- `createFile(...)` can upload string, `Blob`, `ArrayBuffer`, or typed-array content.
+- `createRawFile(...)` is the string-only helper; use the binary/base64/byte/blob helpers when the app is not uploading plain text.
+- `createBinaryFile(...)` and `createBase64File(...)` both take base64 input and decode it before upload.
 - Attachment creation uses string content; binary attachment handling should be encoded by the app before calling the helper.
 
 ## Response Handling In App Code
@@ -255,9 +264,11 @@ Keep separate loading and submit flags in UI state so refresh, create, update, a
 - Use `deleteAttachment(...)` or `deleteAttachmentByList(...)` to remove an attachment from a list item.
 
 ### createFile behavior
-- `createFile(siteUrl, folderPath, fileName, content)` works even for folders/libraries not visible in `listTables`.
+- `createFile(siteUrl, folderPath, fileName, content, optionsOrContentType)` works even for folders/libraries not visible in `listTables`.
 - The `folderPath` must be the server-relative path: e.g. `/sites/IntelligentAutomation/PowerPlatform/Shared Documents/md`.
-- Content is passed as a string (for text files like .md).
+- `createFile(...)` accepts text or binary content and can set the content type.
+- `createRawFile(...)` forces string upload behavior for text content like `.md`.
+- `createBinaryFile(...)`, `createBase64File(...)`, `createByteFile(...)`, and `createBlobFile(...)` are convenience helpers for non-text uploads.
 
 ### Site discovery pattern
 - Use `listTables(siteUrl)` purely as a connectivity probe — if it returns without error, the site URL is valid.
@@ -278,6 +289,7 @@ const page = await getSpItem(siteUrl, 'Site Pages', itemId);
 
 // 4. For file operations
 await createFile(siteUrl, serverRelativeFolderPath, fileName, content);
+```
 
 ## Debugging Checklist
 
@@ -291,6 +303,7 @@ await createFile(siteUrl, serverRelativeFolderPath, fileName, content);
 - If list resolution fails, confirm the site URL and list ID belong to the same site.
 - If the user only knows a list name, let the wrapper perform `listTables(...)` lookup instead of building lookup logic in the page.
 - Do not manually call `encodeURIComponent(siteUrl)` before passing the site URL to the wrapper.
+- If file upload content is not plain text, use the binary/base64/byte/blob helpers or pass a content type through `createFile(...)` or `updateFile(...)`.
 - Use `enableDebugger()` during app development so `_dbgWrap(...)` traces are available.
 - Do not reintroduce `sendHttpRequest(...)` into the SharePoint wrapper.
 
