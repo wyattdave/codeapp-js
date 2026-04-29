@@ -115,7 +115,7 @@ Generic helpers:
 
 - `callSharePointOperation(operationName, parameters)`
 - `listTables(siteUrl)`
-- `listLibrary(siteUrl)`
+- `listLibrary(siteUrl, libraryId, queryOptions)`
 - `resolveSharePointList(siteUrl, listReference)`
 
 Attachment helpers:
@@ -150,24 +150,43 @@ By-list CRUD helpers:
 
 File helpers:
 
-- `createFile(siteUrl, folderPath, fileName, fileContent)`
-- `createRawFile(siteUrl, folderPath, fileName, fileContent)` - accepts content as a Blob or ArrayBuffer instead of string
-- `updateFile(siteUrl, fileId, fileContent)`
+- `createFile(siteUrl, folderPath, fileName, fileContent, optionsOrContentType)`
+- `createRawFile(siteUrl, folderPath, fileName, fileContent)` - coerces non-string content to a string before upload
+- `createBinaryFile(siteUrl, folderPath, fileName, base64Content, contentType)`
+- `createBase64File(siteUrl, folderPath, fileName, base64Content, contentType)`
+- `createByteFile(siteUrl, folderPath, fileName, byteContent, contentType)`
+- `createBlobFile(siteUrl, folderPath, fileName, fileContent, contentType)`
+- `updateFile(siteUrl, fileId, fileContent, optionsOrContentType)`
 - `deleteFile(siteUrl, fileId)`
 - `moveFile(siteUrl, sourceFileId, destinationFolderPath, newFileName)`
 - `getFileMetadata(siteUrl, fileId)`
 - `getFileContent(siteUrl, fileId)`
 
+Attachment helpers:
+
+- `getSpItemAttachments(siteUrl, listId, itemId)` when the list ID or resolved table token is already known and app code needs the current attachment metadata for one item.
+- `getSpItemAttachmentContent(siteUrl, listId, itemId, attachmentId)` only when app code must read an existing attachment's bytes by direct list ID access; do not use it as the primary upload-verification path in this runtime.
+- `deleteSpItemAttachment(siteUrl, listId, itemId, attachmentId)` when the list ID or resolved table token is already known and app code needs to remove an attachment directly.
+- `createSpItemAttachmentByList(siteUrl, listReference, itemId, displayName, fileContent)` when app code should upload an attachment and let the wrapper resolve the list from a list ID, list name, or resolved access object.
+- `getSpItemAttachmentsByList(siteUrl, listReference, itemId)` when app code should confirm an attachment exists or render attachment metadata without manually handling list resolution.
+- `getSpItemAttachmentContentByList(siteUrl, listReference, itemId, attachmentId)` only when app code must read an existing attachment after resolving through a list reference; prefer metadata checks from `getSpItemAttachmentsByList(...)` for upload verification.
+- `deleteSpItemAttachmentByList(siteUrl, listReference, itemId, attachmentId)` when app code should remove an attachment and let the wrapper resolve the list reference first.
+
 Important behavior:
 
 - `resolveSharePointList(...)` returns both generic keys and app-friendly aliases: `siteUrl`, `listId`, `listName`, `sSiteUrl`, `sListId`, `sListName`, plus `table` and lookup metadata.
 - `getItemsByList(...)` and the other by-list helpers accept a list name, list ID object, or resolved access object.
-- Attachment helpers return attachment objects that include the `attachmentId` needed by `getAttachmentContent(...)` and `deleteAttachment(...)`.
+- Prefer the `...ByList(...)` attachment helpers in app code unless the wrapper already has the exact connector table token or list ID in hand.
 - Create and update payloads must be plain objects.
 - Item IDs can be strings or numbers.
 - Attachment IDs and attachment display names must be non-empty strings.
 - Query options such as `top` and `skip` must be numeric if supplied.
+- `listLibrary(...)` requires a document library GUID, not a display name.
 - `moveFile(...)` can rename during the move when `newFileName` is supplied.
+- `createFile(...)` and `updateFile(...)` accept either a content-type string or an options object with `contentType`.
+- `createFile(...)` can upload string, `Blob`, `ArrayBuffer`, or typed-array content.
+- `createRawFile(...)` is the string-only helper; use the binary/base64/byte/blob helpers when the app is not uploading plain text.
+- `createBinaryFile(...)` and `createBase64File(...)` both take base64 input and decode it before upload.
 - Attachment creation uses string content; binary attachment handling should be encoded by the app before calling the helper.
 
 ## Response Handling In App Code
@@ -242,9 +261,11 @@ Keep separate loading and submit flags in UI state so refresh, create, update, a
 - **`CanvasContent1` is NOT returned by `getItems`** on the Site Pages list. It must be fetched per-page via `getSpItem(siteUrl, 'Site Pages', itemId)`.
 
 ### HttpRequest
-- The public SharePoint wrapper in this repo does **not** expose `sendHttpRequest(...)`.
-- The SharePoint connector schema includes an `HttpRequest` action, but it does not fit the repo's working siteUrl-based wrapper contract and the SDK only serializes the first `in: body` parameter for custom operations.
-- **Conclusion: do not add or rely on a SharePoint HTTP helper in Code Apps.** Use dedicated list, attachment, and file helpers instead.
+- The public SharePoint wrapper in this repo **does** expose `sendHttpRequest(...)` for the site-scoped SharePoint `HttpRequest` action.
+- `sendHttpRequest(siteUrl, request)` is the safe default for this repo's existing contract: it passes `siteUrl` separately and supports relative SharePoint REST paths such as `_api/...`.
+- The connector schema also includes `OpenHttpRequest`, exposed here as `sendOpenHttpRequest(...)`, which targets the generic `/{connectionId}/httprequest` endpoint instead of the site-scoped `/{connectionId}/datasets/{siteUrl}/httprequest` route.
+- Use `HttpRequest` when you are working against a known SharePoint site and want the connector to scope the request by `siteUrl`; use `OpenHttpRequest` only when the connector/runtime supports the generic open HTTP endpoint and you can provide a fully resolved request URI.
+- Prefer dedicated list, item, and file helpers when they already cover the scenario; use the HTTP helpers for SharePoint REST operations that are not otherwise wrapped.
 
 ### List item attachments
 - SharePoint list item attachments are supported through dedicated connector actions: `GetItemAttachments`, `GetAttachmentContent`, `CreateAttachment`, and `DeleteAttachment`.
@@ -252,12 +273,13 @@ Keep separate loading and submit flags in UI state so refresh, create, update, a
 - Use `getItemAttachments(...)` or `getItemAttachmentsByList(...)` first to obtain the attachment metadata and `attachmentId`.
 - Use `getAttachmentContent(...)` or `getAttachmentContentByList(...)` to fetch the attachment body.
 - Use `createAttachment(...)` or `createAttachmentByList(...)` to add an attachment to a list item.
-- Use `deleteAttachment(...)` or `deleteAttachmentByList(...)` to remove an attachment from a list item.
 
 ### createFile behavior
-- `createFile(siteUrl, folderPath, fileName, content)` works even for folders/libraries not visible in `listTables`.
+- `createFile(siteUrl, folderPath, fileName, content, optionsOrContentType)` works even for folders/libraries not visible in `listTables`.
 - The `folderPath` must be the server-relative path: e.g. `/sites/IntelligentAutomation/PowerPlatform/Shared Documents/md`.
-- Content is passed as a string (for text files like .md).
+- `createFile(...)` accepts text or binary content and can set the content type.
+- `createRawFile(...)` forces string upload behavior for text content like `.md`.
+- `createBinaryFile(...)`, `createBase64File(...)`, `createByteFile(...)`, and `createBlobFile(...)` are convenience helpers for non-text uploads.
 
 ### Site discovery pattern
 - Use `listTables(siteUrl)` purely as a connectivity probe — if it returns without error, the site URL is valid.
@@ -278,6 +300,7 @@ const page = await getSpItem(siteUrl, 'Site Pages', itemId);
 
 // 4. For file operations
 await createFile(siteUrl, serverRelativeFolderPath, fileName, content);
+```
 
 ## Debugging Checklist
 
@@ -291,6 +314,7 @@ await createFile(siteUrl, serverRelativeFolderPath, fileName, content);
 - If list resolution fails, confirm the site URL and list ID belong to the same site.
 - If the user only knows a list name, let the wrapper perform `listTables(...)` lookup instead of building lookup logic in the page.
 - Do not manually call `encodeURIComponent(siteUrl)` before passing the site URL to the wrapper.
+- If file upload content is not plain text, use the binary/base64/byte/blob helpers or pass a content type through `createFile(...)` or `updateFile(...)`.
 - Use `enableDebugger()` during app development so `_dbgWrap(...)` traces are available.
 - Do not reintroduce `sendHttpRequest(...)` into the SharePoint wrapper.
 

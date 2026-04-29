@@ -1,7 +1,7 @@
 {
-  "appDisplayName": "YOUR APP NAME",
+  "appDisplayName": "",
   "description": "",
-  "environmentId": "<ENVIRONMENT ID>",
+  "environmentId": "<ENVIRONMENT_ID>",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "./dist/icon-512.png",
