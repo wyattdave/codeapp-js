@@ -162,11 +162,21 @@ File helpers:
 - `getFileMetadata(siteUrl, fileId)`
 - `getFileContent(siteUrl, fileId)`
 
+Attachment helpers:
+
+- `getSpItemAttachments(siteUrl, listId, itemId)` when the list ID or resolved table token is already known and app code needs the current attachment metadata for one item.
+- `getSpItemAttachmentContent(siteUrl, listId, itemId, attachmentId)` only when app code must read an existing attachment's bytes by direct list ID access; do not use it as the primary upload-verification path in this runtime.
+- `deleteSpItemAttachment(siteUrl, listId, itemId, attachmentId)` when the list ID or resolved table token is already known and app code needs to remove an attachment directly.
+- `createSpItemAttachmentByList(siteUrl, listReference, itemId, displayName, fileContent)` when app code should upload an attachment and let the wrapper resolve the list from a list ID, list name, or resolved access object.
+- `getSpItemAttachmentsByList(siteUrl, listReference, itemId)` when app code should confirm an attachment exists or render attachment metadata without manually handling list resolution.
+- `getSpItemAttachmentContentByList(siteUrl, listReference, itemId, attachmentId)` only when app code must read an existing attachment after resolving through a list reference; prefer metadata checks from `getSpItemAttachmentsByList(...)` for upload verification.
+- `deleteSpItemAttachmentByList(siteUrl, listReference, itemId, attachmentId)` when app code should remove an attachment and let the wrapper resolve the list reference first.
+
 Important behavior:
 
 - `resolveSharePointList(...)` returns both generic keys and app-friendly aliases: `siteUrl`, `listId`, `listName`, `sSiteUrl`, `sListId`, `sListName`, plus `table` and lookup metadata.
 - `getItemsByList(...)` and the other by-list helpers accept a list name, list ID object, or resolved access object.
-- Attachment helpers return attachment objects that include the `attachmentId` needed by `getAttachmentContent(...)` and `deleteAttachment(...)`.
+- Prefer the `...ByList(...)` attachment helpers in app code unless the wrapper already has the exact connector table token or list ID in hand.
 - Create and update payloads must be plain objects.
 - Item IDs can be strings or numbers.
 - Attachment IDs and attachment display names must be non-empty strings.
@@ -251,9 +261,11 @@ Keep separate loading and submit flags in UI state so refresh, create, update, a
 - **`CanvasContent1` is NOT returned by `getItems`** on the Site Pages list. It must be fetched per-page via `getSpItem(siteUrl, 'Site Pages', itemId)`.
 
 ### HttpRequest
-- The public SharePoint wrapper in this repo does **not** expose `sendHttpRequest(...)`.
-- The SharePoint connector schema includes an `HttpRequest` action, but it does not fit the repo's working siteUrl-based wrapper contract and the SDK only serializes the first `in: body` parameter for custom operations.
-- **Conclusion: do not add or rely on a SharePoint HTTP helper in Code Apps.** Use dedicated list, attachment, and file helpers instead.
+- The public SharePoint wrapper in this repo **does** expose `sendHttpRequest(...)` for the site-scoped SharePoint `HttpRequest` action.
+- `sendHttpRequest(siteUrl, request)` is the safe default for this repo's existing contract: it passes `siteUrl` separately and supports relative SharePoint REST paths such as `_api/...`.
+- The connector schema also includes `OpenHttpRequest`, exposed here as `sendOpenHttpRequest(...)`, which targets the generic `/{connectionId}/httprequest` endpoint instead of the site-scoped `/{connectionId}/datasets/{siteUrl}/httprequest` route.
+- Use `HttpRequest` when you are working against a known SharePoint site and want the connector to scope the request by `siteUrl`; use `OpenHttpRequest` only when the connector/runtime supports the generic open HTTP endpoint and you can provide a fully resolved request URI.
+- Prefer dedicated list, item, and file helpers when they already cover the scenario; use the HTTP helpers for SharePoint REST operations that are not otherwise wrapped.
 
 ### List item attachments
 - SharePoint list item attachments are supported through dedicated connector actions: `GetItemAttachments`, `GetAttachmentContent`, `CreateAttachment`, and `DeleteAttachment`.
@@ -261,7 +273,6 @@ Keep separate loading and submit flags in UI state so refresh, create, update, a
 - Use `getItemAttachments(...)` or `getItemAttachmentsByList(...)` first to obtain the attachment metadata and `attachmentId`.
 - Use `getAttachmentContent(...)` or `getAttachmentContentByList(...)` to fetch the attachment body.
 - Use `createAttachment(...)` or `createAttachmentByList(...)` to add an attachment to a list item.
-- Use `deleteAttachment(...)` or `deleteAttachmentByList(...)` to remove an attachment from a list item.
 
 ### createFile behavior
 - `createFile(siteUrl, folderPath, fileName, content, optionsOrContentType)` works even for folders/libraries not visible in `listTables`.

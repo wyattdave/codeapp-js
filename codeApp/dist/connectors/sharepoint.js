@@ -59,6 +59,51 @@ const dataSourcesInfo = {
           { name: 'item', in: 'body', required: true, type: 'object' },
         ],
       },
+      CreateAttachment: {
+        path: '/{connectionId}/datasets/{siteUrl}/tables/{table}/items/{itemId}/attachments',
+        method: 'POST',
+        parameters: [
+          { name: 'connectionId', in: 'path', required: true, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'table', in: 'path', required: true, type: 'string' },
+          { name: 'itemId', in: 'path', required: true, type: 'string' },
+          { name: 'displayName', in: 'query', required: true, type: 'string' },
+          { name: 'Content-Type', in: 'header', required: false, type: 'string' },
+          { name: 'body', in: 'body', required: true, type: 'object' },
+        ],
+      },
+      GetItemAttachments: {
+        path: '/{connectionId}/datasets/{siteUrl}/tables/{table}/items/{itemId}/attachments',
+        method: 'GET',
+        parameters: [
+          { name: 'connectionId', in: 'path', required: true, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'table', in: 'path', required: true, type: 'string' },
+          { name: 'itemId', in: 'path', required: true, type: 'string' },
+        ],
+      },
+      GetAttachmentContent: {
+        path: '/{connectionId}/datasets/{siteUrl}/tables/{table}/items/{itemId}/attachments/{attachmentId}/content',
+        method: 'GET',
+        parameters: [
+          { name: 'connectionId', in: 'path', required: true, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'table', in: 'path', required: true, type: 'string' },
+          { name: 'itemId', in: 'path', required: true, type: 'string' },
+          { name: 'attachmentId', in: 'path', required: true, type: 'string' },
+        ],
+      },
+      DeleteAttachment: {
+        path: '/{connectionId}/datasets/{siteUrl}/tables/{table}/items/{itemId}/attachments/{attachmentId}',
+        method: 'DELETE',
+        parameters: [
+          { name: 'connectionId', in: 'path', required: true, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'table', in: 'path', required: true, type: 'string' },
+          { name: 'itemId', in: 'path', required: true, type: 'string' },
+          { name: 'attachmentId', in: 'path', required: true, type: 'string' },
+        ],
+      },
       DeleteItem: {
         path: '/{connectionId}/datasets/{siteUrl}/tables/{table}/items/{id}',
         method: 'DELETE',
@@ -147,6 +192,15 @@ const dataSourcesInfo = {
         ],
       },
       HttpRequest: {
+        path: '/{connectionId}/datasets/{siteUrl}/httprequest',
+        method: 'POST',
+        parameters: [
+          { name: 'connectionId', in: 'path', required: true, type: 'string' },
+          { name: 'siteUrl', in: 'path', required: true, type: 'string' },
+          { name: 'body', in: 'body', required: true, type: 'object' },
+        ],
+      },
+      OpenHttpRequest: {
         path: '/{connectionId}/httprequest',
         method: 'POST',
         parameters: [
@@ -294,6 +348,24 @@ function buildSiteUrlParam(siteUrl) {
   return encodeURIComponent(requireNonEmptyString(siteUrl, 'site URL'));
 }
 
+function buildHttpRequestUri(siteUrl, uri) {
+  const sUri = requireNonEmptyString(uri, 'request URI');
+  if (/^[a-z]+:\/\//i.test(sUri)) {
+    return sUri;
+  }
+
+  if (typeof siteUrl !== 'string' || siteUrl.trim() === '') {
+    return sUri;
+  }
+
+  const sSiteUrl = requireNonEmptyString(siteUrl, 'site URL');
+  if (sUri.charAt(0) === '/') {
+    return new URL(sUri, sSiteUrl).toString();
+  }
+
+  return new URL(sUri, sSiteUrl.replace(/\/?$/, '/')).toString();
+}
+
 function buildListContext(siteUrl, listId) {
   return {
     siteUrl: buildSiteUrlParam(siteUrl),
@@ -372,12 +444,20 @@ function toUint8Array(oValue) {
 
 function decodeBase64ToBytes(sBase64Content) {
   const sBase64 = requireNonEmptyString(sBase64Content, 'file content').replace(/\s+/g, '');
-  const sBinary = atob(sBase64);
-  const aBytes = new Uint8Array(sBinary.length);
-  for (let iIndex = 0; iIndex < sBinary.length; iIndex += 1) {
-    aBytes[iIndex] = sBinary.charCodeAt(iIndex);
+  if (typeof atob === 'function') {
+    const sBinary = atob(sBase64);
+    const aBytes = new Uint8Array(sBinary.length);
+    for (let iIndex = 0; iIndex < sBinary.length; iIndex += 1) {
+      aBytes[iIndex] = sBinary.charCodeAt(iIndex);
+    }
+    return aBytes;
   }
-  return aBytes;
+
+  if (typeof Buffer !== 'undefined') {
+    return Uint8Array.from(Buffer.from(sBase64, 'base64'));
+  }
+
+  throw new Error('SharePoint base64 decoding is not available in this runtime.');
 }
 
 async function normalizeFileContent(fileContent, optionsOrContentType) {
@@ -423,7 +503,7 @@ async function executeFileContentOperation(operationName, parameters, fileConten
   const oNormalized = await normalizeFileContent(fileContent, optionsOrContentType);
   const oParameters = {
     ...parameters,
-    ...oNormalized.contentType ? { 'Content-Type': oNormalized.contentType } : {},
+    ...(oNormalized.contentType ? { 'Content-Type': oNormalized.contentType } : {}),
     body: oNormalized.body,
   };
 
@@ -450,6 +530,24 @@ function normalizeSharePointLookupValue(value) {
   }
 
   return String(value).trim().toLowerCase();
+}
+
+function normalizeSharePointAttachmentId(value) {
+  let sValue = requireNonEmptyString(String(value || ''), 'attachment ID');
+
+  for (let iAttempt = 0; iAttempt < 3; iAttempt += 1) {
+    try {
+      const sDecoded = decodeURIComponent(sValue);
+      if (sDecoded === sValue) {
+        break;
+      }
+      sValue = sDecoded;
+    } catch (_) {
+      break;
+    }
+  }
+
+  return sValue;
 }
 
 function normalizeSharePointListReference(listReference) {
@@ -603,10 +701,35 @@ export const callSharePointOperation = async (operationName, parameters = {}) =>
   return executeConnectorOperation(operationName, parameters);
 });
 
-export const sendHttpRequest = async ({ method = 'GET', uri, headers, body } = {}) => _dbgWrap('sendHttpRequest', [{ method, uri, headers, body }], async function() {
-  return executeConnectorOperation('HttpRequest', {
+export const sendHttpRequest = async (siteUrlOrRequest, requestOptions) => _dbgWrap('sendHttpRequest', [siteUrlOrRequest, requestOptions], async function() {
+  const bSiteScoped = typeof siteUrlOrRequest === 'string';
+  const oRequest = bSiteScoped ? (requestOptions || {}) : (siteUrlOrRequest || {});
+  const oBody = {
+    method: String(oRequest.method || 'GET').toUpperCase(),
+    uri: requireNonEmptyString(oRequest.uri, 'request URI'),
+    headers: normalizeHeaders(oRequest.headers),
+    body: oRequest.body == null ? '' : oRequest.body,
+  };
+
+  if (bSiteScoped) {
+    return executeConnectorOperation('HttpRequest', {
+      siteUrl: buildSiteUrlParam(siteUrlOrRequest),
+      body: oBody,
+    });
+  }
+
+  return executeConnectorOperation('OpenHttpRequest', {
+    method: oBody.method,
+    uri: buildHttpRequestUri(oRequest.siteUrl, oBody.uri),
+    headers: oBody.headers,
+    body: oBody.body,
+  });
+});
+
+export const sendOpenHttpRequest = async ({ siteUrl, method = 'GET', uri, headers, body } = {}) => _dbgWrap('sendOpenHttpRequest', [{ siteUrl, method, uri, headers, body }], async function() {
+  return executeConnectorOperation('OpenHttpRequest', {
     method: String(method || 'GET').toUpperCase(),
-    uri: requireNonEmptyString(uri, 'request URI'),
+    uri: buildHttpRequestUri(siteUrl, uri),
     headers: normalizeHeaders(headers),
     body: body == null ? '' : body,
   });
@@ -625,6 +748,47 @@ export const getSpItem = async (siteUrl, listId, itemId) => _dbgWrap('getSpItem'
 export const createSpItem = async (siteUrl, listId, fields) => _dbgWrap('createSpItem', [siteUrl, listId, fields], async function() {
   return executeConnectorOperation('PostItem', Object.assign(buildListContext(siteUrl, listId), {
     item: requireRecord(fields, 'item payload'),
+  }));
+});
+
+export const createSpItemAttachment = async (siteUrl, listId, itemId, displayName, fileContent, optionsOrContentType) => _dbgWrap('createSpItemAttachment', [siteUrl, listId, itemId, displayName, '(attachment content)', optionsOrContentType], async function() {
+  return executeFileContentOperation('CreateAttachment', Object.assign(buildListContext(siteUrl, listId), {
+    itemId: requireItemId(itemId),
+    displayName: requireNonEmptyString(displayName, 'attachment file name'),
+  }), fileContent, optionsOrContentType);
+});
+
+export const getSpItemAttachments = async (siteUrl, listId, itemId) => _dbgWrap('getSpItemAttachments', [siteUrl, listId, itemId], async function() {
+  return normalizeCollection(await executeConnectorOperation('GetItemAttachments', Object.assign(buildListContext(siteUrl, listId), {
+    itemId: requireItemId(itemId),
+  })));
+});
+
+export const getSpItemAttachmentContent = async (siteUrl, listId, itemId, attachmentId) => _dbgWrap('getSpItemAttachmentContent', [siteUrl, listId, itemId, attachmentId], async function() {
+  const sNormalizedAttachmentId = normalizeSharePointAttachmentId(attachmentId);
+  try {
+    return await executeConnectorOperation('GetAttachmentContent', Object.assign(buildListContext(siteUrl, listId), {
+      itemId: requireItemId(itemId),
+      attachmentId: sNormalizedAttachmentId,
+    }));
+  } catch (oError) {
+    const sMessage = getSpErrorMessage(oError);
+    if (!/resource not found|statuscode\s*":\s*404|\b404\b/i.test(sMessage)) {
+      throw oError;
+    }
+
+    // Some SharePoint attachment IDs are returned as generic file identifiers.
+    return executeConnectorOperation('GetFileContent', {
+      siteUrl: buildSiteUrlParam(siteUrl),
+      id: sNormalizedAttachmentId,
+    });
+  }
+});
+
+export const deleteSpItemAttachment = async (siteUrl, listId, itemId, attachmentId) => _dbgWrap('deleteSpItemAttachment', [siteUrl, listId, itemId, attachmentId], async function() {
+  return executeConnectorOperation('DeleteAttachment', Object.assign(buildListContext(siteUrl, listId), {
+    itemId: requireItemId(itemId),
+    attachmentId: normalizeSharePointAttachmentId(attachmentId),
   }));
 });
 
@@ -738,6 +902,26 @@ export const createSpItemByList = async (siteUrl, listReference, fields) => _dbg
   return createSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), fields);
 });
 
+export const createSpItemAttachmentByList = async (siteUrl, listReference, itemId, displayName, fileContent, optionsOrContentType) => _dbgWrap('createSpItemAttachmentByList', [siteUrl, listReference, itemId, displayName, '(attachment content)', optionsOrContentType], async function() {
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference);
+  return createSpItemAttachment(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, displayName, fileContent, optionsOrContentType);
+});
+
+export const getSpItemAttachmentsByList = async (siteUrl, listReference, itemId) => _dbgWrap('getSpItemAttachmentsByList', [siteUrl, listReference, itemId], async function() {
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference);
+  return getSpItemAttachments(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId);
+});
+
+export const getSpItemAttachmentContentByList = async (siteUrl, listReference, itemId, attachmentId) => _dbgWrap('getSpItemAttachmentContentByList', [siteUrl, listReference, itemId, attachmentId], async function() {
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference);
+  return getSpItemAttachmentContent(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, attachmentId);
+});
+
+export const deleteSpItemAttachmentByList = async (siteUrl, listReference, itemId, attachmentId) => _dbgWrap('deleteSpItemAttachmentByList', [siteUrl, listReference, itemId, attachmentId], async function() {
+  const oResolvedList = await resolveSharePointList(siteUrl, listReference);
+  return deleteSpItemAttachment(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, attachmentId);
+});
+
 export const updateSpItemByList = async (siteUrl, listReference, itemId, changedFields) => _dbgWrap('updateSpItemByList', [siteUrl, listReference, itemId, changedFields], async function() {
   const oResolvedList = await resolveSharePointList(siteUrl, listReference);
   return updateSpItem(oResolvedList.siteUrl, pickSharePointValue(oResolvedList.table, oResolvedList.listId), itemId, changedFields);
@@ -749,8 +933,8 @@ export const deleteSpItemByList = async (siteUrl, listReference, itemId) => _dbg
 });
 
 export const createFile = async (siteUrl, folderPath, fileName, fileContent, optionsOrContentType) => _dbgWrap('createFile', [siteUrl, folderPath, fileName, fileContent, optionsOrContentType], async function() {
-  var sFolderPath = requireNonEmptyString(folderPath, 'folder path');
-  var sFileName = requireNonEmptyString(fileName, 'file name');
+  const sFolderPath = requireNonEmptyString(folderPath, 'folder path');
+  const sFileName = requireNonEmptyString(fileName, 'file name');
   return executeFileContentOperation('CreateFile', {
     siteUrl: buildSiteUrlParam(siteUrl),
     folderPath: sFolderPath,
@@ -779,7 +963,7 @@ export const createBlobFile = async (siteUrl, folderPath, fileName, fileContent,
 });
 
 export const updateFile = async (siteUrl, fileId, fileContent, optionsOrContentType) => _dbgWrap('updateFile', [siteUrl, fileId, fileContent, optionsOrContentType], async function() {
-  var sFileId = requireNonEmptyString(String(fileId || ''), 'file ID');
+  const sFileId = requireNonEmptyString(String(fileId || ''), 'file ID');
   return executeFileContentOperation('UpdateFile', {
     siteUrl: buildSiteUrlParam(siteUrl),
     id: sFileId,
@@ -819,15 +1003,24 @@ export const getFileContent = async (siteUrl, fileId) => _dbgWrap('getFileConten
 const SharePointService = {
   callSharePointOperation,
   sendHttpRequest,
+  sendOpenHttpRequest,
   resolveSharePointList,
   getItems,
   getSpItem,
   createSpItem,
+  createSpItemAttachment,
+  getSpItemAttachments,
+  getSpItemAttachmentContent,
+  deleteSpItemAttachment,
   updateSpItem,
   deleteSpItem,
   getItemsByList,
   getSpItemByList,
   createSpItemByList,
+  createSpItemAttachmentByList,
+  getSpItemAttachmentsByList,
+  getSpItemAttachmentContentByList,
+  deleteSpItemAttachmentByList,
   updateSpItemByList,
   deleteSpItemByList,
   listTables,
