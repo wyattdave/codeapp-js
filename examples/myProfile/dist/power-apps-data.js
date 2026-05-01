@@ -1,7 +1,9 @@
 /* power-apps-data.js - Standalone Power Apps SDK for Code Apps
    Converted from @microsoft/power-apps v1.0.4
    Zero dependencies - all code is self-contained
-   Version 2.0.2: outlook fix*/
+   Version 2.0.2: outlook fix
+   sdk v1.0.17*/
+   
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);

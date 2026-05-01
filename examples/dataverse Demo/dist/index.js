@@ -1,6 +1,3 @@
-import { enableDebugger } from "./codeapp.js";
-
-enableDebugger();
 
 import {
   initDataSources,
