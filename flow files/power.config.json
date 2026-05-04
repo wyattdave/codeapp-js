@@ -1,0 +1,72 @@
+{
+  "appId": "e1a196d2-9ace-411b-bb51-e897435a2206",
+  "appDisplayName": "New Role Countdown",
+  "description": "",
+  "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "logoPath": "./dist/icon-512.png",
+  "localAppUrl": "http://localhost:3000",
+  "region": "prod",
+  "connectionReferences": {
+    "office365outlook": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365",
+      "displayName": "Office 365 Outlook",
+      "dataSources": [
+        "office365"
+      ],
+      "authenticationType": null,
+      "sharedConnectionId": null,
+      "dataSets": {}
+    },
+    "fa0aab99-8647-43da-880b-a559e761e6dc": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+      "displayName": "Logic flows",
+      "dataSources": [
+        "childflowa"
+      ],
+      "workflowDetails": {
+        "workflowEntityId": "8e706c9b-4c06-f011-bae1-000d3a9886ab",
+        "workflowDisplayName": "ChildFlow A",
+        "workflowName": "fa3b3af2-ccfb-2c3e-3ca1-0c3b3ebee675"
+      }
+    },
+    "b978fa1f-94cb-4f95-8fb2-89fb7c7bfc3f": {
+      "id": "/providers/microsoft.powerapps/apis/shared_office365groups",
+      "displayName": "Office 365 Groups"
+    },
+    "824c5ef2-2c9d-4483-99ea-d09809bf03b8": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+      "displayName": "Logic flows",
+      "dataSources": [
+        "powerappv2__respondtoapowerapporflow"
+      ],
+      "workflowDetails": {
+        "workflowEntityId": "58539744-2e38-ee11-bdf4-000d3a5a7615",
+        "workflowDisplayName": "PowerAppV2 -> Respond to a PowerApp or flow",
+        "workflowName": "2d0efe25-ef79-4d37-afb9-d6f27cdeae81",
+        "dependencies": {
+          "shared_office365groups": "b978fa1f-94cb-4f95-8fb2-89fb7c7bfc3f"
+        }
+      }
+    }
+  },
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "agilepokerrounds": {
+          "entitySetName": "wd_agilepokerroundses",
+          "logicalName": "wd_agilepokerrounds",
+          "isHidden": false
+        },
+        "tasks": {
+          "entitySetName": "tasks",
+          "logicalName": "task",
+          "isHidden": false
+        }
+      },
+      "environmentVariableName": ""
+    }
+  },
+  "version": "1.0"
+}
