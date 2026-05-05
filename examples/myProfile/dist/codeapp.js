@@ -1,3 +1,4 @@
+// last update v1.1.1
 import { getClient, getContext, callActionAsync } from "./power-apps-data.js";
 
 // ── Initialize SDK & Client ────────────────────────────────────
@@ -364,10 +365,6 @@ function initConnectorClientWithCandidates(aDataSourceCandidates, oApis) {
 }
 
 async function execConnectorOpWithCandidates(aDataSourceCandidates, oApis, sConnectorName, operationName, parameters) {
-  if (!Object.prototype.hasOwnProperty.call(oApis, operationName)) {
-    throw new Error(sConnectorName + ' operation metadata is not registered for: ' + operationName);
-  }
-
   const client = await initConnectorClientWithCandidates(aDataSourceCandidates, oApis);
   const aErrors = [];
 

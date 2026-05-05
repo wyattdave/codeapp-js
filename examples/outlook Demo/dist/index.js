@@ -1,3 +1,7 @@
+import { enableDebugger } from "./codeapp.js";
+
+enableDebugger();
+
 
 import {
   getCalendarView,

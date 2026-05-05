@@ -2,7 +2,7 @@
   "appId":"f77d53bb-2423-4788-8ea7-47faa8869872",
   "appDisplayName": "Dataverse Demo",
   "description": "A simple demo showing CRUD operations against the Dataverse task table.",
-  "environmentId": "<ENVIRONMENT_ID>",
+  "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "logoPath": "default",

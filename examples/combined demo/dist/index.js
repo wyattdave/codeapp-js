@@ -1,5 +1,8 @@
 import { getMyProfile, getUserPhoto } from './connectors/office365users.js';
 import { getCalendarView, listEmails } from './connectors/office365outlook.js';
+import { enableDebugger } from "./codeapp.js";
+
+enableDebugger();
 const eRoot = document.getElementById('root');
 
 const oState = {
@@ -33,12 +36,40 @@ function getDayWindow() {
 }
 
 function normalizeItems(oResult) {
-  if (Array.isArray(oResult)) {
-    return oResult;
-  }
+  const aCandidates = [oResult];
 
-  if (oResult && Array.isArray(oResult.value)) {
-    return oResult.value;
+  while (aCandidates.length > 0) {
+    const oCandidate = aCandidates.shift();
+
+    if (Array.isArray(oCandidate)) {
+      return oCandidate;
+    }
+
+    if (!oCandidate || typeof oCandidate !== 'object') {
+      continue;
+    }
+
+    if (Array.isArray(oCandidate.value)) {
+      return oCandidate.value;
+    }
+
+    if (Array.isArray(oCandidate.items)) {
+      return oCandidate.items;
+    }
+
+    if (Array.isArray(oCandidate.entities)) {
+      return oCandidate.entities;
+    }
+
+    if (Array.isArray(oCandidate.records)) {
+      return oCandidate.records;
+    }
+
+    if (Array.isArray(oCandidate.results)) {
+      return oCandidate.results;
+    }
+
+    aCandidates.push(oCandidate.data, oCandidate.body);
   }
 
   return [];
@@ -211,7 +242,7 @@ function renderStatsCard() {
   return '<div class="stats-card">'
     + '<div class="stats-row">'
     + '<div class="stat-tile' + (oState.bLoading ? ' skeleton' : '') + '">'
-    + '<span class="stat-label">Emails Today</span>'
+    + '<span class="stat-label">Inbox Emails</span>'
     + '<span class="stat-value">' + String(oState.aEmails.length) + '</span>'
     + '</div>'
     + '<div class="stat-tile' + (oState.bLoading ? ' skeleton' : '') + '">'
@@ -239,8 +270,8 @@ function renderEmailList() {
 
   if (oState.aEmails.length === 0) {
     return '<div class="empty-state">'
-      + '<h3 class="empty-title">No emails yet today</h3>'
-      + '<p class="empty-copy">Your inbox is clear so far, or newer mail has not arrived in the first inbox batch yet.</p>'
+      + '<h3 class="empty-title">No inbox emails returned</h3>'
+      + '<p class="empty-copy">The Outlook connector call succeeded, but it did not return any inbox items in the current batch.</p>'
       + '</div>';
   }
 
@@ -328,7 +359,7 @@ function renderApp() {
     + '<div>'
     + '<p class="eyebrow">Daily snapshot</p>'
     + '<h1 class="hero-heading">Profile, mail, and meetings in one glance.</h1>'
-    + '<p class="hero-subtitle">A compact view of the signed-in user, the messages received today, and the meetings scheduled for the rest of the day.</p>'
+    + '<p class="hero-subtitle">A compact view of the signed-in user, the latest inbox messages, and the meetings scheduled for the rest of the day.</p>'
     + renderProfileCard(oWindow)
     + '</div>'
     + '<div class="hero-side">'
@@ -340,8 +371,8 @@ function renderApp() {
     + '<section class="panel">'
     + '<header class="panel-header">'
     + '<div>'
-    + '<h2 class="panel-title">Today\'s Emails</h2>'
-    + '<p class="panel-subtitle">Latest inbox items received since midnight.</p>'
+    + '<h2 class="panel-title">Inbox Emails</h2>'
+    + '<p class="panel-subtitle">Latest inbox items returned by the Outlook connector.</p>'
     + '</div>'
     + '<span class="count-pill">' + String(oState.aEmails.length) + '</span>'
     + '</header>'
@@ -384,12 +415,10 @@ async function loadProfileBundle() {
   };
 }
 
-async function loadTodayEmails() {
-  const oWindow = getDayWindow();
+async function loadInboxEmails() {
   const oResult = await listEmails({ folderId: 'Inbox', top: 50 });
 
   return normalizeItems(oResult)
-    .filter((oEmail) => isInDay(getEmailDate(oEmail), oWindow))
     .sort((oLeft, oRight) => {
       const iLeft = (toDate(getEmailDate(oLeft)) || new Date(0)).getTime();
       const iRight = (toDate(getEmailDate(oRight)) || new Date(0)).getTime();
@@ -425,7 +454,7 @@ async function refreshDashboard() {
 
   const aResults = await Promise.allSettled([
     loadProfileBundle(),
-    loadTodayEmails(),
+    loadInboxEmails(),
     loadTodayMeetings(),
   ]);
 
