@@ -8,9 +8,6 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-const BRIDGE_INIT_TIMEOUT_MS = 8000;
-const PLUGIN_CALL_TIMEOUT_MS = 30000;
-
 var DefaultPowerAppsBridge = class {
   constructor() {
     __publicField(this, "_antiCSRFToken");
@@ -69,20 +66,12 @@ var DefaultPowerAppsBridge = class {
       return this._initializePromise;
     }
     this._initializePromise = new Promise((resolve, reject) => {
-      if (window.parent === window) {
-        reject(new Error("Power Apps host was not detected. Open this app from the Power Apps Code Apps host instead of a standalone browser tab."));
-        return;
-      }
       this._messageChannel.port1.onmessage = (messageEvent) => {
         this._handleMessageEvent(messageEvent);
         if (this._postMessageSource) {
-          clearTimeout(timeoutId);
           resolve();
         }
       };
-      const timeoutId = window.setTimeout(() => {
-        reject(new Error("Timed out waiting for the Power Apps host to initialize the message bridge."));
-      }, BRIDGE_INIT_TIMEOUT_MS);
       window.parent.postMessage({
         messageType: "initCommunicationWithPort",
         instanceId: this._instanceId
@@ -93,19 +82,9 @@ var DefaultPowerAppsBridge = class {
   async executePluginAsync(pluginName, pluginAction, params = [], onUpdate) {
     return new Promise((resolve, reject) => {
       const callbackId = this._getCallbackId(pluginName);
-      const timeoutId = window.setTimeout(() => {
-        delete this._callbacks[callbackId];
-        reject(new Error(`Timed out waiting for ${pluginName}.${pluginAction} to return from the Power Apps host.`));
-      }, PLUGIN_CALL_TIMEOUT_MS);
       this._callbacks[callbackId] = {
-        resolve: (value) => {
-          clearTimeout(timeoutId);
-          resolve(value);
-        },
-        reject: (error) => {
-          clearTimeout(timeoutId);
-          reject(error);
-        },
+        resolve,
+        reject,
         onUpdate
       };
       this._sendMessage({
@@ -137,16 +116,11 @@ async function executePluginAsync(pluginName, pluginAction, params = [], update)
 }
 async function getBridge() {
   if (!bridgePromise) {
-    bridgePromise = new Promise(async (resolve, reject) => {
-      try {
-        const bridge = window && window.powerAppsBridge ? window.powerAppsBridge : new DefaultPowerAppsBridge();
-        await bridge.initialize();
-        resolve(bridge);
-      } catch (error) {
-        bridgePromise = void 0;
-        reject(error);
-      }
-    });
+    bridgePromise = (async () => {
+      const bridge = window && window.powerAppsBridge ? window.powerAppsBridge : new DefaultPowerAppsBridge();
+      await bridge.initialize();
+      return bridge;
+    })();
   }
   return bridgePromise;
 }

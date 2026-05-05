@@ -1,4 +1,5 @@
 {
+  "appId": "60e64ddb-878b-469e-8dba-b17a32560d7c",
   "appDisplayName": "Flow Demo",
   "description": "",
   "environmentId": "Default-6b6c3ede-aa0d-4268-a46f-96b7621b13a8",
@@ -8,7 +9,11 @@
   "localAppUrl": "http://localhost:3000",
   "region": "prod",
   "connectionReferences": {
-    "1589a290-b067-4597-b018-51b917534fb7": {
+    "b978fa1f-94cb-4f95-8fb2-89fb7c7bfc3f": {
+      "id": "/providers/microsoft.powerapps/apis/shared_office365groups",
+      "displayName": "Office 365 Groups"
+    },
+    "7703b9b3-41c2-4d1e-a9e1-e2f458eb3a56": {
       "id": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
       "displayName": "Logic flows",
       "dataSources": [
@@ -17,7 +22,10 @@
       "workflowDetails": {
         "workflowEntityId": "6cbb517b-537e-ef11-ac21-6045bd09cc55",
         "workflowDisplayName": "PowerAppV2 -> Respond to a Power App or flow",
-        "workflowName": "627462e5-91e5-05ac-6d1a-e2400cccda1c"
+        "workflowName": "627462e5-91e5-05ac-6d1a-e2400cccda1c",
+        "dependencies": {
+          "shared_office365groups": "b978fa1f-94cb-4f95-8fb2-89fb7c7bfc3f"
+        }
       }
     }
   },
