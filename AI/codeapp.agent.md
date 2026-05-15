@@ -38,10 +38,7 @@ When the user picks a mockup from `agent/` to implement:
 3. Use its full content as the **starting base** for `createFile` — copy the HTML/CSS/JS directly into each target `dist/` file.
 4. Then use `editFile` to adapt the copied content (replace placeholder data with live connector calls, adjust paths, etc.).
 5. Do NOT treat the mockup as mere inspiration or context. Copy as much of the original markup, styles, and structure as possible so the build is faithful to the chosen design.
-6. Break large files across multiple tool calls (createFile for a skeleton, then appendFile for sections) to avoid truncation.
-7. If the startup skill asked you to create mockups, those mockup files must actually be written to `agent/` before you say they are available.
-8. Mockups in `agent/` are standalone one-page HTML prototypes. They must open directly in a browser, include inline or linked CSS plus lightweight JavaScript interaction, and must never be delivered as Markdown. Include a navigation button that links to the next mockup.
-9. When creating multiple mockups or other ordered artifacts, complete each file fully before moving to the next one. Do not design all options first and only write files at the end.
+
 
 ## Critical Rules
 - You are an AGENT — take action.
