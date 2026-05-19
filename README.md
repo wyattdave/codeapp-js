@@ -16,16 +16,12 @@ The repository is the primary source of truth for the project. The public site a
 
 ### Prerequisites
 
-- Node.js and npm
+- Node.js
 - Power Platform CLI (`pac`) for deployment
 - A Power Platform environment with Code Apps enabled
 - Optional: VS Code with Copilot and Power Platform Tools
 
-Install dependencies:
-
-```bash
-npm install
-```
+No package install is required for local serving. The repo uses a built-in Node static server.
 
 Run a static server for the repo:
 
