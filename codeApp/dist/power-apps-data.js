@@ -1,113 +1,30 @@
 /* power-apps-data.js - Standalone Power Apps SDK for Code Apps
-   Converted from @microsoft/power-apps v1.0.4
-   Zero dependencies - all code is self-contained
-   Version 2.0.3: teams fix
-   sdk v1.0.17*/
-   
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+   Bundled from @microsoft/power-apps v1.2.5
+   Zero runtime dependencies; backward-compatible helpers retained. */
 
-const BRIDGE_INIT_TIMEOUT_MS = 8000;
-const PLUGIN_CALL_TIMEOUT_MS = 30000;
-
+// node_modules/@microsoft/power-apps/dist/internal/plugins/DefaultPowerAppsBridge.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var DefaultPowerAppsBridge = class {
-  constructor() {
-    __publicField(this, "_antiCSRFToken");
-    __publicField(this, "_callbacks", {});
-    __publicField(this, "_currentCallbackId", 0);
-    __publicField(this, "_instanceId", Date.now().toString());
-    __publicField(this, "_messageChannel", new window.MessageChannel());
-    __publicField(this, "_postMessageQueue", []);
-    __publicField(this, "_postMessageSource");
-    __publicField(this, "_initializePromise");
-    __publicField(this, "_handleMessageEvent", (messageEvent) => {
-      const message = messageEvent.data;
-      if (message && typeof message.isPluginCall === "boolean") {
-        if (message.isPluginCall) {
-          const callbackId = message.callbackId;
-          const status = message.status;
-          const args = message.args;
-          const keepCallback = message.keepCallback;
-          try {
-            const callback = this._callbacks[callbackId];
-            if (keepCallback) {
-              if (callback && callback.onUpdate) {
-                callback.onUpdate(message.args?.[0]);
-              }
-            } else {
-              if (callback) {
-                if (status === 1) {
-                  callback.resolve(args[0]);
-                } else if (status !== 0) {
-                  callback.reject(args);
-                }
-              }
-              if (!keepCallback) {
-                delete this._callbacks[callbackId];
-              }
-            }
-          } catch (error) {
-            console.error(error);
-          }
-        }
-      } else if (message && message.messageType === "initCommunication") {
-        this._antiCSRFToken = message.antiCSRFToken;
-        this._postMessageSource = this._messageChannel.port1;
-        if (this._postMessageSource) {
-          for (let i = 0; i < this._postMessageQueue.length; i++) {
-            this._postMessageQueue[i].antiCSRFToken = this._antiCSRFToken;
-            this._postMessageSource.postMessage(this._postMessageQueue[i]);
-          }
-          this._postMessageQueue = [];
-        }
-      }
-    });
-  }
+  _antiCSRFToken;
+  _callbacks = {};
+  _currentCallbackId = 0;
+  _instanceId = Date.now().toString();
+  _messageChannel = new window.MessageChannel();
+  _postMessageQueue = [];
+  _postMessageSource;
   async initialize() {
-    if (this._initializePromise) {
-      return this._initializePromise;
-    }
-    this._initializePromise = new Promise((resolve, reject) => {
-      if (window.parent === window) {
-        reject(new Error("Power Apps host was not detected. Open this app from the Power Apps Code Apps host instead of a standalone browser tab."));
-        return;
-      }
-      this._messageChannel.port1.onmessage = (messageEvent) => {
-        this._handleMessageEvent(messageEvent);
-        if (this._postMessageSource) {
-          clearTimeout(timeoutId);
-          resolve();
-        }
-      };
-      const timeoutId = window.setTimeout(() => {
-        reject(new Error("Timed out waiting for the Power Apps host to initialize the message bridge."));
-      }, BRIDGE_INIT_TIMEOUT_MS);
-      window.parent.postMessage({
-        messageType: "initCommunicationWithPort",
-        instanceId: this._instanceId
-      }, "*", [this._messageChannel.port2]);
-    });
-    return this._initializePromise;
+    this._messageChannel.port1.onmessage = this._handleMessageEvent;
+    window.parent.postMessage({
+      messageType: "initCommunicationWithPort",
+      instanceId: this._instanceId
+    }, "*", [this._messageChannel.port2]);
   }
   async executePluginAsync(pluginName, pluginAction, params = [], onUpdate) {
     return new Promise((resolve, reject) => {
       const callbackId = this._getCallbackId(pluginName);
-      const timeoutId = window.setTimeout(() => {
-        delete this._callbacks[callbackId];
-        reject(new Error(`Timed out waiting for ${pluginName}.${pluginAction} to return from the Power Apps host.`));
-      }, PLUGIN_CALL_TIMEOUT_MS);
-      this._callbacks[callbackId] = {
-        resolve: (value) => {
-          clearTimeout(timeoutId);
-          resolve(value);
-        },
-        reject: (error) => {
-          clearTimeout(timeoutId);
-          reject(error);
-        },
-        onUpdate
-      };
+      this._callbacks[callbackId] = { resolve, reject, onUpdate };
       this._sendMessage({
         isPluginCall: true,
         callbackId,
@@ -128,8 +45,53 @@ var DefaultPowerAppsBridge = class {
   _getCallbackId(pluginName) {
     return "instanceId=" + this._instanceId + "_" + pluginName + this._currentCallbackId++;
   }
+  _handleMessageEvent = (messageEvent) => {
+    const message = messageEvent.data;
+    if (message && typeof message.isPluginCall === "boolean") {
+      if (message.isPluginCall) {
+        const callbackId = message.callbackId;
+        const status = message.status;
+        const args = message.args;
+        const keepCallback = message.keepCallback;
+        try {
+          const callback = this._callbacks[callbackId];
+          if (keepCallback) {
+            if (callback && callback.onUpdate) {
+              callback.onUpdate(message.args?.[0]);
+            }
+          } else {
+            if (callback) {
+              if (status === 1) {
+                callback.resolve(args[0]);
+              } else if (status !== 0) {
+                callback.reject(args);
+              }
+            }
+            if (!keepCallback) {
+              delete this._callbacks[callbackId];
+            }
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    } else if (message && message.messageType === "initCommunication") {
+      this._antiCSRFToken = message.antiCSRFToken;
+      this._postMessageSource = this._messageChannel.port1;
+      if (this._postMessageSource) {
+        for (let i = 0; i < this._postMessageQueue.length; i++) {
+          this._postMessageQueue[i].antiCSRFToken = this._antiCSRFToken;
+          this._postMessageSource.postMessage(this._postMessageQueue[i]);
+        }
+      }
+    }
+  };
 };
 
+// node_modules/@microsoft/power-apps/dist/internal/plugins/PluginBridge.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var bridgePromise;
 async function executePluginAsync(pluginName, pluginAction, params = [], update) {
   const powerAppsBridge = await getBridge();
@@ -137,59 +99,47 @@ async function executePluginAsync(pluginName, pluginAction, params = [], update)
 }
 async function getBridge() {
   if (!bridgePromise) {
-    bridgePromise = new Promise(async (resolve, reject) => {
-      try {
-        const bridge = window && window.powerAppsBridge ? window.powerAppsBridge : new DefaultPowerAppsBridge();
-        await bridge.initialize();
-        resolve(bridge);
-      } catch (error) {
-        bridgePromise = void 0;
-        reject(error);
+    bridgePromise = (async () => {
+      const injected = globalThis.powerAppsBridge;
+      if (!injected && typeof window === "undefined") {
+        throw new Error("Native host must inject globalThis.powerAppsBridge before using @microsoft/power-apps in non-browser environments.");
       }
-    });
+      const bridge = injected ?? new DefaultPowerAppsBridge();
+      await bridge.initialize();
+      return bridge;
+    })();
   }
   return bridgePromise;
 }
 
-var context;
-async function getContext() {
-  if (context) {
-    return context;
-  }
-  context = await executePluginAsync("AppLifecycle", "getContext");
-  return context;
-}
-
-var IncompatibleMessageReceiver = class {
-  constructor(versionInfo, incompatibilityDescription) {
-    __publicField(this, "versionInfo");
-    __publicField(this, "incompatibilityDescription");
-    __publicField(this, "isCompatible", false);
-    this.versionInfo = versionInfo;
-    this.incompatibilityDescription = incompatibilityDescription;
-  }
-};
-
+// node_modules/@microsoft/power-apps/dist/internal/plugins/SendMessage/SendMessageOperation.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var SendMessageOperation = class {
+  resultPromise;
+  sendUpdate;
+  /**
+   * When completed is false onMessageReceived and sendUpdate will be visible.
+   * When completed is true then these are hidden.
+   */
+  completed = false;
+  onMessageReceived = void 0;
   constructor(resultPromise, sendUpdate) {
-    __publicField(this, "resultPromise");
-    __publicField(this, "sendUpdate");
-    /**
-     * When completed is false onMessageReceived and sendUpdate will be visible.
-     * When completed is true then these are hidden.
-     */
-    __publicField(this, "completed", false);
-    __publicField(this, "onMessageReceived");
     this.resultPromise = resultPromise;
     this.sendUpdate = sendUpdate;
   }
 };
 
+// node_modules/@microsoft/power-apps/dist/internal/plugins/SendMessage/CompatibleMessageReceiver.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var CompatibleMessageReceiver = class {
+  _receiverName;
+  versionInfo;
+  isCompatible = true;
   constructor(_receiverName, versionInfo) {
-    __publicField(this, "_receiverName");
-    __publicField(this, "versionInfo");
-    __publicField(this, "isCompatible", true);
     this._receiverName = _receiverName;
     this.versionInfo = versionInfo;
   }
@@ -257,6 +207,24 @@ var CompatibleMessageReceiver = class {
   }
 };
 
+// node_modules/@microsoft/power-apps/dist/internal/plugins/SendMessage/IncompatibleMessageReceiver.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var IncompatibleMessageReceiver = class {
+  versionInfo;
+  incompatibilityDescription;
+  isCompatible = false;
+  constructor(versionInfo, incompatibilityDescription) {
+    this.versionInfo = versionInfo;
+    this.incompatibilityDescription = incompatibilityDescription;
+  }
+};
+
+// node_modules/@microsoft/power-apps/dist/internal/plugins/SendMessage/SendMessage.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var SendMessage = class _SendMessage {
   static createInstanceAsync() {
     return Promise.resolve(new _SendMessage());
@@ -280,6 +248,15 @@ var SendMessage = class _SendMessage {
   }
 };
 
+// node_modules/@microsoft/power-apps/dist/internal/plugins/SendMessage/index.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
+// node_modules/@microsoft/power-apps/dist/telemetry/LoggerManager.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var loggerInstance;
 async function initializeLogger(logger) {
   loggerInstance = logger;
@@ -303,58 +280,219 @@ async function initializeLogger(logger) {
   }
 }
 
-function getAppLoadedPerformanceData() {
-  const performanceApi = new PerformanceApi();
-  const perfData = {
-    appTimeOrigin: performanceApi.timeOrigin
-  };
-  const navigationTimingEntries = performanceApi.getEntriesByType("navigation");
-  const navigationTiming = navigationTimingEntries[0];
-  if (navigationTiming) {
-    perfData.appNavigateType = navigationTiming.type;
-    perfData.appNavigationStart = navigationTiming.startTime;
-    perfData.appNavigationDuration = navigationTiming.duration;
-    perfData.appEncodedBodySize = navigationTiming.encodedBodySize;
-    perfData.appNextHopProtocol = navigationTiming.nextHopProtocol;
-    perfData.appDomainLookupStart = navigationTiming.domainLookupStart;
-    perfData.appDomainLookupEnd = navigationTiming.domainLookupEnd;
-    perfData.appConnectStart = navigationTiming.connectStart;
-    perfData.appConnectEnd = navigationTiming.connectEnd;
-    perfData.appSecureConnectionStart = navigationTiming.secureConnectionStart;
-    perfData.appFetchStart = navigationTiming.fetchStart;
-    perfData.appRequestStart = navigationTiming.requestStart;
-    perfData.appResponseStart = navigationTiming.responseStart;
-    perfData.appResponseEnd = navigationTiming.responseEnd;
-    perfData.appLoadEventEnd = navigationTiming.loadEventEnd;
-    perfData.appDomInteractive = navigationTiming.domInteractive;
-    perfData.appDomContentLoadedEventStart = navigationTiming.domContentLoadedEventStart;
-  }
-  return perfData;
-}
-var PerformanceApi = class {
-  constructor(targetWindow = window) {
-    __publicField(this, "_performance");
-    this._performance = targetWindow.performance;
-  }
-  get timeOrigin() {
-    return this._performance?.timeOrigin;
-  }
-  getEntriesByType(type) {
-    if (!this._performance?.getEntriesByType) {
-      return [];
-    }
-    return this._performance.getEntriesByType(type);
-  }
-};
+// node_modules/@microsoft/power-apps/dist/telemetry/index.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 
-executePluginAsync("AppLifecycle", "notifyAppSdkLoaded", [getAppLoadedPerformanceData()]);
-
+// node_modules/@microsoft/power-apps/dist/app/Config.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 function setConfig(config) {
   if (config.logger) {
     initializeLogger(config.logger);
   }
 }
 
+// node_modules/@microsoft/power-apps/dist/internal/plugins/index.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
+// node_modules/@microsoft/power-apps/dist/app/ContextProvider.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var context;
+async function getContext() {
+  if (context) {
+    return context;
+  }
+  context = await executePluginAsync("AppLifecycle", "getContext");
+  return context;
+}
+
+// node_modules/@microsoft/power-apps/dist/app/index.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
+// node_modules/@microsoft/power-apps/dist/data/multiSelectPicklistUtils.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+function serializeMultiSelectPicklistFields(record, fields) {
+  const result = { ...record };
+  for (const field of fields) {
+    if (Array.isArray(result[field])) {
+      const arr = result[field];
+      result[field] = arr.length > 0 ? arr.join(",") : null;
+    }
+  }
+  return result;
+}
+function deserializeMultiSelectPicklistFields(record, fields) {
+  for (const field of fields) {
+    const value = record[field];
+    if (typeof value === "string") {
+      record[field] = value !== "" ? value.split(",").map(Number) : [];
+    }
+  }
+}
+
+// node_modules/@microsoft/power-apps/dist/internal/data/ConnectionUtils.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var connectionsLoaded = false;
+async function loadConnections() {
+  if (connectionsLoaded) {
+    return;
+  }
+  connectionsLoaded = true;
+  await loadNonCompositeConnectionsAsync();
+  await resolveCompositeConnectionsAsync();
+}
+async function loadNonCompositeConnectionsAsync() {
+  return executePluginAsync("AppPowerAppsClientPlugin", "loadNonCompositeConnectionsAsync", []);
+}
+async function resolveCompositeConnectionsAsync() {
+  return executePluginAsync("AppPowerAppsClientPlugin", "resolveCompositeConnectionsAsync", []);
+}
+
+// node_modules/@microsoft/power-apps/dist/internal/data/OperationExecutor.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var loadConnectionsPromise;
+var OperationExecutor = class {
+  /**
+   * Executes an operation using the plugin.
+   * @param operationName The name of the operation.
+   * @param action The action to perform.
+   * @param params The parameters for the operation.
+   * @returns A promise resolving to the operation result.
+   */
+  async execute(operationName, action, params) {
+    if (!loadConnectionsPromise) {
+      loadConnectionsPromise = loadConnections();
+    }
+    await loadConnectionsPromise;
+    const result = await executePluginAsync(operationName, action, params);
+    return {
+      success: true,
+      data: result
+    };
+  }
+};
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/telemetry/log.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var ServiceName = "PublishedAppTelemetry";
+var Log = class _Log {
+  _powerOperationExecutor;
+  static _instance = null;
+  constructor(_powerOperationExecutor) {
+    this._powerOperationExecutor = _powerOperationExecutor;
+  }
+  static createInstance(powerOperationExecutor) {
+    if (!_Log._instance) {
+      _Log._instance = new _Log(powerOperationExecutor);
+    } else {
+      _Log.trackEvent("TelemetryLogger", {
+        message: "Attempted to create an instance when instance is already created."
+      });
+    }
+    return _Log._instance;
+  }
+  // Since powerDataRuntime can be reset, we need to be able to reset the instance of Log as well.
+  static resetInstance() {
+    _Log._instance = null;
+  }
+  static async _sendMessage(actionName, ...args) {
+    try {
+      const instance = _Log._getInstance();
+      const result = await instance._powerOperationExecutor.execute(ServiceName, actionName, args);
+      if (!result.success) {
+        console.error({
+          message: `PowerDataRuntime.TelemetryLogger: Failed to send telemetry message.`,
+          error: result.error,
+          telemetryArgs: args
+        });
+      }
+    } catch (error) {
+      console.error({
+        message: `PowerDataRuntime.TelemetryLogger: Failed to send telemetry message.`,
+        error,
+        telemetryArgs: args
+      });
+    }
+  }
+  static trackEvent(eventName, eventData) {
+    const serializedData = eventData ? _Log._serializeErrors(eventData) : eventData;
+    return _Log._sendMessage("trackEvent", `PowerDataRuntime.${eventName}`, serializedData);
+  }
+  static trackException(exception) {
+    return _Log._sendMessage("trackException", exception);
+  }
+  static trackMetric(metricName, value) {
+    return _Log._sendMessage("trackMetric", `PowerDataRuntime.${metricName}`, value);
+  }
+  static startScenario(scenarioName) {
+    return _Log._sendMessage("startScenario", `PowerDataRuntime.${scenarioName}`);
+  }
+  static endScenario(scenarioName) {
+    return _Log._sendMessage("endScenario", `PowerDataRuntime.${scenarioName}`);
+  }
+  static setDefaultProperties(properties) {
+    return _Log._sendMessage("setDefaultProperties", properties);
+  }
+  static _getInstance() {
+    if (!_Log._instance) {
+      throw new Error("PowerDataRuntime.TelemetryLogger: Attempted to log telemetry prior to instantiation.");
+    }
+    return _Log._instance;
+  }
+  /**
+   * Recursively serializes Error objects in an object to prevent empty object serialization
+   * when passed through postMessage's structured clone algorithm.
+   * @param obj - The object to process
+   * @returns A new object with Error instances replaced by serializable objects
+   */
+  static _serializeErrors(obj) {
+    if (obj === null || obj === void 0) {
+      return obj;
+    }
+    if (obj instanceof Error) {
+      return {
+        errorMessage: obj.message,
+        errorStack: obj.stack,
+        errorType: obj.name
+      };
+    }
+    if (Array.isArray(obj)) {
+      return obj.map((item) => _Log._serializeErrors(item));
+    }
+    if (typeof obj === "object" && obj !== null && Object.getPrototypeOf(obj) === Object.prototype) {
+      const serialized = {};
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          serialized[key] = _Log._serializeErrors(obj[key]);
+        }
+      }
+      return serialized;
+    }
+    return obj;
+  }
+};
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/common/types.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var HttpMethod;
 (function(HttpMethod2) {
   HttpMethod2["GET"] = "GET";
@@ -369,6 +507,10 @@ var DataSources;
   DataSources2["Connector"] = "Connector";
 })(DataSources || (DataSources = {}));
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/error/codes.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var ErrorCodes;
 (function(ErrorCodes2) {
   ErrorCodes2["InitializationFailed"] = "PDR_INIT_FAILED";
@@ -395,6 +537,10 @@ var ErrorCodes;
   ErrorCodes2["TokenAcquisitionFailed"] = "TOKEN_ACQUISITION_FAILED";
 })(ErrorCodes || (ErrorCodes = {}));
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/error/messages.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var UnknownErrorMessage = "An unknown error occurred";
 var ErrorMessages = {
   // PowerDataRuntime specific errors
@@ -441,121 +587,18 @@ var DataOperationErrorMessages;
   DataOperationErrorMessages2["RetrieveFailed"] = "Retrieve operation failure";
   DataOperationErrorMessages2["RetrieveMultipleFailed"] = "Retrieve multiple records operation failure";
   DataOperationErrorMessages2["UpdateFailed"] = "Update operation failure";
+  DataOperationErrorMessages2["UploadFailed"] = "Upload operation failure";
+  DataOperationErrorMessages2["DownloadFailed"] = "Download operation failure";
+  DataOperationErrorMessages2["DeleteFileOrImageFailed"] = "Delete file or image operation failure";
+  DataOperationErrorMessages2["MissingFileData"] = "File data is required";
 })(DataOperationErrorMessages || (DataOperationErrorMessages = {}));
 
-function isOperationResult(result) {
-  return result?.success !== void 0;
-}
-
-var ServiceName = "PublishedAppTelemetry";
-var TelemetryActionNames;
-(function(TelemetryActionNames2) {
-  TelemetryActionNames2["trackEvent"] = "trackEvent";
-  TelemetryActionNames2["trackException"] = "trackException";
-  TelemetryActionNames2["trackMetric"] = "trackMetric";
-  TelemetryActionNames2["startScenario"] = "startScenario";
-  TelemetryActionNames2["endScenario"] = "endScenario";
-  TelemetryActionNames2["setDefaultProperties"] = "setDefaultProperties";
-})(TelemetryActionNames || (TelemetryActionNames = {}));
-var _Log = class _Log {
-  constructor(_powerOperationExecutor) {
-    __publicField(this, "_powerOperationExecutor");
-    this._powerOperationExecutor = _powerOperationExecutor;
-  }
-  static createInstance(powerOperationExecutor) {
-    if (!_Log._instance) {
-      _Log._instance = new _Log(powerOperationExecutor);
-    } else {
-      _Log.trackEvent("TelemetryLogger", {
-        message: "Attempted to create an instance when instance is already created."
-      });
-    }
-    return _Log._instance;
-  }
-  // Since powerDataRuntime can be reset, we need to be able to reset the instance of Log as well.
-  static resetInstance() {
-    _Log._instance = null;
-  }
-  static async _sendMessage(actionName, ...args) {
-    try {
-      const instance = _Log._getInstance();
-      const result = await instance._powerOperationExecutor.execute(ServiceName, actionName, args);
-      if (!result.success) {
-        console.error({
-          message: `PowerDataRuntime.TelemetryLogger: Failed to send telemetry message.`,
-          error: result.error,
-          telemetryArgs: args
-        });
-      }
-    } catch (error) {
-      console.error({
-        message: `PowerDataRuntime.TelemetryLogger: Failed to send telemetry message.`,
-        error,
-        telemetryArgs: args
-      });
-    }
-  }
-  static trackEvent(eventName, eventData) {
-    const serializedData = eventData ? _Log._serializeErrors(eventData) : eventData;
-    return _Log._sendMessage(TelemetryActionNames.trackEvent, `PowerDataRuntime.${eventName}`, serializedData);
-  }
-  static trackException(exception) {
-    return _Log._sendMessage(TelemetryActionNames.trackException, exception);
-  }
-  static trackMetric(metricName, value) {
-    return _Log._sendMessage(TelemetryActionNames.trackMetric, `PowerDataRuntime.${metricName}`, value);
-  }
-  static startScenario(scenarioName) {
-    return _Log._sendMessage(TelemetryActionNames.startScenario, `PowerDataRuntime.${scenarioName}`);
-  }
-  static endScenario(scenarioName) {
-    return _Log._sendMessage(TelemetryActionNames.endScenario, `PowerDataRuntime.${scenarioName}`);
-  }
-  static setDefaultProperties(properties) {
-    return _Log._sendMessage(TelemetryActionNames.setDefaultProperties, properties);
-  }
-  static _getInstance() {
-    if (!_Log._instance) {
-      throw new Error("PowerDataRuntime.TelemetryLogger: Attempted to log telemetry prior to instantiation.");
-    }
-    return _Log._instance;
-  }
-  /**
-   * Recursively serializes Error objects in an object to prevent empty object serialization
-   * when passed through postMessage's structured clone algorithm.
-   * @param obj - The object to process
-   * @returns A new object with Error instances replaced by serializable objects
-   */
-  static _serializeErrors(obj) {
-    if (obj === null || obj === void 0) {
-      return obj;
-    }
-    if (obj instanceof Error) {
-      return {
-        errorMessage: obj.message,
-        errorStack: obj.stack,
-        errorType: obj.name
-      };
-    }
-    if (Array.isArray(obj)) {
-      return obj.map((item) => _Log._serializeErrors(item));
-    }
-    if (typeof obj === "object" && obj !== null && Object.getPrototypeOf(obj) === Object.prototype) {
-      const serialized = {};
-      for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-          serialized[key] = _Log._serializeErrors(obj[key]);
-        }
-      }
-      return serialized;
-    }
-    return obj;
-  }
-};
-__publicField(_Log, "_instance", null);
-var Log = _Log;
-
+// node_modules/@microsoft/power-apps/dist/internal/data/core/error/types.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var PowerDataRuntimeError = class extends Error {
+  code;
   /**
    * Creates an instance of PowerDataRuntimeError.
    * @param code - The error code associated with the error.
@@ -568,13 +611,24 @@ var PowerDataRuntimeError = class extends Error {
       message += `: ${additionalInfo}`;
     }
     super(message);
-    __publicField(this, "code");
     this.code = code;
     this.name = "PowerDataRuntimeError";
     Log.trackException(this);
   }
 };
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/types/index.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+function isOperationResult(result) {
+  return result?.success !== void 0;
+}
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/error/constants.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var HeaderNames;
 (function(HeaderNames2) {
   HeaderNames2["RequestId"] = "x-ms-client-request-id";
@@ -583,9 +637,13 @@ var DataverseOperationName;
 (function(DataverseOperationName2) {
   DataverseOperationName2["CreateRecord"] = "dataverseDataOperation.createRecordAsync";
   DataverseOperationName2["UpdateRecord"] = "dataverseDataOperation.updateRecordAsync";
+  DataverseOperationName2["UploadRecord"] = "dataverseDataOperation.uploadFileToRecord";
+  DataverseOperationName2["DownloadRecord"] = "dataverseDataOperation.downloadFileFromRecord";
   DataverseOperationName2["DeleteRecord"] = "dataverseDataOperation.deleteRecordAsync";
+  DataverseOperationName2["DeleteFileOrImageRecord"] = "dataverseDataOperation.deleteFileOrImageFromRecord";
   DataverseOperationName2["RetrieveRecord"] = "dataverseDataOperation.retrieveRecordAsync";
   DataverseOperationName2["RetrieveMultipleRecords"] = "dataverseDataOperation.retrieveMultipleRecordsAsync";
+  DataverseOperationName2["ExecuteCustomApi"] = "dataverseDataOperation.executeCustomApi";
 })(DataverseOperationName || (DataverseOperationName = {}));
 var ConnectorOperationName;
 (function(ConnectorOperationName2) {
@@ -596,6 +654,10 @@ var ConnectorOperationName;
   ConnectorOperationName2["RetrieveMultipleRecords"] = "connectorDataOperation.retrieveMultipleRecordsAsync";
 })(ConnectorOperationName || (ConnectorOperationName = {}));
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/error/util.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 function getErrorMessage(error) {
   if (typeof error === "string") {
     return error;
@@ -645,13 +707,22 @@ function parseHttpPluginError(error) {
   };
 }
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/error/error.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/data/defaultOperationOrchestrator.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var DefaultDataOperationOrchestrator = class {
+  _dataverseOperation;
+  _connectorOperation;
+  _connectionsService;
   // Static identifiers for services and actions
   // Used to identify specific services and actions within the PowerApps environment
   constructor(_dataverseOperation, _connectorOperation, _connectionsService) {
-    __publicField(this, "_dataverseOperation");
-    __publicField(this, "_connectorOperation");
-    __publicField(this, "_connectionsService");
     this._dataverseOperation = _dataverseOperation;
     this._connectorOperation = _connectorOperation;
     this._connectionsService = _connectionsService;
@@ -687,6 +758,77 @@ var DefaultDataOperationOrchestrator = class {
       return await executor.updateRecordAsync(tableName, id, data);
     } catch (error) {
       return createErrorResponse(error, "Update record operation failed");
+    }
+  }
+  /**
+   * Uploads data for an existing record in the specified data source.
+   * @param tableName - The name of the table.
+   * @param id - The ID of the record to upload data for.
+   * @param columnName - The name of the file column to upload to.
+   * @param fileName - The name of the file to upload (used for Dataverse file columns).
+   * @param data - The data to upload.
+   * @returns A promise that resolves to the operation result.
+   * @throws DataOperationError if the operation fails.
+   */
+  async uploadFileToRecord(tableName, id, columnName, fileName, data) {
+    try {
+      this._validateParams({ tableName, id, columnName, fileName, data });
+      const executor = await this._getExecutor(tableName);
+      return await executor.uploadFileToRecord(tableName, id, columnName, fileName, data);
+    } catch (error) {
+      return createErrorResponse(error, "Upload record operation failed");
+    }
+  }
+  /**
+   * Downloads binary data from a file column in the specified data source.
+   * @param tableName - The name of the table.
+   * @param id - The ID of the record to download from.
+   * @param columnName - The name of the file column to download from.
+   * @returns A promise that resolves to the operation result with file contents as binary data (Uint8Array).
+   * @throws DataOperationError if the operation fails.
+   */
+  async downloadFileFromRecord(tableName, id, columnName) {
+    try {
+      this._validateParams({ tableName, id, columnName });
+      const executor = await this._getExecutor(tableName);
+      return await executor.downloadFileFromRecord(tableName, id, columnName);
+    } catch (error) {
+      return createErrorResponse(error, "Download record operation failed");
+    }
+  }
+  /**
+   * Downloads binary image data from an image column in the specified data source.
+   * Only applicable to Dataverse data sources.
+   * @param tableName - The logical name of the Dataverse table.
+   * @param recordId - The ID of the record containing the image.
+   * @param columnName - The name of the image column to download from.
+   * @param fullSize - When true, requests the full-size image (`?size=full`). Defaults to false.
+   * @returns A promise that resolves to the operation result with image contents as binary data (Uint8Array).
+   */
+  async downloadImageFromRecord(tableName, recordId, columnName, fullSize) {
+    try {
+      this._validateParams({ tableName, recordId, columnName });
+      const executor = await this._getExecutor(tableName);
+      return await executor.downloadImageFromRecord(tableName, recordId, columnName, fullSize);
+    } catch (error) {
+      return createErrorResponse(error, "Download image operation failed");
+    }
+  }
+  /**
+   * Deletes the file or image data stored in a file/image column of an existing record.
+   * Only applicable to Dataverse data sources.
+   * @param tableName - The logical name of the Dataverse table.
+   * @param recordId - The ID of the record containing the file or image.
+   * @param columnName - The name of the file or image column whose data should be deleted.
+   * @returns A promise that resolves to the operation result.
+   */
+  async deleteFileOrImageFromRecord(tableName, recordId, columnName) {
+    try {
+      this._validateParams({ tableName, recordId, columnName });
+      const executor = await this._getExecutor(tableName);
+      return await executor.deleteFileOrImageFromRecord(tableName, recordId, columnName);
+    } catch (error) {
+      return createErrorResponse(error, "Delete file or image operation failed");
     }
   }
   /**
@@ -832,35 +974,20 @@ var DefaultDataOperationOrchestrator = class {
   }
 };
 
-var RuntimeMetadataOperations = class {
-  // Static identifiers for services and actions
-  // Used to identify specific services and actions within the PowerApps environment
-  constructor(_clientProvider) {
-    __publicField(this, "_clientProvider");
-    this._clientProvider = _clientProvider;
-  }
-  async getConnections(context2) {
-    const client = await this._clientProvider.getMetadataClientAsync();
-    const response = await client.getAppConnectionConfigsAsync(context2);
-    return {
-      success: response.success,
-      data: response.data ? [response.data] : [],
-      error: response.error
-    };
-  }
-  async getConnectionApis(_connectionId, context2) {
-    const client = await this._clientProvider.getMetadataClientAsync();
-    const response = await client.getAppDataSourceConfigsAsync(context2);
-    return {
-      success: response.success,
-      data: response.data ? [response.data] : [],
-      error: response.error
-    };
-  }
-};
-
+// node_modules/@microsoft/power-apps/dist/internal/data/core/common/utils.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 function arrayBufferToBase64(buffer) {
   return window.btoa(convertArrayBufferToString(buffer));
+}
+function base64ToUint8Array(base64) {
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
 }
 function convertArrayBufferToString(buf) {
   if (buf.byteLength <= 65535) {
@@ -876,591 +1003,17 @@ function strictEncode(str) {
   return encodeURIComponent(str).replace(/\(/g, "%28").replace(/\)/g, "%29");
 }
 function extractDataverseUrlParts(url) {
-  const baseUrlMatch = url.match(/^(https?:\/\/[^/]+\/api\/data\/v9\.0)/);
+  const baseUrlMatch = url.match(/^(https?:\/\/[^/]+\/api\/data\/v[\d.]+)/);
   const baseUrl = baseUrlMatch ? baseUrlMatch[1] : "";
-  const pathMatch = url.match(/\/api\/data\/v9\.0\/(.+)$/);
+  const pathMatch = url.match(/\/api\/data\/v[\d.]+\/(.+)$/);
   const encodedPath = pathMatch ? strictEncode(pathMatch[1]) : "";
   return { baseUrl, encodedPath };
 }
 
-var _RuntimeDataClient = class _RuntimeDataClient {
-  // Constructor for RuntimeDataClient
-  // Accepts an IPowerOperationExecutor instance for executing operations
-  constructor(_powerOperationExecutor) {
-    __publicField(this, "_powerOperationExecutor");
-    this._powerOperationExecutor = _powerOperationExecutor;
-  }
-  /**
-   * Creates a new instance of RuntimeDataClient
-   */
-  static createInstanceAsync(powerOperationExecutor) {
-    return Promise.resolve(new _RuntimeDataClient(powerOperationExecutor));
-  }
-  /**
-   * Creates data using POST method
-   * @param url - The URL for the request
-   * @param apiId - The API ID for authentication
-   * @param tableName - The name of the table to access
-   * @param body - The request body for the POST method
-   * @param operationName - Optional operation name for telemetry
-   * @return Promise resolving to the response data
-   * @throws Error if the request fails or the response is invalid
-   * @throws Error if the request body is invalid
-   */
-  async createDataAsync(url, apiId, tableName, body, context2) {
-    try {
-      if (!body) {
-        throw new Error(`${DataOperationErrorMessages.InvalidRequest}: ${DataOperationErrorMessages.MissingRequestBody}`);
-      }
-      const config = {
-        url,
-        method: HttpMethod.POST,
-        apiId,
-        tableName,
-        body: JSON.stringify(body)
-      };
-      context2 = this._ensureContext(context2, "runtimeDataClient.createDataAsync");
-      return await this._executeRequest(config, context2);
-    } catch (error) {
-      if (isOperationResult(error)) {
-        return error;
-      } else {
-        return createErrorResponse(error, DataOperationErrorMessages.CreateFailed);
-      }
-    }
-  }
-  /**
-   * Updates data using PATCH method
-   * @param url - The URL for the request
-   * @param apiId - The API ID for authentication
-   * @param tableName - The name of the table to access
-   * @param body - The request body for the PATCH method
-   * @param operationName - Optional operation name for telemetry
-   * @return Promise resolving to the response data
-   * @throws Error if the request fails or the response is invalid
-   * @throws Error if the request body is invalid
-   */
-  async updateDataAsync(url, apiId, tableName, body, context2) {
-    try {
-      if (!body) {
-        throw new Error(`${DataOperationErrorMessages.InvalidRequest}: ${DataOperationErrorMessages.MissingRequestBody}`);
-      }
-      const config = {
-        url,
-        method: HttpMethod.PATCH,
-        apiId,
-        tableName,
-        body: JSON.stringify(body)
-      };
-      context2 = this._ensureContext(context2, "runtimeDataClient.updateDataAsync");
-      return await this._executeRequest(config, context2);
-    } catch (error) {
-      if (isOperationResult(error)) {
-        return error;
-      } else {
-        return createErrorResponse(error, DataOperationErrorMessages.UpdateFailed);
-      }
-    }
-  }
-  /**
-   * Deletes data using DELETE method
-   * @param url - The URL for the request
-   * @param connectionApi - The API ID for authentication
-   * @param serviceNamespace - The name of the service namespace
-   * @param operationName - Optional operation name for telemetry
-   * @return Promise resolving to the response data
-   * @throws Error if the request fails or the response is invalid
-   */
-  async deleteDataAsync(url, connectionApi, serviceNamespace, context2) {
-    try {
-      const config = {
-        url,
-        method: HttpMethod.DELETE,
-        apiId: connectionApi,
-        tableName: serviceNamespace
-      };
-      context2 = this._ensureContext(context2, "runtimeDataClient.deleteDataAsync");
-      return await this._executeRequest(config, context2);
-    } catch (error) {
-      if (isOperationResult(error)) {
-        return error;
-      } else {
-        return createErrorResponse(error, DataOperationErrorMessages.DeleteFailed);
-      }
-    }
-  }
-  /**
-   * Retrieves data using GET or POST method
-   * @param url - The URL for the request
-   * @param apiId - The API ID for authentication
-   * @param tableName - The name of the table to access
-   * @param method - The HTTP method
-   * @param body - Optional request body for POST method
-   * @param context - Optional operation context
-   * @param operationName - Optional operation name for telemetry
-   * @return Promise resolving to the response data
-   * @throws Error if the request fails or the response is invalid
-   */
-  async retrieveDataAsync(url, apiId, tableName, method, headers, body, context2) {
-    try {
-      const config = {
-        url,
-        method,
-        apiId,
-        tableName,
-        headers,
-        body: body ? typeof body === "string" ? body : JSON.stringify(body) : void 0
-      };
-      context2 = this._ensureContext(context2, "runtimeDataClient.retrieveDataAsync");
-      return await this._executeRequest(config, context2);
-    } catch (error) {
-      if (isOperationResult(error)) {
-        return error;
-      } else {
-        return createErrorResponse(error, DataOperationErrorMessages.RetrieveFailed);
-      }
-    }
-  }
-  /**
-   * Gets an access token for the specified API.
-   * If the API is Dataverse, retrieves a dynamic resource token; otherwise, retrieves a standard appservice API token.
-   * @param apiId - The API ID for authentication
-   * @param datasetName - Optional dataset name for Dataverse
-   * @returns Promise resolving to the access token
-   * @throws Error if token acquisition fails
-   */
-  async _getAccessToken(apiId, datasetName) {
-    try {
-      let result;
-      if (apiId === DataSources.Dataverse) {
-        result = await this._powerOperationExecutor.execute(_RuntimeDataClient.SERVICES.identityService, _RuntimeDataClient.ACTIONS.getDynamicToken, [datasetName]);
-      } else {
-        result = await this._powerOperationExecutor.execute(_RuntimeDataClient.SERVICES.identityService, _RuntimeDataClient.ACTIONS.getToken, [apiId]);
-      }
-      return result.data;
-    } catch (error) {
-      throw new PowerDataRuntimeError(ErrorCodes.TokenAcquisitionFailed, getErrorMessage(error));
-    }
-  }
-  // Merge Prefer headers for Dataverse batch payloads
-  _mergePreferHeaders(configHeaders, method) {
-    let preferHeader = "";
-    if (configHeaders?.Prefer) {
-      preferHeader += configHeaders.Prefer;
-    }
-    if (method === HttpMethod.POST || method === HttpMethod.PATCH) {
-      const defaultPrefer = "return=representation,odata.include-annotations=*";
-      if (preferHeader) {
-        if (!preferHeader.includes("return=representation")) {
-          preferHeader += (preferHeader ? "," : "") + defaultPrefer;
-        }
-      } else {
-        preferHeader = defaultPrefer;
-      }
-    }
-    return preferHeader;
-  }
-  /**
-   * Creates headers for the HTTP request.
-   * Combines default headers with any custom headers provided in the config.
-   * Custom headers are optional and take precedence over default headers.
-   * @param token - The access token for authentication
-   * @param config - The HTTP request configuration
-   * @return The headers for the request
-   * @throws Error if header creation fails
-   */
-  _createHeaders(token, config, context2) {
-    const baseHeaders = {
-      Accept: "application/json",
-      "x-ms-protocol-semantics": "cdp",
-      ServiceNamespace: config.tableName,
-      Authorization: `paauth ${token}`,
-      "x-ms-pa-client-custom-headers-options": '{"addCustomHeaders":true}',
-      "x-ms-enable-selects": "true",
-      "x-ms-pa-client-telemetry-options": `paclient-telemetry {"operationName":"${context2?.operationName ?? "runtimeDataClient.executeRequest"}"}`,
-      "x-ms-pa-client-telemetry-additional-data": `{"apiId":"${config.apiId}"}`
-    };
-    if (config.apiId === DataSources.Dataverse) {
-      baseHeaders["x-ms-protocol-semantics"] = DataSources.Dataverse;
-      baseHeaders.Authorization = `dynamicauth ${token}`;
-      const { baseUrl, encodedPath } = extractDataverseUrlParts(config.url);
-      const batchId = context2?.batchId || "";
-      const preferHeader = this._mergePreferHeaders(config.headers, config.method);
-      baseHeaders.BatchInfo = JSON.stringify({
-        baseUrl,
-        encodedPath,
-        headers: {
-          Accept: "application/json",
-          ...preferHeader ? { Prefer: preferHeader } : {},
-          ...config.method === HttpMethod.POST || config.method === HttpMethod.PATCH ? { "Content-Type": "application/json" } : {}
-        },
-        batchId
-      });
-    }
-    if (config.headers) {
-      return { ...baseHeaders, ...config.headers };
-    }
-    return baseHeaders;
-  }
-  /**
-   * Executes an HTTP request with the given configuration
-   * @param config - The HTTP request configuration
-   * @param context - Optional operation context
-   * @return Promise resolving to the response data
-   * @throws Error if the request fails or the response is invalid
-   * @throws Error if the response content type is invalid
-   */
-  async _executeRequest(config, context2) {
-    const token = await this._getAccessToken(config.apiId, context2?.datasetName);
-    const headers = this._createHeaders(token, config, context2);
-    const requestBody = config.body ? new Blob([config.body], { type: "application/json" }) : "";
-    let result;
-    try {
-      result = await this._powerOperationExecutor.execute(_RuntimeDataClient.SERVICES.dataClient, _RuntimeDataClient.ACTIONS.sendHttp, [
-        {
-          url: config.url,
-          method: config.method,
-          requestSource: _RuntimeDataClient.REQUEST_SOURCE,
-          allowSessionStorage: true,
-          returnDirectResponse: true,
-          headers
-        },
-        requestBody,
-        "arraybuffer"
-      ]);
-    } catch (error) {
-      return {
-        success: false,
-        error: parseHttpPluginError(error),
-        data: void 0
-      };
-    }
-    const responseData = result.data;
-    const responseHeaders = responseData[0].headers;
-    const contentType = responseHeaders["Content-Type"];
-    if (!contentType) {
-      return {
-        success: true,
-        data: void 0
-      };
-    } else if (contentType.indexOf("application/json") !== -1) {
-      const data = result.data[1];
-      let text = this._decodeArrayBuffer(data);
-      if (!text) {
-        text = "{}";
-      }
-      const parsedResult = JSON.parse(text);
-      if (context2?.isDataVerseOperation || this._isDataverseCall(config.url)) {
-        return {
-          success: true,
-          data: parsedResult
-        };
-      } else if (!context2?.isExecuteAsync && "value" in parsedResult && Array.isArray(parsedResult.value)) {
-        return {
-          success: true,
-          data: parsedResult.value,
-          count: parsedResult["@odata.count"]
-        };
-      } else {
-        return {
-          success: true,
-          data: parsedResult
-        };
-      }
-    } else if (contentType.indexOf("image/") !== -1) {
-      const buffer = result.data[1];
-      if (buffer instanceof ArrayBuffer) {
-        const value = arrayBufferToBase64(buffer);
-        return {
-          success: true,
-          data: value
-        };
-      }
-      return {
-        success: true,
-        data: buffer
-      };
-    } else {
-      const buffer = result.data[1];
-      if (buffer instanceof ArrayBuffer) {
-        const value = convertArrayBufferToString(buffer);
-        const status = responseData[0].status;
-        const responseType = context2?.responseInfo?.[status];
-        if (responseType) {
-          let parsedValue;
-          try {
-            parsedValue = JSON.parse(value);
-          } catch (err) {
-            return {
-              success: false,
-              data: void 0,
-              error: new Error(DataOperationErrorMessages.InvalidResponse)
-            };
-          }
-          if (responseType.type === "array" && !Array.isArray(parsedValue)) {
-            return {
-              success: false,
-              data: void 0,
-              error: new Error(DataOperationErrorMessages.InvalidResponse)
-            };
-          }
-          if (responseType.type === "object" && (typeof parsedValue !== "object" || Array.isArray(parsedValue) || parsedValue === null)) {
-            return {
-              success: false,
-              data: void 0,
-              error: new Error(DataOperationErrorMessages.InvalidResponse)
-            };
-          }
-          return {
-            success: true,
-            data: parsedValue
-          };
-        } else {
-          return {
-            success: true,
-            data: value
-          };
-        }
-      }
-      return {
-        success: false,
-        data: responseData,
-        error: new Error(DataOperationErrorMessages.InvalidResponse)
-      };
-    }
-  }
-  _ensureContext(context2, defaultOperationName) {
-    if (!context2) {
-      context2 = {};
-    }
-    if (!context2.operationName) {
-      context2.operationName = defaultOperationName;
-    }
-    return context2;
-  }
-  /**
-   * Checks if the given URL is a Dataverse API call
-   * @param url - The URL to check
-   * @returns True if the URL is a Dataverse API call, false otherwise
-   */
-  _isDataverseCall(url) {
-    if (!url) {
-      return false;
-    }
-    const urlLower = decodeURIComponent(url).toLowerCase();
-    return urlLower.includes("/api/data/") && !urlLower.includes("/apim");
-  }
-  /**
-   * Decodes ArrayBuffer to string, handling both browser and Node.js environments
-   * @param buffer - The ArrayBuffer to decode
-   * @returns The decoded string
-   */
-  _decodeArrayBuffer(buffer) {
-    if (typeof TextDecoder !== "undefined") {
-      return new TextDecoder().decode(buffer);
-    }
-    const uint8Array = new Uint8Array(buffer);
-    const results = [];
-    const chunkSize = 8192;
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
-      results.push(String.fromCharCode.apply(null, Array.from(chunk)));
-    }
-    try {
-      return results.join("");
-    } catch {
-      return results.join("");
-    }
-  }
-};
-// Static identifiers for services
-// Used to identify specific services within the PowerApps environment
-__publicField(_RuntimeDataClient, "SERVICES", {
-  dataClient: "AppHttpClientPlugin",
-  identityService: "AppIdentityServicePlugin"
-});
-// Static identifiers for service actions
-// Used to identify specific actions within the service
-// These actions are used to send HTTP requests and get access tokens
-__publicField(_RuntimeDataClient, "ACTIONS", {
-  sendHttp: "sendHttpAsync",
-  getToken: "getAppAccessTokenAsync",
-  getDynamicToken: "getAppDynamicResourceAccessTokenAsync"
-});
-// Request source identifier for telemetry
-// Used to identify the source of the request in telemetry data
-__publicField(_RuntimeDataClient, "REQUEST_SOURCE", "PublishedApp");
-var RuntimeDataClient = _RuntimeDataClient;
-
-var _RuntimeMetadataClient = class _RuntimeMetadataClient {
-  // Private member for the PowerOperationExecutor
-  // The PowerOperationExecutor is used to execute operations on the clients
-  constructor(_powerOperationExecutor) {
-    __publicField(this, "_powerOperationExecutor");
-    this._powerOperationExecutor = _powerOperationExecutor;
-  }
-  /**
-   * Creates a new instance of RuntimeMetadataClient
-   * @param powerOperationExecutor - The powerOperationExecutor instance
-   * @returns Promise resolving to IRuntimeMetadataClient
-   */
-  static createInstanceAsync(powerOperationExecutor) {
-    return Promise.resolve(new _RuntimeMetadataClient(powerOperationExecutor));
-  }
-  /**
-   * Fetches app connection configurations
-   * @returns Promise resolving to connection reference details
-   * @throws Error if the operation fails
-   */
-  async getAppConnectionConfigsAsync() {
-    try {
-      const config = {
-        service: _RuntimeMetadataClient.SERVICES.powerAppsClient,
-        action: _RuntimeMetadataClient.ACTIONS.getConnectionConfigs,
-        params: []
-      };
-      const result = await this._executeOperation(config);
-      return { success: true, data: result };
-    } catch (error) {
-      throw new PowerDataRuntimeError(ErrorCodes.ConnectionConfigFetchFailed, getErrorMessage(error));
-    }
-  }
-  /**
-   * Fetches app data source configurations
-   * @returns Promise resolving to connection reference details
-   * @throws Error if the operation fails
-   */
-  async getAppDataSourceConfigsAsync() {
-    try {
-      const config = {
-        service: _RuntimeMetadataClient.SERVICES.powerAppsClient,
-        action: _RuntimeMetadataClient.ACTIONS.getDataSourceConfigs,
-        params: []
-      };
-      const result = await this._executeOperation(config);
-      return { success: true, data: result };
-    } catch (error) {
-      throw new PowerDataRuntimeError(ErrorCodes.DataSourceConfigFetchFailed, getErrorMessage(error));
-    }
-  }
-  /**
-   * Executes a metadata operation with the given configuration
-   * @param config - The operation configuration
-   * @returns Promise resolving to the operation result
-   * @throws Error if the operation fails
-   */
-  async _executeOperation(config) {
-    try {
-      const result = await this._powerOperationExecutor.execute(config.service, config.action, config.params || []);
-      const rawResult = result && typeof result === "object" && "data" in result ? result.data : result;
-      const normalizedResult = Array.isArray(rawResult) && rawResult.length === 1 && rawResult[0] && typeof rawResult[0] === "object"
-        ? rawResult[0]
-        : rawResult;
-      if (!normalizedResult || typeof normalizedResult !== "object" || Array.isArray(normalizedResult)) {
-        throw new PowerDataRuntimeError(ErrorCodes.InvalidMetadataResponse, JSON.stringify(rawResult));
-      }
-      const lowerCaseResult = Object.keys(normalizedResult).reduce((acc, key) => {
-        acc[key.toLowerCase()] = normalizedResult[key];
-        return acc;
-      }, {});
-      return lowerCaseResult;
-    } catch (error) {
-      if (error instanceof PowerDataRuntimeError) {
-        throw error;
-      }
-      throw new PowerDataRuntimeError(ErrorCodes.InvalidMetadataResponse, getErrorMessage(error));
-    }
-  }
-};
-// Static identifiers for services and actions
-// Used to identify specific services and actions within the PowerApps environment
-// These identifiers are used to execute operations through the PowerOperationExecutor
-// The services provide the functionality for the operations
-__publicField(_RuntimeMetadataClient, "SERVICES", {
-  powerAppsClient: "AppPowerAppsClientPlugin"
-});
-// The actions define the specific operations to be performed
-__publicField(_RuntimeMetadataClient, "ACTIONS", {
-  getConnectionConfigs: "loadAppConnectionsAsync_v2",
-  getDataSourceConfigs: "getAppCdsDataSourceConfigsAsync"
-});
-var RuntimeMetadataClient = _RuntimeMetadataClient;
-
-var RuntimeClientProvider = class {
-  // Constructor for RuntimeClientProvider
-  // Accepts an optional IPowerOperationExecutor instance for executing operations
-  // If not provided, uses the default PowerOperationExecutor instance
-  constructor(powerOperationExecutor) {
-    // Private members for data and metadata clients
-    // The data client is responsible for handling data operations
-    __publicField(this, "_dataClient");
-    // The metadata client is responsible for handling metadata operations
-    __publicField(this, "_metadataClient");
-    // The operation executor is used to execute operations on the clients
-    // It is an instance of IPowerOperationExecutor, which provides the necessary methods for executing operations
-    __publicField(this, "_operationExecutor");
-    this._operationExecutor = powerOperationExecutor;
-  }
-  /**
-   * Gets or initializes the data client
-   * @throws Error if client initialization fails
-   * @returns Promise resolving to IRuntimeDataClient
-   */
-  async getDataClientAsync() {
-    try {
-      if (!this._dataClient) {
-        this._dataClient = await this._initializeDataClient();
-      }
-      if (!this._dataClient) {
-        throw new PowerDataRuntimeError(ErrorCodes.DataClientNotInitialized);
-      }
-      return this._dataClient;
-    } catch (error) {
-      throw new PowerDataRuntimeError(ErrorCodes.DataClientInitFailed, getErrorMessage(error));
-    }
-  }
-  /**
-   * Gets or initializes the metadata client
-   * @throws Error if client initialization fails
-   * @returns Promise resolving to IRuntimeMetadataClient
-   */
-  async getMetadataClientAsync() {
-    try {
-      if (!this._metadataClient) {
-        this._metadataClient = await this._initializeMetadataClient();
-      }
-      if (!this._metadataClient) {
-        throw new PowerDataRuntimeError(ErrorCodes.MetadataClientNotInitialized);
-      }
-      return this._metadataClient;
-    } catch (error) {
-      throw new PowerDataRuntimeError(ErrorCodes.MetadataClientInitFailed, getErrorMessage(error));
-    }
-  }
-  /**
-   * Initializes the data client
-   * @returns Promise resolving to IRuntimeDataClient
-   */
-  async _initializeDataClient() {
-    return RuntimeDataClient.createInstanceAsync(this._operationExecutor);
-  }
-  /**
-   * Initializes the metadata client
-   * @returns Promise resolving to IRuntimeMetadataClient
-   */
-  async _initializeMetadataClient() {
-    return RuntimeMetadataClient.createInstanceAsync(this._operationExecutor);
-  }
-  /**
-   * Resets both clients, forcing re-initialization on next use
-   * Useful for testing or recovering from error states
-   */
-  reset() {
-    this._dataClient = void 0;
-    this._metadataClient = void 0;
-  }
-};
-
+// node_modules/@microsoft/power-apps/dist/internal/data/core/data/executors/shared/stringQueryOptions.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 function convertOptionsToQueryString(options) {
   if (!options) {
     return "";
@@ -1491,449 +1044,22 @@ function convertOptionsToQueryString(options) {
   return parts.length ? `?${parts.join("&")}` : "";
 }
 
-var ODATA_NEXT_LINK = "@odata.nextLink";
-var DataverseDataOperationExecutor = class {
-  constructor(clientProvider) {
-    // Static identifiers for services and actions
-    // Used to identify specific services and actions within the PowerApps environment
-    __publicField(this, "_clientProvider");
-    __publicField(this, "_databaseReferences");
-    this._clientProvider = clientProvider;
-  }
-  /**
-   * Creates a new record in Dataverse
-   * @param tableName - The name of the table
-   * @param data - The record data to create
-   * @returns Promise resolving to operation result
-   */
-  async createRecordAsync(tableName, data) {
-    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName), async (dataClient, requestUrl, dataSourceInfo) => {
-      const dataverseResponse = await dataClient.createDataAsync(
-        requestUrl,
-        DataSources.Dataverse,
-        // Use environment name for Dataverse authentication
-        tableName,
-        data,
-        {
-          operationName: DataverseOperationName.CreateRecord,
-          datasetName: dataSourceInfo.datasetName,
-          isDataVerseOperation: true
-        }
-      );
-      const returnValue = {
-        success: dataverseResponse.success,
-        data: dataverseResponse.data,
-        error: dataverseResponse.error
-      };
-      return returnValue;
-    }, DataOperationErrorMessages.CreateFailed);
-  }
-  /**
-   * Updates an existing record in Dataverse
-   * @param tableName - The name of the table
-   * @param id - The record identifier
-   * @param data - The updated record data
-   * @returns Promise resolving to operation result
-   */
-  async updateRecordAsync(tableName, id, data) {
-    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, `(${id})`), async (dataClient, requestUrl, dataSourceInfo) => {
-      const dataverseResponse = await dataClient.updateDataAsync(requestUrl, DataSources.Dataverse, tableName, data, {
-        operationName: DataverseOperationName.UpdateRecord,
-        datasetName: dataSourceInfo.datasetName,
-        isDataVerseOperation: true
-      });
-      const returnValue = {
-        success: dataverseResponse.success,
-        data: dataverseResponse.data,
-        error: dataverseResponse.error
-      };
-      return returnValue;
-    }, DataOperationErrorMessages.UpdateFailed);
-  }
-  /**
-   * Deletes a record from Dataverse
-   * @param tableName - The name of the table
-   * @param id - The record identifier
-   * @returns Promise resolving to operation result
-   */
-  async deleteRecordAsync(tableName, id) {
-    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, `(${id})`), async (dataClient, requestUrl, dataSourceInfo) => {
-      const dataverseResponse = await dataClient.deleteDataAsync(requestUrl, DataSources.Dataverse, tableName, {
-        operationName: DataverseOperationName.DeleteRecord,
-        datasetName: dataSourceInfo.datasetName,
-        isDataVerseOperation: true
-      });
-      const returnValue = {
-        success: dataverseResponse.success,
-        data: dataverseResponse.data,
-        error: dataverseResponse.error
-      };
-      return returnValue;
-    }, DataOperationErrorMessages.DeleteFailed);
-  }
-  /**
-   * Retrieves a single record from Dataverse
-   * @param tableName - The name of the table
-   * @param id - The record identifier
-   * @param options - The retrieval options
-   * @returns Promise resolving to operation result
-   */
-  async retrieveRecordAsync(tableName, id, options) {
-    const { maxPageSize = 500, ...rest } = options || {};
-    const optionsString = convertOptionsToQueryString(rest);
-    const headers = { Prefer: `odata.maxpagesize=${maxPageSize},odata.include-annotations=*` };
-    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, `(${id})${optionsString}`), async (dataClient, requestUrl, dataSourceInfo) => {
-      const dataverseResponse = await dataClient.retrieveDataAsync(
-        requestUrl,
-        DataSources.Dataverse,
-        tableName,
-        HttpMethod.GET,
-        headers,
-        void 0,
-        // No body for GET requests
-        {
-          operationName: DataverseOperationName.RetrieveRecord,
-          datasetName: dataSourceInfo.datasetName,
-          isDataVerseOperation: true
-        }
-      );
-      const returnValue = {
-        success: dataverseResponse.success,
-        data: dataverseResponse.data,
-        error: dataverseResponse.error
-      };
-      return returnValue;
-    }, DataOperationErrorMessages.RetrieveFailed);
-  }
-  /**
-   * Retrieves multiple records from Dataverse
-   * @param tableName - The name of the table
-   * @param options - The retrieval options
-   * @param maxPageSize - Optional maximum page size
-   * @returns Promise resolving to operation result
-   */
-  async retrieveMultipleRecordsAsync(tableName, options) {
-    const { maxPageSize = 500, ...rest } = options || {};
-    const optionsString = convertOptionsToQueryString(rest);
-    const headers = { Prefer: `odata.maxpagesize=${maxPageSize},odata.include-annotations=*` };
-    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, optionsString), async (dataClient, requestUrl, dataSourceInfo) => {
-      const dataverseResponse = await dataClient.retrieveDataAsync(
-        requestUrl,
-        DataSources.Dataverse,
-        tableName,
-        HttpMethod.GET,
-        headers,
-        void 0,
-        // No body for GET requests
-        {
-          operationName: DataverseOperationName.RetrieveMultipleRecords,
-          datasetName: dataSourceInfo.datasetName,
-          isDataVerseOperation: true
-        }
-      );
-      const returnValue = {
-        success: dataverseResponse.success,
-        data: dataverseResponse?.data?.value || [],
-        skipToken: extractSkipToken(dataverseResponse?.data?.[ODATA_NEXT_LINK]),
-        error: dataverseResponse.error
-      };
-      return returnValue;
-    }, DataOperationErrorMessages.RetrieveMultipleFailed);
-  }
-  /**
-   * Executes a custom Dataverse operation
-   * @param operation - The operation to execute
-   * @returns Promise resolving to operation result
-   */
-  async executeAsync(operation) {
-    const { dataverseRequest } = operation;
-    if (!dataverseRequest) {
-      return {
-        success: false,
-        data: null,
-        error: { message: "Dataverse request details are required for Dataverse operations." }
-      };
-    }
-    const { action, parameters } = dataverseRequest;
-    switch (action) {
-      // Future custom actions can be handled here
-      case "getEntityMetadata":
-        const { tableName, options } = parameters;
-        if (!tableName) {
-          return {
-            success: false,
-            data: null,
-            error: { message: "Table name is required for getEntityMetadata action." }
-          };
-        }
-        return this._getEntityMetadata(tableName, options ?? {});
-      default:
-        Log.trackEvent("DataverseDataOperation.UnsupportedAction", {
-          message: `Unsupported Dataverse action: ${action}`
-        });
-        return {
-          success: false,
-          data: null,
-          error: { message: `Unsupported Dataverse action: "${action}"` }
-        };
-    }
-  }
-  async _getEntityMetadata(tableName, options) {
-    const client = await this._getDataClient();
-    const dataSourceInfo = await this._getDataverseDataSourceInfo(tableName);
-    const url = this._generateMetadataRequestUrl(dataSourceInfo, options);
-    return client.retrieveDataAsync(url, DataSources.Dataverse, "EntityDefinitions", HttpMethod.GET, {
-      Consistency: "Strong"
-      // Force CDS to return latest metadata
-    }, void 0, {
-      operationName: DataverseOperationName.RetrieveRecord,
-      datasetName: dataSourceInfo.datasetName,
-      isDataVerseOperation: true
-    });
-  }
-  /**
-   * Returns the database references for Dataverse, grouped by environment/database.
-   * These come from the launch app response via runtime metadata client.
-   */
-  async getDatabaseReferences() {
-    if (this._databaseReferences) {
-      return this._databaseReferences;
-    }
-    const runtimeDatabaseReferences = await this._loadDatabaseReferencesFromRuntime();
-    if (runtimeDatabaseReferences && Object.keys(runtimeDatabaseReferences).length > 0) {
-      this._databaseReferences = runtimeDatabaseReferences;
-      return this._databaseReferences;
-    }
-    throw new PowerDataRuntimeError(ErrorCodes.DataSourceNotFound, "Failed to load Dataverse database references from runtime.");
-  }
-  /**
-   * Loads database references from runtime metadata client (launch app response).
-   */
-  async _loadDatabaseReferencesFromRuntime() {
-    try {
-      const metadataClient = await this._getMetadataClient();
-      const response = await metadataClient.getAppDataSourceConfigsAsync();
-      if (!response.success || !response.data) {
-        return void 0;
-      }
-      const cdsDataSources = Object.values(response.data);
-      if (cdsDataSources.length === 0) {
-        return void 0;
-      }
-      const databaseReferences = {};
-      for (const cdsDataSource of cdsDataSources) {
-        const cdsConfig = cdsDataSource;
-        const instanceUrl = this._extractInstanceUrlFromRuntimeUrl(cdsConfig.runtimeUrl);
-        const envName = "default.cds";
-        if (!databaseReferences[envName]) {
-          databaseReferences[envName] = {
-            databaseDetails: {
-              referenceType: "Environmental",
-              environmentName: envName,
-              overrideValues: {
-                status: "NotSpecified",
-                environmentVariableName: ""
-              },
-              linkedEnvironmentMetadata: {
-                resourceId: "",
-                friendlyName: "",
-                uniqueName: "",
-                domainName: "",
-                version: cdsConfig.version || "9.2",
-                instanceUrl,
-                instanceApiUrl: cdsConfig.runtimeUrl,
-                baseLanguage: 1033,
-                instanceState: "Ready",
-                createdTime: "",
-                platformSku: ""
-              }
-            },
-            dataSources: {}
-          };
-        }
-        const dataSourceName = cdsConfig.entitySetName || cdsConfig.logicalName;
-        databaseReferences[envName].dataSources[dataSourceName] = {
-          entitySetName: cdsConfig.entitySetName,
-          logicalName: cdsConfig.logicalName,
-          isHidden: false
-        };
-      }
-      return databaseReferences;
-    } catch (error) {
-      Log.trackEvent("DataverseDataOperation.FailedToLoadDatabaseReferences", {
-        message: "[DataverseDataOperation] Failed to load database references from runtime",
-        error
-      });
-      return void 0;
-    }
-  }
-  _extractInstanceUrlFromRuntimeUrl(runtimeUrl) {
-    try {
-      const matches = runtimeUrl.match(/^(https?:\/\/[^\/]+)/);
-      return matches ? matches[1] : runtimeUrl;
-    } catch (error) {
-      Log.trackEvent("DataverseDataOperation.FailedToExtractInstanceUrl", {
-        message: "[DataverseDataOperation] Failed to extract instance URL from runtime URL",
-        error
-      });
-      return runtimeUrl;
-    }
-  }
-  /**
-   * Helper to get a native data client and database reference
-   */
-  async _getDataClient() {
-    const dataClient = await this._clientProvider.getDataClientAsync();
-    if (!dataClient) {
-      Log.trackEvent("DataverseDataOperation.DataClientNotAvailable", {
-        message: "[DataverseDataOperation] Data client is not available"
-      });
-      throw new PowerDataRuntimeError(ErrorCodes.DataClientNotAvailable, "Data client is not available.");
-    }
-    return dataClient;
-  }
-  /**
-   * Gets the metadata client instance
-   */
-  async _getMetadataClient() {
-    const metadataClient = await this._clientProvider.getMetadataClientAsync();
-    if (!metadataClient) {
-      Log.trackEvent("DataverseDataOperation.MetadataClientNotAvailable", {
-        message: "[DataverseDataOperation] Metadata client is not available"
-      });
-      throw new PowerDataRuntimeError(ErrorCodes.MetadataClientNotAvailable);
-    }
-    return metadataClient;
-  }
-  /**
-   * Template method for connector-style CRUD operations to reduce duplication.
-   * Handles client, dataSourceInfo, requestUrl, and error handling.
-   */
-  async _executeNativeDataverseOperation(tableName, buildUrl, operation, errorMessage) {
-    try {
-      const dataClient = await this._getDataClient();
-      const dataSourceInfo = await this._getDataverseDataSourceInfo(tableName);
-      const requestUrl = buildUrl(dataSourceInfo, tableName);
-      return operation(dataClient, requestUrl, dataSourceInfo);
-    } catch (error) {
-      return createErrorResponse(error, errorMessage);
-    }
-  }
-  /**
-   * Helper to get the Dataverse datasourceinfo from databaseReferences
-   */
-  async _getDataverseDataSourceInfo(tableName) {
-    let dbRefs;
-    try {
-      dbRefs = await this.getDatabaseReferences();
-    } catch (error) {
-      Log.trackEvent("DataverseDataOperation.GetDataSourceInfoFailed", {
-        message: "[DataverseDataOperation] Failed to get database references",
-        tableName,
-        error
-      });
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new PowerDataRuntimeError(ErrorCodes.DataSourceNotFound, `Failed to get Dataverse data source info for table '${tableName}': ${errorMessage}`);
-    }
-    for (const dbKey of Object.keys(dbRefs)) {
-      const db = dbRefs[dbKey];
-      if (db.dataSources[tableName]) {
-        const ds = db.dataSources[tableName];
-        return {
-          datasetName: db.databaseDetails?.environmentName,
-          referenceType: db.databaseDetails?.referenceType,
-          linkedEnvironmentMetadata: db.databaseDetails?.linkedEnvironmentMetadata,
-          entitySetName: ds?.entitySetName,
-          logicalName: ds?.logicalName,
-          isHidden: ds?.isHidden,
-          tableId: ds?.logicalName,
-          apis: {}
-        };
-      }
-    }
-    const notFoundMsg = `No Dataverse data source found for table: ${tableName}`;
-    Log.trackEvent("DataverseDataOperation.DataSourceNotFound", {
-      message: notFoundMsg,
-      tableName
-    });
-    throw new PowerDataRuntimeError(ErrorCodes.DataSourceNotFound, notFoundMsg);
-  }
-  /**
-   * Helper to construct the Dataverse API URL using instanceUrl if available, otherwise fallback to runtimeUrl.
-   */
-  _getInstanceUrl(dataSourceInfo) {
-    const instanceUrl = dataSourceInfo.linkedEnvironmentMetadata?.instanceUrl;
-    if (!instanceUrl) {
-      throw new PowerDataRuntimeError(ErrorCodes.DataClientInitFailed, "No instanceUrl found for Dataverse table.");
-    }
-    const baseUrl = instanceUrl.endsWith("/") ? instanceUrl : `${instanceUrl}/`;
-    return baseUrl;
-  }
-  /**
-   * Helper to construct the Dataverse API URL using instanceUrl if available, otherwise fallback to runtimeUrl.
-   */
-  _getDataverseRequestUrl(dataSourceInfo, tableName, urlPath = "") {
-    const baseUrl = this._getInstanceUrl(dataSourceInfo);
-    return `${baseUrl}api/data/v9.0/${tableName}${urlPath}`;
-  }
-  /**
-   * Constructs GET request URL for fetching metadata using options object.
-   * @param dataSourceInfo - The data source information for the Dataverse table.
-   * @param options - The options for the metadata request.
-   * @returns The constructed metadata request URL.
-   */
-  _generateMetadataRequestUrl(dataSourceInfo, options) {
-    const { logicalName } = dataSourceInfo;
-    if (!logicalName) {
-      throw new PowerDataRuntimeError(ErrorCodes.DataClientInitFailed, "No logicalName found for Dataverse table.");
-    }
-    const url = new URL(`${this._getInstanceUrl(dataSourceInfo)}api/data/v9.0/EntityDefinitions(LogicalName='${logicalName}')`);
-    const { metadata, schema } = options;
-    const selects = new Set(Array.isArray(metadata) ? metadata : []);
-    selects.add("LogicalName");
-    const expands = [];
-    if (schema?.manyToOne) {
-      expands.push("ManyToOneRelationships");
-    }
-    if (schema?.oneToMany) {
-      expands.push("OneToManyRelationships");
-    }
-    if (schema?.manyToMany) {
-      expands.push("ManyToManyRelationships");
-    }
-    if (schema?.columns === "all") {
-      expands.push("Attributes");
-    } else if (schema && Array.isArray(schema.columns) && schema.columns.length > 0) {
-      const attributesCollection = schema.columns.map((a) => `'${a}'`).join(",");
-      expands.push(`Attributes($filter=Microsoft.Dynamics.CRM.In(PropertyName='LogicalName',PropertyValues=[${attributesCollection}]))`);
-    }
-    url.search = new URLSearchParams({
-      $select: [...selects].join(","),
-      $expand: expands.join(",")
-    }).toString();
-    return url.toString();
-  }
-};
-function extractSkipToken(nextLink) {
-  if (!nextLink?.trim()) {
-    return void 0;
-  }
-  const match = nextLink.match(/[\?&]\$?skiptoken=([^&#]+)/i);
-  return match ? decodeURIComponent(match[1]) : void 0;
-}
-
+// node_modules/@microsoft/power-apps/dist/internal/data/core/data/executors/connectorDataOperationExecutor.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var ConnectorDataOperationExecutor = class {
+  // =====================================
+  // Private Members
+  // =====================================
+  _clientProvider;
+  _connectionsService;
+  _databaseReferences;
+  _connectionReferences;
   // =====================================
   // Constructor
   // =====================================
   constructor(clientProvider, connectionsService) {
-    // =====================================
-    // Private Members
-    // =====================================
-    __publicField(this, "_clientProvider");
-    __publicField(this, "_connectionsService");
-    __publicField(this, "_databaseReferences");
-    __publicField(this, "_connectionReferences");
     this._validateConstructorParams(clientProvider, connectionsService);
     this._clientProvider = clientProvider;
     this._connectionsService = connectionsService;
@@ -1966,6 +1092,30 @@ var ConnectorDataOperationExecutor = class {
     } catch (error) {
       return createErrorResponse(error, DataOperationErrorMessages.UpdateFailed);
     }
+  }
+  /**
+   * Uploads binary data to a file column in the specified table
+   */
+  async uploadFileToRecord(tableName, id, columnName, fileName, data) {
+    return createErrorResponse(new Error(`uploadFileToRecord is not implemented for connector data sources, ${tableName}, ${columnName}, ${fileName}, ${id}, ${JSON.stringify(data)}`), DataOperationErrorMessages.UploadFailed);
+  }
+  /**
+   * Downloads binary data from a file column — not supported for connector data sources
+   */
+  async downloadFileFromRecord(tableName, id, columnName) {
+    return createErrorResponse(new Error(`downloadFileFromRecord is not implemented for connector data sources, ${tableName}, ${columnName}, ${id}`), DataOperationErrorMessages.DownloadFailed);
+  }
+  /**
+   * Deletes a file or image from a column — not supported for connector data sources
+   */
+  async deleteFileOrImageFromRecord(tableName, id, columnName) {
+    return createErrorResponse(new Error(`deleteFileOrImageFromRecord is not implemented for connector data sources, ${tableName}, ${id}, ${columnName}`), DataOperationErrorMessages.DeleteFileOrImageFailed);
+  }
+  /**
+   * Downloads an image from an image column — not supported for connector data sources
+   */
+  async downloadImageFromRecord(tableName, id, columnName, _fullSize) {
+    return createErrorResponse(new Error(`downloadImageFromRecord is not implemented for connector data sources, ${tableName}, ${id}, ${columnName}`), DataOperationErrorMessages.DownloadFailed);
   }
   /**
    * Deletes a record from the specified table
@@ -2037,9 +1187,10 @@ var ConnectorDataOperationExecutor = class {
       const requestUrl = await this._buildOperationUrl(operation, config);
       const bodyParam = await this._buildOperationBody(operation, tableName);
       const headers = await this._buildOperationHeader(operation, tableName);
+      const resolvedHeaders = bodyParam instanceof Uint8Array ? { ...headers ?? {}, "Content-Type": "application/octet-stream" } : headers;
       const httpMethod = this._getHttpMethod(requestUrl, dataSourceInfo, operation.connectorOperation.operationName);
       const responseInfo = dataSourceInfo.apis[operation.connectorOperation.operationName]?.responseInfo;
-      const result = await dataClient.retrieveDataAsync(requestUrl, config.apiId, tableName, httpMethod, headers, bodyParam, {
+      const result = await dataClient.retrieveDataAsync(requestUrl, config.apiId, tableName, httpMethod, resolvedHeaders, bodyParam, {
         isExecuteAsync: true,
         // Use the connector operation name for telemetry, may be a better idea to use executeAsync
         // here and just log the connector operation name in the custom dimensions leaving comment for PR.
@@ -2104,6 +1255,9 @@ var ConnectorDataOperationExecutor = class {
     if (bodyParam) {
       const value = rawParams[bodyParam.name];
       if (value !== void 0 && value !== null) {
+        if (bodyParam.format === "binary" && typeof value === "string") {
+          return base64ToUint8Array(value);
+        }
         return JSON.stringify(value);
       }
     }
@@ -2157,8 +1311,9 @@ var ConnectorDataOperationExecutor = class {
     }
     if (typeof inputParams === "object" && !Array.isArray(inputParams)) {
       apiParamSpec.forEach((param) => {
-        if (param.in === "header" && param.name in inputParams) {
-          headers[param.name] = inputParams[param.name];
+        const headerValue = inputParams[param.name];
+        if (param.in === "header" && headerValue !== void 0) {
+          headers[param.name] = headerValue;
         }
       });
     }
@@ -2183,11 +1338,13 @@ var ConnectorDataOperationExecutor = class {
     const dataSourceInfo = await this._connectionsService.getDataSource(tableName);
     const isSharedSql = (connectionReference.apiId ?? "").indexOf("shared_sql") > -1;
     const isSharePoint = (connectionReference.apiId ?? "").indexOf("shared_sharepointonline") > -1;
+    const datasetName = connectionReference.datasetNameOverride?.trim() || connectionReference.datasetName || "";
+    const rawTableId = connectionReference.tableNameOverride?.trim() || dataSourceInfo.tableId;
     const urlBuilder = {
       runtimeUrl: connectionReference.runtimeUrl ?? "",
       connectionName: connectionReference.connectionName ?? "",
-      datasetName: connectionReference.datasetName ? isSharedSql ? connectionReference.datasetNameOverride : isSharePoint ? encodeURIComponent(encodeURIComponent(connectionReference.datasetName)) : encodeURIComponent(connectionReference.datasetName) : "",
-      tableId: isSharedSql ? encodeURIComponent(encodeURIComponent(dataSourceInfo.tableId)) : dataSourceInfo.tableId,
+      datasetName: isSharePoint ? encodeURIComponent(encodeURIComponent(datasetName)) : encodeURIComponent(datasetName),
+      tableId: encodeURIComponent(rawTableId),
       version: dataSourceInfo.version,
       isSharedSql
     };
@@ -2317,6 +1474,14 @@ var ConnectorDataOperationExecutor = class {
             }
           }
         });
+        const datasetOverride = this._getNormalizedParamValue(operationParams, "dataset");
+        if (datasetOverride !== void 0) {
+          rawParamValues["dataset"] = config.apiId.indexOf("shared_sharepointonline") !== -1 ? encodeURIComponent(datasetOverride) : datasetOverride;
+        }
+        const tableNameOverride = this._getNormalizedParamValue(operationParams, "tableName");
+        if (tableNameOverride !== void 0) {
+          rawParamValues["tableName"] = tableNameOverride;
+        }
       } else if (Array.isArray(operationParams)) {
         apiParams.forEach((param, index) => {
           rawParamValues[param.name] = operationParams[index];
@@ -2351,7 +1516,7 @@ var ConnectorDataOperationExecutor = class {
     const usedParams = /* @__PURE__ */ new Set();
     let processedPath = path;
     const queryParams = [];
-    apiParams.forEach((param, index) => {
+    apiParams.forEach((param, _index) => {
       const paramValue = rawParamValues[param.name];
       if (paramValue === void 0) {
         return;
@@ -2386,7 +1551,7 @@ var ConnectorDataOperationExecutor = class {
       runtimeUrl: connectionReference.runtimeUrl ?? "",
       connectionName: connectionReference.connectionName ?? "",
       datasetName: connectionReference.datasetName ?? "",
-      tableId: dataSourceInfo.tableId,
+      tableId: connectionReference.tableNameOverride?.trim() || dataSourceInfo.tableId,
       version: dataSourceInfo.version
     };
     return config;
@@ -2422,23 +1587,649 @@ var ConnectorDataOperationExecutor = class {
   }
 };
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/data/executors/dataverseDataOperationExecutor.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var ODATA_NEXT_LINK = "@odata.nextLink";
+var DataverseDataOperationExecutor = class {
+  // Static identifiers for services and actions
+  // Used to identify specific services and actions within the PowerApps environment
+  _clientProvider;
+  _dataSourceService;
+  _databaseReferences;
+  constructor(clientProvider, dataSourceService) {
+    this._clientProvider = clientProvider;
+    this._dataSourceService = dataSourceService;
+  }
+  /**
+   * Creates a new record in Dataverse
+   * @param tableName - The name of the table
+   * @param data - The record data to create
+   * @returns Promise resolving to operation result
+   */
+  async createRecordAsync(tableName, data) {
+    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName), async (dataClient, requestUrl, dataSourceInfo) => {
+      const dataverseResponse = await dataClient.createDataAsync(
+        requestUrl,
+        DataSources.Dataverse,
+        // Use environment name for Dataverse authentication
+        tableName,
+        data,
+        {
+          operationName: DataverseOperationName.CreateRecord,
+          datasetName: dataSourceInfo.datasetName,
+          isDataVerseOperation: true
+        }
+      );
+      const returnValue = {
+        success: dataverseResponse.success,
+        data: dataverseResponse.data,
+        error: dataverseResponse.error
+      };
+      return returnValue;
+    }, DataOperationErrorMessages.CreateFailed);
+  }
+  /**
+   * Updates an existing record in Dataverse
+   * @param tableName - The name of the table
+   * @param id - The record identifier
+   * @param data - The updated record data
+   * @returns Promise resolving to operation result
+   */
+  async updateRecordAsync(tableName, id, data) {
+    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, `(${id})`), async (dataClient, requestUrl, dataSourceInfo) => {
+      const dataverseResponse = await dataClient.updateDataAsync(requestUrl, DataSources.Dataverse, tableName, data, {
+        operationName: DataverseOperationName.UpdateRecord,
+        datasetName: dataSourceInfo.datasetName,
+        isDataVerseOperation: true
+      });
+      const returnValue = {
+        success: dataverseResponse.success,
+        data: dataverseResponse.data,
+        error: dataverseResponse.error
+      };
+      return returnValue;
+    }, DataOperationErrorMessages.UpdateFailed);
+  }
+  /**
+   * Uploads a record with binary data to Dataverse
+   * @param tableName - The name of the table
+   * @param id - The record identifier
+   * @param columnName - The name of the file column
+   * @param fileName - The name of the file (used for Dataverse file columns)
+   * @param data - The binary data to upload
+   * @returns Promise resolving to operation result
+   */
+  async uploadFileToRecord(tableName, id, columnName, fileName, data) {
+    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, `(${id})/${columnName}`), async (dataClient, requestUrl, dataSourceInfo) => {
+      const dataverseResponse = await dataClient.uploadDataAsync(requestUrl, DataSources.Dataverse, tableName, data, {
+        operationName: DataverseOperationName.UploadRecord,
+        datasetName: dataSourceInfo.datasetName,
+        isDataVerseOperation: true,
+        fileName
+      });
+      const returnValue = {
+        success: dataverseResponse.success,
+        data: dataverseResponse.data,
+        error: dataverseResponse.error
+      };
+      return returnValue;
+    }, DataOperationErrorMessages.UploadFailed);
+  }
+  /**
+   * Downloads binary data from a file column in Dataverse
+   * @param tableName - The name of the table
+   * @param id - The record identifier
+   * @param columnName - The name of the file column
+   * @returns Promise resolving to operation result with file contents as binary data (Uint8Array)
+   */
+  async downloadFileFromRecord(tableName, id, columnName) {
+    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, `(${id})/${columnName}/$value`), async (dataClient, requestUrl, dataSourceInfo) => {
+      const dataverseResponse = await dataClient.retrieveDataAsync(requestUrl, DataSources.Dataverse, tableName, HttpMethod.GET, { Accept: "application/octet-stream" }, void 0, {
+        operationName: DataverseOperationName.DownloadRecord,
+        datasetName: dataSourceInfo.datasetName,
+        isDataVerseOperation: true,
+        skipBatch: true
+      });
+      const returnValue = {
+        success: dataverseResponse.success,
+        data: dataverseResponse.data,
+        error: dataverseResponse.error,
+        fileName: dataverseResponse.fileName
+      };
+      return returnValue;
+    }, DataOperationErrorMessages.DownloadFailed);
+  }
+  /**
+   * Downloads an image from a Dataverse image column via the Web API $value endpoint.
+   * @param tableName - The logical name of the Dataverse table.
+   * @param recordId - The identifier of the record.
+   * @param columnName - The name of the image column.
+   */
+  async downloadImageFromRecord(tableName, recordId, columnName, fullSize = false) {
+    const urlSuffix = `(${recordId})/${columnName}/$value${fullSize ? "?size=full" : ""}`;
+    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, urlSuffix), async (dataClient, requestUrl, dataSourceInfo) => {
+      const dataverseResponse = await dataClient.retrieveDataAsync(requestUrl, DataSources.Dataverse, tableName, HttpMethod.GET, { Accept: "application/octet-stream" }, void 0, {
+        operationName: DataverseOperationName.DownloadRecord,
+        datasetName: dataSourceInfo.datasetName,
+        isDataVerseOperation: true,
+        skipBatch: true
+      });
+      return {
+        success: dataverseResponse.success,
+        data: dataverseResponse.data,
+        error: dataverseResponse.error,
+        fileName: deriveImageFileName(columnName, dataverseResponse.data)
+      };
+    }, DataOperationErrorMessages.DownloadFailed);
+  }
+  /**
+   * Deletes a record from Dataverse
+   * @param tableName - The name of the table
+   * @param id - The record identifier
+   * @returns Promise resolving to operation result
+   */
+  async deleteRecordAsync(tableName, id) {
+    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, `(${id})`), async (dataClient, requestUrl, dataSourceInfo) => {
+      const dataverseResponse = await dataClient.deleteDataAsync(requestUrl, DataSources.Dataverse, tableName, {
+        operationName: DataverseOperationName.DeleteRecord,
+        datasetName: dataSourceInfo.datasetName,
+        isDataVerseOperation: true
+      });
+      const returnValue = {
+        success: dataverseResponse.success,
+        data: dataverseResponse.data,
+        error: dataverseResponse.error
+      };
+      return returnValue;
+    }, DataOperationErrorMessages.DeleteFailed);
+  }
+  /**
+   * Deletes the file or image data stored in a file/image column of an existing record.
+   * Sends a DELETE request to `/<tableName>(<recordId>)/<columnName>`.
+   * Only applicable to Dataverse data sources.
+   * @param tableName - The logical name of the Dataverse table.
+   * @param recordId - The identifier of the record.
+   * @param columnName - The name of the file or image column whose data should be deleted.
+   */
+  async deleteFileOrImageFromRecord(tableName, recordId, columnName) {
+    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, `(${recordId})/${columnName}`), async (dataClient, requestUrl, dataSourceInfo) => {
+      const dataverseResponse = await dataClient.deleteDataAsync(requestUrl, DataSources.Dataverse, tableName, {
+        operationName: DataverseOperationName.DeleteFileOrImageRecord,
+        datasetName: dataSourceInfo.datasetName,
+        isDataVerseOperation: true
+      });
+      return {
+        success: dataverseResponse.success,
+        data: dataverseResponse.data,
+        error: dataverseResponse.error
+      };
+    }, DataOperationErrorMessages.DeleteFileOrImageFailed);
+  }
+  /**
+   * Retrieves a single record from Dataverse
+   * @param tableName - The name of the table
+   * @param id - The record identifier
+   * @param options - The retrieval options
+   * @returns Promise resolving to operation result
+   */
+  async retrieveRecordAsync(tableName, id, options) {
+    const { maxPageSize = 500, ...rest } = options || {};
+    const optionsString = convertOptionsToQueryString(rest);
+    const headers = { Prefer: `odata.maxpagesize=${maxPageSize},odata.include-annotations=*` };
+    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, `(${id})${optionsString}`), async (dataClient, requestUrl, dataSourceInfo) => {
+      const dataverseResponse = await dataClient.retrieveDataAsync(
+        requestUrl,
+        DataSources.Dataverse,
+        tableName,
+        HttpMethod.GET,
+        headers,
+        void 0,
+        // No body for GET requests
+        {
+          operationName: DataverseOperationName.RetrieveRecord,
+          datasetName: dataSourceInfo.datasetName,
+          isDataVerseOperation: true
+        }
+      );
+      const returnValue = {
+        success: dataverseResponse.success,
+        data: dataverseResponse.data,
+        error: dataverseResponse.error
+      };
+      return returnValue;
+    }, DataOperationErrorMessages.RetrieveFailed);
+  }
+  /**
+   * Retrieves multiple records from Dataverse
+   * @param tableName - The name of the table
+   * @param options - The retrieval options
+   * @param maxPageSize - Optional maximum page size
+   * @returns Promise resolving to operation result
+   */
+  async retrieveMultipleRecordsAsync(tableName, options) {
+    const { maxPageSize = 500, ...rest } = options || {};
+    const optionsString = convertOptionsToQueryString(rest);
+    const headers = { Prefer: `odata.maxpagesize=${maxPageSize},odata.include-annotations=*` };
+    return this._executeNativeDataverseOperation(tableName, (dataSourceInfo, tblName) => this._getDataverseRequestUrl(dataSourceInfo, tblName, optionsString), async (dataClient, requestUrl, dataSourceInfo) => {
+      const dataverseResponse = await dataClient.retrieveDataAsync(
+        requestUrl,
+        DataSources.Dataverse,
+        tableName,
+        HttpMethod.GET,
+        headers,
+        void 0,
+        // No body for GET requests
+        {
+          operationName: DataverseOperationName.RetrieveMultipleRecords,
+          datasetName: dataSourceInfo.datasetName,
+          isDataVerseOperation: true
+        }
+      );
+      const returnValue = {
+        success: dataverseResponse.success,
+        data: dataverseResponse?.data?.value || [],
+        skipToken: extractSkipToken(dataverseResponse?.data?.[ODATA_NEXT_LINK]),
+        error: dataverseResponse.error
+      };
+      return returnValue;
+    }, DataOperationErrorMessages.RetrieveMultipleFailed);
+  }
+  /**
+   * Executes a custom Dataverse operation
+   * @param operation - The operation to execute
+   * @returns Promise resolving to operation result
+   */
+  async executeAsync(operation) {
+    const { dataverseRequest } = operation;
+    if (!dataverseRequest) {
+      return {
+        success: false,
+        data: null,
+        error: { message: "Dataverse request details are required for Dataverse operations." }
+      };
+    }
+    const { action, parameters } = dataverseRequest;
+    switch (action) {
+      // Future custom actions can be handled here
+      case "getEntityMetadata": {
+        const { tableName, options } = parameters;
+        if (!tableName) {
+          return {
+            success: false,
+            data: null,
+            error: { message: "Table name is required for getEntityMetadata action." }
+          };
+        }
+        return this._getEntityMetadata(tableName, options ?? {});
+      }
+      case "customapi": {
+        const { operationName, tableName, body } = parameters;
+        const dataSourceInfo = await this._dataSourceService.getDataSource(tableName);
+        const apiDef = dataSourceInfo.apis[operationName];
+        if (!apiDef) {
+          return {
+            success: false,
+            data: null,
+            error: {
+              message: `Operation '${operationName}' not found in data source '${tableName}'.`
+            }
+          };
+        }
+        const dvInfo = await this._getDefaultDataverseEnvironmentInfo();
+        const instanceUrl = this._getInstanceUrl(dvInfo);
+        const bodyRecord = body ?? {};
+        let resolvedPath = apiDef.path;
+        const requestBody = {};
+        const functionParams = [];
+        for (const param of apiDef.parameters) {
+          if (param.in === "path") {
+            resolvedPath = resolvedPath.replace(`{${param.name}}`, encodeURIComponent(String(bodyRecord[param.name] ?? "")));
+          } else if (param.in === "body") {
+            if (param.name in bodyRecord) {
+              requestBody[param.name] = bodyRecord[param.name];
+            }
+          } else if (param.in === "query") {
+            if (param.name in bodyRecord) {
+              functionParams.push(`${param.name}=${toODataLiteral(bodyRecord[param.name], param.type)}`);
+            }
+          }
+        }
+        if (functionParams.length > 0) {
+          resolvedPath += `(${functionParams.join(",")})`;
+        }
+        const requestUrl = `${instanceUrl}${resolvedPath.startsWith("/") ? resolvedPath.slice(1) : resolvedPath}`;
+        const dataClient = await this._getDataClient();
+        const isGet = apiDef.method.toUpperCase() === HttpMethod.GET;
+        const response = isGet ? await dataClient.retrieveDataAsync(requestUrl, DataSources.Dataverse, operationName, HttpMethod.GET, void 0, void 0, {
+          operationName: DataverseOperationName.ExecuteCustomApi,
+          datasetName: dvInfo.datasetName,
+          isDataVerseOperation: true
+        }) : await dataClient.createDataAsync(requestUrl, DataSources.Dataverse, operationName, requestBody, {
+          operationName: DataverseOperationName.ExecuteCustomApi,
+          datasetName: dvInfo.datasetName,
+          isDataVerseOperation: true
+        });
+        return { success: response.success, data: response.data, error: response.error };
+      }
+      default:
+        Log.trackEvent("DataverseDataOperation.UnsupportedAction", {
+          message: `Unsupported Dataverse action: ${action}`
+        });
+        return {
+          success: false,
+          data: null,
+          error: { message: `Unsupported Dataverse action: "${action}"` }
+        };
+    }
+  }
+  async _getEntityMetadata(tableName, options) {
+    const client = await this._getDataClient();
+    const dataSourceInfo = await this._getDataverseDataSourceInfo(tableName);
+    const url = this._generateMetadataRequestUrl(dataSourceInfo, options);
+    return client.retrieveDataAsync(url, DataSources.Dataverse, "EntityDefinitions", HttpMethod.GET, {
+      Consistency: "Strong"
+      // Force CDS to return latest metadata
+    }, void 0, {
+      operationName: DataverseOperationName.RetrieveRecord,
+      datasetName: dataSourceInfo.datasetName,
+      isDataVerseOperation: true
+    });
+  }
+  /**
+   * Returns the database references for Dataverse, grouped by environment/database.
+   * These come from the launch app response via runtime metadata client.
+   */
+  async getDatabaseReferences() {
+    if (this._databaseReferences) {
+      return this._databaseReferences;
+    }
+    const runtimeDatabaseReferences = await this._loadDatabaseReferencesFromRuntime();
+    if (runtimeDatabaseReferences && Object.keys(runtimeDatabaseReferences).length > 0) {
+      this._databaseReferences = runtimeDatabaseReferences;
+      return this._databaseReferences;
+    }
+    throw new PowerDataRuntimeError(ErrorCodes.DataSourceNotFound, "Failed to load Dataverse database references from runtime.");
+  }
+  /**
+   * Loads database references from runtime metadata client (launch app response).
+   */
+  async _loadDatabaseReferencesFromRuntime() {
+    try {
+      const metadataClient = await this._getMetadataClient();
+      const response = await metadataClient.getAppDataSourceConfigsAsync();
+      if (!response.success || !response.data) {
+        return void 0;
+      }
+      const cdsDataSources = Object.values(response.data);
+      if (cdsDataSources.length === 0) {
+        return void 0;
+      }
+      const databaseReferences = {};
+      for (const cdsDataSource of cdsDataSources) {
+        const cdsConfig = cdsDataSource;
+        const instanceUrl = this._extractInstanceUrlFromRuntimeUrl(cdsConfig.runtimeUrl);
+        const envName = "default.cds";
+        if (!databaseReferences[envName]) {
+          databaseReferences[envName] = {
+            databaseDetails: {
+              referenceType: "Environmental",
+              environmentName: envName,
+              overrideValues: {
+                status: "NotSpecified",
+                environmentVariableName: ""
+              },
+              linkedEnvironmentMetadata: {
+                resourceId: "",
+                // This would be available in the full app info
+                friendlyName: "",
+                uniqueName: "",
+                domainName: "",
+                version: cdsConfig.version || "9.2",
+                instanceUrl,
+                instanceApiUrl: cdsConfig.runtimeUrl,
+                baseLanguage: 1033,
+                instanceState: "Ready",
+                createdTime: "",
+                platformSku: ""
+              }
+            },
+            dataSources: {}
+          };
+        }
+        const dataSourceName = cdsConfig.entitySetName || cdsConfig.logicalName;
+        databaseReferences[envName].dataSources[dataSourceName] = {
+          entitySetName: cdsConfig.entitySetName,
+          logicalName: cdsConfig.logicalName,
+          isHidden: false
+        };
+      }
+      return databaseReferences;
+    } catch (error) {
+      Log.trackEvent("DataverseDataOperation.FailedToLoadDatabaseReferences", {
+        message: "[DataverseDataOperation] Failed to load database references from runtime",
+        error
+      });
+      return void 0;
+    }
+  }
+  _extractInstanceUrlFromRuntimeUrl(runtimeUrl) {
+    try {
+      const matches = runtimeUrl.match(/^(https?:\/\/[^/]+)/);
+      return matches ? matches[1] : runtimeUrl;
+    } catch (error) {
+      Log.trackEvent("DataverseDataOperation.FailedToExtractInstanceUrl", {
+        message: "[DataverseDataOperation] Failed to extract instance URL from runtime URL",
+        error
+      });
+      return runtimeUrl;
+    }
+  }
+  /**
+   * Helper to get a native data client and database reference
+   */
+  async _getDataClient() {
+    const dataClient = await this._clientProvider.getDataClientAsync();
+    if (!dataClient) {
+      Log.trackEvent("DataverseDataOperation.DataClientNotAvailable", {
+        message: "[DataverseDataOperation] Data client is not available"
+      });
+      throw new PowerDataRuntimeError(ErrorCodes.DataClientNotAvailable, "Data client is not available.");
+    }
+    return dataClient;
+  }
+  /**
+   * Gets the metadata client instance
+   */
+  async _getMetadataClient() {
+    const metadataClient = await this._clientProvider.getMetadataClientAsync();
+    if (!metadataClient) {
+      Log.trackEvent("DataverseDataOperation.MetadataClientNotAvailable", {
+        message: "[DataverseDataOperation] Metadata client is not available"
+      });
+      throw new PowerDataRuntimeError(ErrorCodes.MetadataClientNotAvailable);
+    }
+    return metadataClient;
+  }
+  /**
+   * Template method for connector-style CRUD operations to reduce duplication.
+   * Handles client, dataSourceInfo, requestUrl, and error handling.
+   */
+  async _executeNativeDataverseOperation(tableName, buildUrl, operation, errorMessage) {
+    try {
+      const dataClient = await this._getDataClient();
+      const dataSourceInfo = await this._getDataverseDataSourceInfo(tableName);
+      const requestUrl = buildUrl(dataSourceInfo, tableName);
+      return operation(dataClient, requestUrl, dataSourceInfo);
+    } catch (error) {
+      return createErrorResponse(error, errorMessage);
+    }
+  }
+  /**
+   * Helper to get the Dataverse datasourceinfo from databaseReferences
+   */
+  async _getDataverseDataSourceInfo(tableName) {
+    let dbRefs;
+    try {
+      dbRefs = await this.getDatabaseReferences();
+    } catch (error) {
+      Log.trackEvent("DataverseDataOperation.GetDataSourceInfoFailed", {
+        message: "[DataverseDataOperation] Failed to get database references",
+        tableName,
+        error
+      });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new PowerDataRuntimeError(ErrorCodes.DataSourceNotFound, `Failed to get Dataverse data source info for table '${tableName}': ${errorMessage}`);
+    }
+    for (const dbKey of Object.keys(dbRefs)) {
+      const db = dbRefs[dbKey];
+      if (db.dataSources[tableName]) {
+        const ds = db.dataSources[tableName];
+        return {
+          datasetName: db.databaseDetails?.environmentName,
+          referenceType: db.databaseDetails?.referenceType,
+          linkedEnvironmentMetadata: db.databaseDetails?.linkedEnvironmentMetadata,
+          entitySetName: ds?.entitySetName,
+          logicalName: ds?.logicalName,
+          isHidden: ds?.isHidden,
+          tableId: ds?.logicalName,
+          apis: {}
+        };
+      }
+    }
+    const notFoundMsg = `No Dataverse data source found for table: ${tableName}`;
+    Log.trackEvent("DataverseDataOperation.DataSourceNotFound", {
+      message: notFoundMsg,
+      tableName
+    });
+    throw new PowerDataRuntimeError(ErrorCodes.DataSourceNotFound, notFoundMsg);
+  }
+  /**
+   * Returns the Dataverse environment info from the default CDS database reference.
+   * Used for custom API operations where the data source name is not an entity table.
+   */
+  async _getDefaultDataverseEnvironmentInfo() {
+    const dbRefs = await this.getDatabaseReferences();
+    const db = dbRefs["default.cds"];
+    if (!db?.databaseDetails?.linkedEnvironmentMetadata?.instanceUrl) {
+      throw new PowerDataRuntimeError(ErrorCodes.DataSourceNotFound, "No Dataverse environment found at default.cds database reference.");
+    }
+    return {
+      datasetName: db.databaseDetails.environmentName,
+      referenceType: db.databaseDetails.referenceType,
+      linkedEnvironmentMetadata: db.databaseDetails.linkedEnvironmentMetadata,
+      tableId: "",
+      apis: {}
+    };
+  }
+  _getInstanceUrl(dataSourceInfo) {
+    const instanceUrl = dataSourceInfo.linkedEnvironmentMetadata?.instanceUrl;
+    if (!instanceUrl) {
+      throw new PowerDataRuntimeError(ErrorCodes.DataClientInitFailed, "No instanceUrl found for Dataverse table.");
+    }
+    const baseUrl = instanceUrl.endsWith("/") ? instanceUrl : `${instanceUrl}/`;
+    return baseUrl;
+  }
+  _getDataverseRequestUrl(dataSourceInfo, tableName, urlPath = "") {
+    const baseUrl = this._getInstanceUrl(dataSourceInfo);
+    return `${baseUrl}api/data/v9.0/${tableName}${urlPath}`;
+  }
+  /**
+   * Constructs GET request URL for fetching metadata using options object.
+   * @param dataSourceInfo - The data source information for the Dataverse table.
+   * @param options - The options for the metadata request.
+   * @returns The constructed metadata request URL.
+   */
+  _generateMetadataRequestUrl(dataSourceInfo, options) {
+    const { logicalName } = dataSourceInfo;
+    if (!logicalName) {
+      throw new PowerDataRuntimeError(ErrorCodes.DataClientInitFailed, "No logicalName found for Dataverse table.");
+    }
+    const url = new URL(`${this._getInstanceUrl(dataSourceInfo)}api/data/v9.0/EntityDefinitions(LogicalName='${logicalName}')`);
+    const { metadata, schema } = options;
+    const selects = new Set(Array.isArray(metadata) ? metadata : []);
+    selects.add("LogicalName");
+    const expands = [];
+    if (schema?.manyToOne) {
+      expands.push("ManyToOneRelationships");
+    }
+    if (schema?.oneToMany) {
+      expands.push("OneToManyRelationships");
+    }
+    if (schema?.manyToMany) {
+      expands.push("ManyToManyRelationships");
+    }
+    if (schema?.columns === "all") {
+      expands.push("Attributes");
+    } else if (schema && Array.isArray(schema.columns) && schema.columns.length > 0) {
+      const attributesCollection = schema.columns.map((a) => `'${a}'`).join(",");
+      expands.push(`Attributes($filter=Microsoft.Dynamics.CRM.In(PropertyName='LogicalName',PropertyValues=[${attributesCollection}]))`);
+    }
+    url.search = new URLSearchParams({
+      $select: [...selects].join(","),
+      $expand: expands.join(",")
+    }).toString();
+    return url.toString();
+  }
+};
+function extractSkipToken(nextLink) {
+  if (!nextLink?.trim()) {
+    return void 0;
+  }
+  const match = nextLink.match(/[?&]\$?skiptoken=([^&#]+)/i);
+  return match ? decodeURIComponent(match[1]) : void 0;
+}
+function sniffImageExtension(data) {
+  if (data.length >= 3 && data[0] === 255 && data[1] === 216 && data[2] === 255) {
+    return "jpg";
+  }
+  if (data.length >= 8 && data[0] === 137 && data[1] === 80 && data[2] === 78 && data[3] === 71 && data[4] === 13 && data[5] === 10 && data[6] === 26 && data[7] === 10) {
+    return "png";
+  }
+  if (data.length >= 4 && data[0] === 71 && data[1] === 73 && data[2] === 70 && data[3] === 56) {
+    return "gif";
+  }
+  if (data.length >= 2 && data[0] === 66 && data[1] === 77) {
+    return "bmp";
+  }
+  return "png";
+}
+function deriveImageFileName(columnName, data) {
+  const ext = data ? sniffImageExtension(data) : "png";
+  return `${columnName}.${ext}`;
+}
+function toODataLiteral(value, type) {
+  if (value === null || value === void 0) {
+    return "null";
+  }
+  if (type === "string") {
+    return `'${String(value).replace(/'/g, "''")}'`;
+  }
+  return String(value);
+}
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/metadata/runtimeDataSourceService.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var DataSourceServiceError;
 /* @__PURE__ */ (function(DataSourceServiceError2) {
 })(DataSourceServiceError || (DataSourceServiceError = {}));
 var RuntimeDataSourceService = class {
+  _powerDataSourcesInfoProvider;
+  /**
+   * Data source information
+   */
+  _dataSourcesInfo;
+  /**
+   * Indicates whether the service has been initialized
+   */
+  _isInitialized;
   /**
    * Creates a new instance of RuntimeDataSourceService
    */
   constructor(_powerDataSourcesInfoProvider) {
-    __publicField(this, "_powerDataSourcesInfoProvider");
-    /**
-     * Data source information
-     */
-    __publicField(this, "_dataSourcesInfo");
-    /**
-     * Indicates whether the service has been initialized
-     */
-    __publicField(this, "_isInitialized");
     this._powerDataSourcesInfoProvider = _powerDataSourcesInfoProvider;
     this._dataSourcesInfo = {};
     this._isInitialized = false;
@@ -2512,18 +2303,697 @@ var RuntimeDataSourceService = class {
   }
 };
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/metadata/runtimeMetadataOperations.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var RuntimeMetadataOperations = class {
+  _clientProvider;
+  // Static identifiers for services and actions
+  // Used to identify specific services and actions within the PowerApps environment
+  constructor(_clientProvider) {
+    this._clientProvider = _clientProvider;
+  }
+  async getConnections(context2) {
+    const client = await this._clientProvider.getMetadataClientAsync();
+    const response = await client.getAppConnectionConfigsAsync(context2);
+    return {
+      success: response.success,
+      data: response.data ? [response.data] : [],
+      error: response.error
+    };
+  }
+  async getConnectionApis(_connectionId, context2) {
+    const client = await this._clientProvider.getMetadataClientAsync();
+    const response = await client.getAppDataSourceConfigsAsync(context2);
+    return {
+      success: response.success,
+      data: response.data ? [response.data] : [],
+      error: response.error
+    };
+  }
+};
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/runtimeClient/runtimeDataClient.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var RuntimeDataClient = class _RuntimeDataClient {
+  _powerOperationExecutor;
+  _createRequestBody;
+  // Static identifiers for services
+  // Used to identify specific services within the PowerApps environment
+  static SERVICES = {
+    dataClient: "AppHttpClientPlugin",
+    identityService: "AppIdentityServicePlugin"
+  };
+  // Static identifiers for service actions
+  // Used to identify specific actions within the service
+  // These actions are used to send HTTP requests and get access tokens
+  static ACTIONS = {
+    sendHttp: "sendHttpAsync",
+    getToken: "getAppAccessTokenAsync",
+    getDynamicToken: "getAppDynamicResourceAccessTokenAsync"
+  };
+  // Request source identifier for telemetry
+  // Used to identify the source of the request in telemetry data
+  static REQUEST_SOURCE = "PublishedApp";
+  // Constructor for RuntimeDataClient
+  // Accepts an IPowerOperationExecutor instance for executing operations
+  constructor(_powerOperationExecutor, _createRequestBody) {
+    this._powerOperationExecutor = _powerOperationExecutor;
+    this._createRequestBody = _createRequestBody;
+  }
+  /**
+   * Creates a new instance of RuntimeDataClient
+   */
+  static createInstanceAsync(powerOperationExecutor, createRequestBody) {
+    return Promise.resolve(new _RuntimeDataClient(powerOperationExecutor, createRequestBody));
+  }
+  /**
+   * Creates data using POST method
+   * @param url - The URL for the request
+   * @param apiId - The API ID for authentication
+   * @param tableName - The name of the table to access
+   * @param body - The request body for the POST method
+   * @param operationName - Optional operation name for telemetry
+   * @return Promise resolving to the response data
+   * @throws Error if the request fails or the response is invalid
+   * @throws Error if the request body is invalid
+   */
+  async createDataAsync(url, apiId, tableName, body, context2) {
+    try {
+      if (!body) {
+        throw new Error(`${DataOperationErrorMessages.InvalidRequest}: ${DataOperationErrorMessages.MissingRequestBody}`);
+      }
+      const config = {
+        url,
+        method: HttpMethod.POST,
+        apiId,
+        tableName,
+        body: JSON.stringify(body)
+      };
+      context2 = this._ensureContext(context2, "runtimeDataClient.createDataAsync");
+      return await this._executeRequest(config, context2);
+    } catch (error) {
+      if (isOperationResult(error)) {
+        return error;
+      } else {
+        return createErrorResponse(error, DataOperationErrorMessages.CreateFailed);
+      }
+    }
+  }
+  /**
+   * Updates data using PATCH method
+   * @param url - The URL for the request
+   * @param apiId - The API ID for authentication
+   * @param tableName - The name of the table to access
+   * @param body - The request body for the PATCH method
+   * @param operationName - Optional operation name for telemetry
+   * @return Promise resolving to the response data
+   * @throws Error if the request fails or the response is invalid
+   * @throws Error if the request body is invalid
+   */
+  async updateDataAsync(url, apiId, tableName, body, context2) {
+    try {
+      if (!body) {
+        throw new Error(`${DataOperationErrorMessages.InvalidRequest}: ${DataOperationErrorMessages.MissingRequestBody}`);
+      }
+      const config = {
+        url,
+        method: HttpMethod.PATCH,
+        apiId,
+        tableName,
+        body: JSON.stringify(body)
+      };
+      context2 = this._ensureContext(context2, "runtimeDataClient.updateDataAsync");
+      return await this._executeRequest(config, context2);
+    } catch (error) {
+      if (isOperationResult(error)) {
+        return error;
+      } else {
+        return createErrorResponse(error, DataOperationErrorMessages.UpdateFailed);
+      }
+    }
+  }
+  /**
+   * Uploads data using PATCH method for file/image columns.
+   * @param url - The URL for the request (should include the column name, e.g., /accounts(id)/sample_filecolumn)
+   * @param apiId - The API ID for authentication
+   * @param tableName - The name of the table to access
+   * @param data - The binary content to upload
+   * @param context - Operation context, must include fileName for upload and may include telemetry information
+   * @return Promise resolving to the response data
+   * @remarks File size is not validated client-side; limits are enforced server-side by Dataverse.
+   * For file columns the limit is 128 MB or the column's MaxSizeInKB setting, whichever is lower.
+   * For image columns the maximum configurable size is 30 MB.
+   */
+  async uploadDataAsync(url, apiId, tableName, data, context2) {
+    try {
+      if (!data) {
+        throw new Error(`${DataOperationErrorMessages.InvalidRequest}: ${DataOperationErrorMessages.MissingRequestBody}`);
+      }
+      if (!context2?.fileName) {
+        throw new Error(`${DataOperationErrorMessages.InvalidRequest}: ${DataOperationErrorMessages.MissingFileData}`);
+      }
+      const config = {
+        url,
+        method: HttpMethod.PATCH,
+        apiId,
+        tableName,
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "x-ms-file-name": context2.fileName
+        },
+        body: data
+      };
+      context2 = this._ensureContext(context2, "runtimeDataClient.uploadDataAsync");
+      return await this._executeRequest(config, context2);
+    } catch (error) {
+      if (isOperationResult(error)) {
+        return error;
+      } else {
+        return createErrorResponse(error, DataOperationErrorMessages.UploadFailed);
+      }
+    }
+  }
+  /**
+   * Deletes data using DELETE method
+   * @param url - The URL for the request
+   * @param connectionApi - The API ID for authentication
+   * @param serviceNamespace - The name of the service namespace
+   * @param operationName - Optional operation name for telemetry
+   * @return Promise resolving to the response data
+   * @throws Error if the request fails or the response is invalid
+   */
+  async deleteDataAsync(url, connectionApi, serviceNamespace, context2) {
+    try {
+      const config = {
+        url,
+        method: HttpMethod.DELETE,
+        apiId: connectionApi,
+        tableName: serviceNamespace
+      };
+      context2 = this._ensureContext(context2, "runtimeDataClient.deleteDataAsync");
+      return await this._executeRequest(config, context2);
+    } catch (error) {
+      if (isOperationResult(error)) {
+        return error;
+      } else {
+        return createErrorResponse(error, DataOperationErrorMessages.DeleteFailed);
+      }
+    }
+  }
+  /**
+   * Retrieves data using GET or POST method
+   * @param url - The URL for the request
+   * @param apiId - The API ID for authentication
+   * @param tableName - The name of the table to access
+   * @param method - The HTTP method
+   * @param body - Optional request body for POST method
+   * @param context - Optional operation context
+   * @param operationName - Optional operation name for telemetry
+   * @return Promise resolving to the response data
+   * @throws Error if the request fails or the response is invalid
+   */
+  async retrieveDataAsync(url, apiId, tableName, method, headers, body, context2) {
+    try {
+      const config = {
+        url,
+        method,
+        apiId,
+        tableName,
+        headers,
+        // Pass binary bodies (Uint8Array/ArrayBuffer) through untouched. JSON.stringify would
+        // turn a Uint8Array into an index-keyed object ({"0":137,...}), corrupting uploads.
+        body: body ? body instanceof Uint8Array || body instanceof ArrayBuffer ? body : typeof body === "string" ? body : JSON.stringify(body) : void 0
+      };
+      context2 = this._ensureContext(context2, "runtimeDataClient.retrieveDataAsync");
+      return await this._executeRequest(config, context2);
+    } catch (error) {
+      if (isOperationResult(error)) {
+        return error;
+      } else {
+        return createErrorResponse(error, DataOperationErrorMessages.RetrieveFailed);
+      }
+    }
+  }
+  /**
+   * Gets an access token for the specified API.
+   * If the API is Dataverse, retrieves a dynamic resource token; otherwise, retrieves a standard appservice API token.
+   * @param apiId - The API ID for authentication
+   * @param datasetName - Optional dataset name for Dataverse
+   * @returns Promise resolving to the access token
+   * @throws Error if token acquisition fails
+   */
+  async _getAccessToken(apiId, datasetName) {
+    try {
+      let result;
+      if (apiId === DataSources.Dataverse) {
+        result = await this._powerOperationExecutor.execute(_RuntimeDataClient.SERVICES.identityService, _RuntimeDataClient.ACTIONS.getDynamicToken, [datasetName]);
+      } else {
+        result = await this._powerOperationExecutor.execute(_RuntimeDataClient.SERVICES.identityService, _RuntimeDataClient.ACTIONS.getToken, [apiId]);
+      }
+      return result.data;
+    } catch (error) {
+      throw new PowerDataRuntimeError(ErrorCodes.TokenAcquisitionFailed, getErrorMessage(error));
+    }
+  }
+  // Merge Prefer headers for Dataverse batch payloads
+  _mergePreferHeaders(configHeaders, method) {
+    let preferHeader = "";
+    if (configHeaders?.Prefer) {
+      preferHeader += configHeaders.Prefer;
+    }
+    if (method === HttpMethod.POST || method === HttpMethod.PATCH) {
+      const defaultPrefer = "return=representation,odata.include-annotations=*";
+      if (preferHeader) {
+        if (!preferHeader.includes("return=representation")) {
+          preferHeader += (preferHeader ? "," : "") + defaultPrefer;
+        }
+      } else {
+        preferHeader = defaultPrefer;
+      }
+    }
+    return preferHeader;
+  }
+  /**
+   * Creates headers for the HTTP request.
+   * Combines default headers with any custom headers provided in the config.
+   * Custom headers are optional and take precedence over default headers.
+   * @param token - The access token for authentication
+   * @param config - The HTTP request configuration
+   * @return The headers for the request
+   * @throws Error if header creation fails
+   */
+  _createHeaders(token, config, context2) {
+    const isFileUpload = config.headers?.["Content-Type"] === "application/octet-stream";
+    const baseHeaders = {
+      Accept: "application/json",
+      "x-ms-protocol-semantics": "cdp",
+      ServiceNamespace: config.tableName,
+      Authorization: `paauth ${token}`,
+      "x-ms-pa-client-custom-headers-options": '{"addCustomHeaders":true}',
+      "x-ms-enable-selects": "true",
+      "x-ms-pa-client-telemetry-options": `paclient-telemetry {"operationName":"${context2?.operationName ?? "runtimeDataClient.executeRequest"}"}`,
+      "x-ms-pa-client-telemetry-additional-data": `{"apiId":"${config.apiId}"}`
+    };
+    if (config.apiId === DataSources.Dataverse) {
+      baseHeaders["x-ms-protocol-semantics"] = DataSources.Dataverse;
+      baseHeaders.Authorization = `dynamicauth ${token}`;
+      const { baseUrl, encodedPath } = extractDataverseUrlParts(config.url);
+      const batchId = context2?.batchId || "";
+      const preferHeader = this._mergePreferHeaders(config.headers, config.method);
+      if (!isFileUpload && !context2?.skipBatch) {
+        baseHeaders.BatchInfo = JSON.stringify({
+          baseUrl,
+          encodedPath,
+          // for use in batch payload construction
+          headers: {
+            Accept: "application/json",
+            ...preferHeader ? { Prefer: preferHeader } : {},
+            ...config.method === HttpMethod.POST || config.method === HttpMethod.PATCH ? { "Content-Type": "application/json" } : {}
+          },
+          batchId
+        });
+      }
+    }
+    if (config.headers) {
+      return { ...baseHeaders, ...config.headers };
+    }
+    return baseHeaders;
+  }
+  /**
+   * Executes an HTTP request with the given configuration
+   * @param config - The HTTP request configuration
+   * @param context - Optional operation context
+   * @return Promise resolving to the response data
+   * @throws Error if the request fails or the response is invalid
+   * @throws Error if the response content type is invalid
+   */
+  async _executeRequest(config, context2) {
+    const token = await this._getAccessToken(config.apiId, context2?.datasetName);
+    const headers = this._createHeaders(token, config, context2);
+    const requestBody = config.body ? this._createRequestBody ? this._createRequestBody(config) : config.headers?.["Content-Type"] === "application/octet-stream" ? new Blob([config.body], { type: "application/octet-stream" }) : new Blob([config.body], { type: "application/json" }) : "";
+    let result;
+    try {
+      result = await this._powerOperationExecutor.execute(_RuntimeDataClient.SERVICES.dataClient, _RuntimeDataClient.ACTIONS.sendHttp, [
+        {
+          url: config.url,
+          method: config.method,
+          requestSource: _RuntimeDataClient.REQUEST_SOURCE,
+          allowSessionStorage: true,
+          returnDirectResponse: true,
+          headers
+        },
+        requestBody,
+        "arraybuffer"
+      ]);
+    } catch (error) {
+      return {
+        success: false,
+        error: parseHttpPluginError(error),
+        data: void 0
+      };
+    }
+    const responseData = result.data;
+    const responseHeaders = responseData[0].headers;
+    const contentType = responseHeaders["Content-Type"];
+    if (!contentType) {
+      return {
+        success: true,
+        data: void 0
+      };
+    } else if (contentType.indexOf("application/json") !== -1) {
+      const data = result.data[1];
+      let text = this._decodeArrayBuffer(data);
+      if (!text) {
+        text = "{}";
+      }
+      const parsedResult = JSON.parse(text);
+      if (context2?.isDataVerseOperation || this._isDataverseCall(config.url)) {
+        return {
+          success: true,
+          data: parsedResult
+        };
+      } else if (!context2?.isExecuteAsync && "value" in parsedResult && Array.isArray(parsedResult.value)) {
+        return {
+          success: true,
+          data: parsedResult.value,
+          count: parsedResult["@odata.count"]
+        };
+      } else {
+        return {
+          success: true,
+          data: parsedResult
+        };
+      }
+    } else if (contentType.indexOf("image/") !== -1) {
+      const buffer = result.data[1];
+      if (buffer instanceof ArrayBuffer) {
+        const value = arrayBufferToBase64(buffer);
+        return {
+          success: true,
+          data: value
+        };
+      }
+      return {
+        success: true,
+        data: buffer
+      };
+    } else if (contentType.indexOf("application/octet-stream") !== -1) {
+      const buffer = result.data[1];
+      const rawFileName = responseHeaders["x-ms-file-name"];
+      const fileName = typeof rawFileName === "string" && rawFileName ? rawFileName : void 0;
+      return {
+        success: true,
+        data: buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer,
+        ...fileName !== void 0 ? { fileName } : {}
+      };
+    } else {
+      const buffer = result.data[1];
+      if (buffer instanceof ArrayBuffer) {
+        const value = convertArrayBufferToString(buffer);
+        const status = responseData[0].status;
+        const responseType = context2?.responseInfo?.[status];
+        if (responseType) {
+          let parsedValue;
+          try {
+            parsedValue = JSON.parse(value);
+          } catch (err) {
+            return {
+              success: false,
+              data: void 0,
+              error: new Error(DataOperationErrorMessages.InvalidResponse)
+            };
+          }
+          if (responseType.type === "array" && !Array.isArray(parsedValue)) {
+            return {
+              success: false,
+              data: void 0,
+              error: new Error(DataOperationErrorMessages.InvalidResponse)
+            };
+          }
+          if (responseType.type === "object" && (typeof parsedValue !== "object" || Array.isArray(parsedValue) || parsedValue === null)) {
+            return {
+              success: false,
+              data: void 0,
+              error: new Error(DataOperationErrorMessages.InvalidResponse)
+            };
+          }
+          return {
+            success: true,
+            data: parsedValue
+          };
+        } else {
+          return {
+            success: true,
+            data: value
+          };
+        }
+      }
+      const statusCode = responseData[0].status;
+      if (statusCode >= 200 && statusCode < 300) {
+        return {
+          success: true,
+          data: void 0
+        };
+      }
+      return {
+        success: false,
+        data: responseData,
+        error: new Error(DataOperationErrorMessages.InvalidResponse)
+      };
+    }
+  }
+  _ensureContext(context2, defaultOperationName) {
+    if (!context2) {
+      context2 = {};
+    }
+    if (!context2.operationName) {
+      context2.operationName = defaultOperationName;
+    }
+    return context2;
+  }
+  /**
+   * Checks if the given URL is a Dataverse API call
+   * @param url - The URL to check
+   * @returns True if the URL is a Dataverse API call, false otherwise
+   */
+  _isDataverseCall(url) {
+    if (!url) {
+      return false;
+    }
+    const urlLower = decodeURIComponent(url).toLowerCase();
+    return urlLower.includes("/api/data/") && !urlLower.includes("/apim");
+  }
+  /**
+   * Decodes ArrayBuffer to string, handling both browser and Node.js environments
+   * @param buffer - The ArrayBuffer to decode
+   * @returns The decoded string
+   */
+  _decodeArrayBuffer(buffer) {
+    if (typeof TextDecoder !== "undefined") {
+      return new TextDecoder().decode(buffer);
+    }
+    const uint8Array = new Uint8Array(buffer);
+    const results = [];
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+      results.push(String.fromCharCode.apply(null, Array.from(chunk)));
+    }
+    try {
+      return results.join("");
+    } catch {
+      return results.join("");
+    }
+  }
+};
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/runtimeClient/runtimeMetadataClient.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var RuntimeMetadataClient = class _RuntimeMetadataClient {
+  _powerOperationExecutor;
+  // Static identifiers for services and actions
+  // Used to identify specific services and actions within the PowerApps environment
+  // These identifiers are used to execute operations through the PowerOperationExecutor
+  // The services provide the functionality for the operations
+  static SERVICES = {
+    powerAppsClient: "AppPowerAppsClientPlugin"
+  };
+  // The actions define the specific operations to be performed
+  static ACTIONS = {
+    getConnectionConfigs: "loadAppConnectionsAsync_v2",
+    getDataSourceConfigs: "getAppCdsDataSourceConfigsAsync"
+  };
+  // Private member for the PowerOperationExecutor
+  // The PowerOperationExecutor is used to execute operations on the clients
+  constructor(_powerOperationExecutor) {
+    this._powerOperationExecutor = _powerOperationExecutor;
+  }
+  /**
+   * Creates a new instance of RuntimeMetadataClient
+   * @param powerOperationExecutor - The powerOperationExecutor instance
+   * @returns Promise resolving to IRuntimeMetadataClient
+   */
+  static createInstanceAsync(powerOperationExecutor) {
+    return Promise.resolve(new _RuntimeMetadataClient(powerOperationExecutor));
+  }
+  /**
+   * Fetches app connection configurations
+   * @returns Promise resolving to connection reference details
+   * @throws Error if the operation fails
+   */
+  async getAppConnectionConfigsAsync() {
+    try {
+      const config = {
+        service: _RuntimeMetadataClient.SERVICES.powerAppsClient,
+        action: _RuntimeMetadataClient.ACTIONS.getConnectionConfigs,
+        params: []
+      };
+      const result = await this._executeOperation(config);
+      return { success: true, data: result };
+    } catch (error) {
+      throw new PowerDataRuntimeError(ErrorCodes.ConnectionConfigFetchFailed, getErrorMessage(error));
+    }
+  }
+  /**
+   * Fetches app data source configurations
+   * @returns Promise resolving to connection reference details
+   * @throws Error if the operation fails
+   */
+  async getAppDataSourceConfigsAsync() {
+    try {
+      const config = {
+        service: _RuntimeMetadataClient.SERVICES.powerAppsClient,
+        action: _RuntimeMetadataClient.ACTIONS.getDataSourceConfigs,
+        params: []
+      };
+      const result = await this._executeOperation(config);
+      return { success: true, data: result };
+    } catch (error) {
+      throw new PowerDataRuntimeError(ErrorCodes.DataSourceConfigFetchFailed, getErrorMessage(error));
+    }
+  }
+  /**
+   * Executes a metadata operation with the given configuration
+   * @param config - The operation configuration
+   * @returns Promise resolving to the operation result
+   * @throws Error if the operation fails
+   */
+  async _executeOperation(config) {
+    try {
+      const result = await this._powerOperationExecutor.execute(config.service, config.action, config.params || []);
+      const lowerCaseResult = Object.keys(result.data).reduce((acc, key) => {
+        acc[key.toLowerCase()] = (result.data ?? {})[key];
+        return acc;
+      }, {});
+      return lowerCaseResult;
+    } catch {
+      throw new PowerDataRuntimeError(ErrorCodes.InvalidMetadataResponse);
+    }
+  }
+};
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/runtimeClient/runtimeClientProvider.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var RuntimeClientProvider = class {
+  // Private members for data and metadata clients
+  // The data client is responsible for handling data operations
+  _dataClient;
+  // The metadata client is responsible for handling metadata operations
+  _metadataClient;
+  // The operation executor is used to execute operations on the clients
+  // It is an instance of IPowerOperationExecutor, which provides the necessary methods for executing operations
+  _operationExecutor;
+  // Constructor for RuntimeClientProvider
+  // Accepts an optional IPowerOperationExecutor instance for executing operations
+  // If not provided, uses the default PowerOperationExecutor instance
+  constructor(powerOperationExecutor) {
+    this._operationExecutor = powerOperationExecutor;
+  }
+  /**
+   * Gets or initializes the data client
+   * @throws Error if client initialization fails
+   * @returns Promise resolving to IRuntimeDataClient
+   */
+  async getDataClientAsync() {
+    try {
+      if (!this._dataClient) {
+        this._dataClient = await this._initializeDataClient();
+      }
+      if (!this._dataClient) {
+        throw new PowerDataRuntimeError(ErrorCodes.DataClientNotInitialized);
+      }
+      return this._dataClient;
+    } catch (error) {
+      throw new PowerDataRuntimeError(ErrorCodes.DataClientInitFailed, getErrorMessage(error));
+    }
+  }
+  /**
+   * Gets or initializes the metadata client
+   * @throws Error if client initialization fails
+   * @returns Promise resolving to IRuntimeMetadataClient
+   */
+  async getMetadataClientAsync() {
+    try {
+      if (!this._metadataClient) {
+        this._metadataClient = await this._initializeMetadataClient();
+      }
+      if (!this._metadataClient) {
+        throw new PowerDataRuntimeError(ErrorCodes.MetadataClientNotInitialized);
+      }
+      return this._metadataClient;
+    } catch (error) {
+      throw new PowerDataRuntimeError(ErrorCodes.MetadataClientInitFailed, getErrorMessage(error));
+    }
+  }
+  /**
+   * Initializes the data client
+   * @returns Promise resolving to IRuntimeDataClient
+   */
+  async _initializeDataClient() {
+    const bridge = await getBridge();
+    return RuntimeDataClient.createInstanceAsync(this._operationExecutor, bridge.createRequestBody?.bind(bridge));
+  }
+  /**
+   * Initializes the metadata client
+   * @returns Promise resolving to IRuntimeMetadataClient
+   */
+  async _initializeMetadataClient() {
+    return RuntimeMetadataClient.createInstanceAsync(this._operationExecutor);
+  }
+  /**
+   * Resets both clients, forcing re-initialization on next use
+   * Useful for testing or recovering from error states
+   */
+  reset() {
+    this._dataClient = void 0;
+    this._metadataClient = void 0;
+  }
+};
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/runtime/powerDataRuntime.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var PowerDataRuntime = class {
+  _clientProvider;
+  _dataSourceService;
+  _dataOperations;
+  _metadataOperations;
+  _isInitialized;
   /**
    * Creates a new instance of PowerDataRuntime
    * @param params - Initialization parameters
    * @throws DataRuntimeError if initialization fails
    */
   constructor(params) {
-    __publicField(this, "_clientProvider");
-    __publicField(this, "_dataSourceService");
-    __publicField(this, "_dataOperations");
-    __publicField(this, "_metadataOperations");
-    __publicField(this, "_isInitialized");
     try {
       Log.createInstance(params.powerOperationExecutor);
       this._clientProvider = new RuntimeClientProvider(params.powerOperationExecutor);
@@ -2585,7 +3055,7 @@ var PowerDataRuntime = class {
    * Creates a new instance of DataOperations
    */
   _createDataOperations() {
-    const dataverseOperation = new DataverseDataOperationExecutor(this._clientProvider);
+    const dataverseOperation = new DataverseDataOperationExecutor(this._clientProvider, this._dataSourceService);
     const connectorOperation = new ConnectorDataOperationExecutor(this._clientProvider, this._dataSourceService);
     return new DefaultDataOperationOrchestrator(dataverseOperation, connectorOperation, this._dataSourceService);
   }
@@ -2597,6 +3067,10 @@ var PowerDataRuntime = class {
   }
 };
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/runtime/powerDataRuntimeInstance.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var powerDataRuntimeInstance;
 function getPowerDataRuntime(powerDataSourcesInfoProvider, powerOperationExecutor) {
   if (!powerDataRuntimeInstance) {
@@ -2608,13 +3082,18 @@ function getPowerDataRuntime(powerDataSourcesInfoProvider, powerOperationExecuto
   return powerDataRuntimeInstance;
 }
 
-var _PowerDataSourcesInfoProvider = class _PowerDataSourcesInfoProvider {
+// node_modules/@microsoft/power-apps/dist/internal/data/core/runtime/powerDataSourcesInfoProvider.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+var PowerDataSourcesInfoProvider = class _PowerDataSourcesInfoProvider {
+  static instance = null;
+  dataSourcesInfo;
   /**
    * Private constructor to enforce the singleton pattern.
    * @param dataSourcesInfo The data sources information to initialize the provider with.
    */
   constructor(dataSourcesInfo) {
-    __publicField(this, "dataSourcesInfo");
     this.dataSourcesInfo = dataSourcesInfo;
   }
   /**
@@ -2643,60 +3122,12 @@ var _PowerDataSourcesInfoProvider = class _PowerDataSourcesInfoProvider {
     return this.dataSourcesInfo;
   }
 };
-__publicField(_PowerDataSourcesInfoProvider, "instance", null);
-var PowerDataSourcesInfoProvider = _PowerDataSourcesInfoProvider;
 var powerDataSourcesInfoProvider_default = PowerDataSourcesInfoProvider;
 
-var connectionsLoaded = false;
-async function loadConnections() {
-  if (connectionsLoaded) {
-    return;
-  }
-  connectionsLoaded = true;
-  try {
-    await loadNonCompositeConnectionsAsync();
-  } catch (error) {
-    console.warn("Power Apps connection preload failed; continuing with runtime metadata fetch.", error);
-  }
-  try {
-    await resolveCompositeConnectionsAsync();
-  } catch (error) {
-    console.warn("Power Apps composite connection resolution failed; continuing with runtime metadata fetch.", error);
-  }
-}
-async function loadNonCompositeConnectionsAsync() {
-  return executePluginAsync("AppPowerAppsClientPlugin", "loadNonCompositeConnectionsAsync", []);
-}
-async function resolveCompositeConnectionsAsync() {
-  return executePluginAsync("AppPowerAppsClientPlugin", "resolveCompositeConnectionsAsync", []);
-}
-
-var loadConnectionsPromise;
-var OperationExecutor = class {
-  /**
-   * Executes an operation using the plugin.
-   * @param operationName The name of the operation.
-   * @param action The action to perform.
-   * @param params The parameters for the operation.
-   * @returns A promise resolving to the operation result.
-   */
-  async execute(operationName, action, params) {
-    try {
-      if (!loadConnectionsPromise) {
-        loadConnectionsPromise = loadConnections();
-      }
-      await loadConnectionsPromise;
-      const result = await executePluginAsync(operationName, action, params);
-      return {
-        success: true,
-        data: result
-      };
-    } catch (error) {
-      throw error;
-    }
-  }
-};
-
+// node_modules/@microsoft/power-apps/dist/internal/data/core/runtime/getRuntimeContext.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var _executor;
 function getExecutor() {
   if (!_executor) {
@@ -2704,145 +3135,96 @@ function getExecutor() {
   }
   return _executor;
 }
-function mergeDataSourcesInfo(existingDataSourcesInfo, nextDataSourcesInfo) {
-  return Object.assign({}, existingDataSourcesInfo || {}, nextDataSourcesInfo || {});
-}
-
 async function getPowerSdkInstance(dataSourcesInfo) {
   const executor = getExecutor();
-  const existingProvider = powerDataSourcesInfoProvider_default.instance;
-  if (existingProvider) {
-    existingProvider.dataSourcesInfo = mergeDataSourcesInfo(existingProvider.dataSourcesInfo, dataSourcesInfo);
-  }
   const provider = powerDataSourcesInfoProvider_default.getInstance(dataSourcesInfo);
-  if (powerDataRuntimeInstance?._dataSourceService) {
-    powerDataRuntimeInstance._dataSourceService._powerDataSourcesInfoProvider = provider;
-    powerDataRuntimeInstance._dataSourceService._dataSourcesInfo = mergeDataSourcesInfo(
-      powerDataRuntimeInstance._dataSourceService._dataSourcesInfo,
-      provider.dataSourcesInfo
-    );
-  }
   return getPowerDataRuntime(provider, executor);
 }
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/api/createRecord.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 async function createRecordAsync(dataSourcesInfo, tableName, record) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.createRecordAsync(tableName, record);
 }
 
-async function updateRecordAsync(dataSourcesInfo, tableName, recordId, changes) {
-  return await (await getPowerSdkInstance(dataSourcesInfo)).Data.updateRecordAsync(tableName, recordId, changes);
+// node_modules/@microsoft/power-apps/dist/internal/data/core/api/deleteFileOrImageFromRecord.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+async function deleteFileOrImageFromRecord(dataSourcesInfo, tableName, recordId, columnName) {
+  return await (await getPowerSdkInstance(dataSourcesInfo)).Data.deleteFileOrImageFromRecord(tableName, recordId, columnName);
 }
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/api/deleteRecord.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 async function deleteRecordAsync(dataSourcesInfo, tableName, recordId) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.deleteRecordAsync(tableName, recordId);
 }
 
-async function retrieveRecordAsync(dataSourcesInfo, tableName, recordId, options) {
-  return await (await getPowerSdkInstance(dataSourcesInfo)).Data.retrieveRecordAsync(tableName, recordId, options);
+// node_modules/@microsoft/power-apps/dist/internal/data/core/api/downloadFileFromRecord.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+async function downloadFileFromRecord(dataSourcesInfo, tableName, recordId, columnName) {
+  return await (await getPowerSdkInstance(dataSourcesInfo)).Data.downloadFileFromRecord(tableName, recordId, columnName);
 }
 
-async function retrieveMultipleRecordsAsync(dataSourcesInfo, tableName, options) {
-  return await (await getPowerSdkInstance(dataSourcesInfo)).Data.retrieveMultipleRecordsAsync(tableName, options);
+// node_modules/@microsoft/power-apps/dist/internal/data/core/api/downloadImageFromRecord.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+async function downloadImageFromRecord(dataSourcesInfo, tableName, recordId, columnName, fullSize) {
+  return await (await getPowerSdkInstance(dataSourcesInfo)).Data.downloadImageFromRecord(tableName, recordId, columnName, fullSize);
 }
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/api/execute.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 async function executeAsync(dataSourcesInfo, operation) {
   return await (await getPowerSdkInstance(dataSourcesInfo)).Data.executeAsync(operation);
 }
 
-async function callActionAsync(dataSourcesInfo, actionName, params) {
-  var sdkInstance = await getPowerSdkInstance(dataSourcesInfo);
-  var dvExecutor = sdkInstance.Data._dataverseOperation;
-  var dataClient = await dvExecutor._getDataClient();
-  var dbRefs = await dvExecutor.getDatabaseReferences();
-  var sInstanceUrl = null;
-  var sDatasetName = null;
-  for (var sDbKey of Object.keys(dbRefs)) {
-    var oDb = dbRefs[sDbKey];
-    if (oDb.databaseDetails && oDb.databaseDetails.linkedEnvironmentMetadata) {
-      sInstanceUrl = oDb.databaseDetails.linkedEnvironmentMetadata.instanceUrl;
-      sDatasetName = oDb.databaseDetails.environmentName;
-      break;
-    }
-  }
-  if (!sInstanceUrl) {
-    throw new Error("Cannot call unbound action: no Dataverse instance URL found. Ensure at least one Dataverse table is registered.");
-  }
-  var sBaseUrl = sInstanceUrl.endsWith("/") ? sInstanceUrl : sInstanceUrl + "/";
-  var sRequestUrl = sBaseUrl + "api/data/v9.0/" + actionName;
-  var oContext = {
-    operationName: DataverseOperationName.CreateRecord,
-    datasetName: sDatasetName,
-    isDataVerseOperation: true
-  };
-  var sToken = await dataClient._getAccessToken(DataSources.Dataverse, sDatasetName);
-  var oHeaders = dataClient._createHeaders(sToken, {
-    url: sRequestUrl,
-    method: HttpMethod.POST,
-    apiId: DataSources.Dataverse,
-    tableName: actionName,
-    body: JSON.stringify(params || {})
-  }, oContext);
-  var oRequestBody = new Blob([JSON.stringify(params || {})], { type: "application/json" });
-  var oRawResult;
-  try {
-    oRawResult = await dataClient._powerOperationExecutor.execute(
-      "AppHttpClientPlugin", "sendHttpAsync",
-      [
-        {
-          url: sRequestUrl,
-          method: HttpMethod.POST,
-          requestSource: "PublishedApp",
-          allowSessionStorage: true,
-          returnDirectResponse: true,
-          headers: oHeaders
-        },
-        oRequestBody,
-        "arraybuffer"
-      ]
-    );
-  } catch (oErr) {
-    return { success: false, data: null, error: oErr };
-  }
-  var aResponseData = oRawResult.data;
-  var oRespHeaders = aResponseData[0] ? aResponseData[0].headers || {} : {};
-  var iStatus = aResponseData[0] ? aResponseData[0].status : 0;
-  var sContentType = oRespHeaders["Content-Type"] || "";
-  // HTTP 2xx with no body or no parseable content = success (void actions like GrantAccess)
-  if (iStatus >= 200 && iStatus < 300 && (!sContentType || !aResponseData[1])) {
-    return { success: true, data: null, error: null };
-  }
-  // Try to parse JSON response
-  if (sContentType.indexOf("application/json") !== -1 && aResponseData[1]) {
-    try {
-      var sText = "";
-      if (aResponseData[1] instanceof ArrayBuffer) {
-        sText = new TextDecoder().decode(aResponseData[1]);
-      } else if (typeof aResponseData[1] === "string") {
-        sText = aResponseData[1];
-      }
-      if (!sText) sText = "{}";
-      var oParsed = JSON.parse(sText);
-      if (iStatus >= 200 && iStatus < 300) {
-        return { success: true, data: oParsed, error: null };
-      }
-      // Error response from server
-      var sErrMsg = oParsed.error ? (oParsed.error.message || JSON.stringify(oParsed.error)) : JSON.stringify(oParsed);
-      return { success: false, data: null, error: { message: sErrMsg } };
-    } catch (oParseErr) {
-      if (iStatus >= 200 && iStatus < 300) {
-        return { success: true, data: null, error: null };
-      }
-      return { success: false, data: null, error: { message: "Failed to parse action response" } };
-    }
-  }
-  // Any other 2xx = success
-  if (iStatus >= 200 && iStatus < 300) {
-    return { success: true, data: null, error: null };
-  }
-  // Non-2xx with non-JSON body
-  return { success: false, data: null, error: { message: "Action failed with status " + iStatus } };
+// node_modules/@microsoft/power-apps/dist/internal/data/core/api/retrieveMultipleRecords.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+async function retrieveMultipleRecordsAsync(dataSourcesInfo, tableName, options) {
+  return await (await getPowerSdkInstance(dataSourcesInfo)).Data.retrieveMultipleRecordsAsync(tableName, options);
 }
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/api/retrieveRecord.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+async function retrieveRecordAsync(dataSourcesInfo, tableName, recordId, options) {
+  return await (await getPowerSdkInstance(dataSourcesInfo)).Data.retrieveRecordAsync(tableName, recordId, options);
+}
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/api/updateRecord.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+async function updateRecordAsync(dataSourcesInfo, tableName, recordId, changes) {
+  return await (await getPowerSdkInstance(dataSourcesInfo)).Data.updateRecordAsync(tableName, recordId, changes);
+}
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/api/uploadRecord.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+async function uploadFileToRecord(dataSourcesInfo, tableName, recordId, columnName, fileName, data) {
+  return await (await getPowerSdkInstance(dataSourcesInfo)).Data.uploadFileToRecord(tableName, recordId, columnName, fileName, data);
+}
+
+// node_modules/@microsoft/power-apps/dist/data/powerAppsData.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var _dataOperationExecutor;
 function getDataOperationExecutor() {
   return _dataOperationExecutor;
@@ -2869,37 +3251,94 @@ function getClient(dataSourcesInfo) {
     },
     updateRecordAsync: (tableName, recordId, changes) => {
       return updateRecordAsync(dataSourcesInfo, tableName, recordId, changes);
+    },
+    uploadFileToRecord: (tableName, recordId, columnName, fileName, data) => {
+      return uploadFileToRecord(dataSourcesInfo, tableName, recordId, columnName, fileName, data);
+    },
+    downloadFileFromRecord: (tableName, recordId, columnName) => {
+      return downloadFileFromRecord(dataSourcesInfo, tableName, recordId, columnName);
+    },
+    downloadImageFromRecord: (tableName, recordId, columnName, fullSize) => {
+      return downloadImageFromRecord(dataSourcesInfo, tableName, recordId, columnName, fullSize);
+    },
+    deleteFileOrImageFromRecord: (tableName, recordId, columnName) => {
+      return deleteFileOrImageFromRecord(dataSourcesInfo, tableName, recordId, columnName);
     }
   };
 }
 
+// node_modules/@microsoft/power-apps/dist/data/index.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/data/executors/mockDataOperationExecutor.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var MockDataOperationExecutor = class {
+  _dataStore;
   constructor(data) {
-    __publicField(this, "_dataStore");
     this._dataStore = data;
   }
-  async createRecordAsync(tableName, data) {
+  async createRecordAsync(_tableName, _data) {
     return {
       success: false,
       error: { message: "createRecordAsync is not supported by MockDataOperationExecutor" },
       data: null
     };
   }
-  async updateRecordAsync(tableName, id, data) {
+  async updateRecordAsync(_tableName, _id, _data) {
     return {
       success: false,
       error: { message: "updateRecordAsync is not supported by MockDataOperationExecutor" },
       data: null
     };
   }
-  async deleteRecordAsync(tableName, id) {
+  async uploadFileToRecord(tableName, id, columnName, fileName, data) {
+    return {
+      success: false,
+      error: {
+        message: `uploadFileToRecord is not supported by MockDataOperationExecutor, ${tableName}, ${columnName}, ${fileName}, ${id}, ${JSON.stringify(data)}`
+      },
+      data: void 0
+    };
+  }
+  async downloadFileFromRecord(tableName, id, columnName) {
+    return {
+      success: false,
+      error: {
+        message: `downloadFileFromRecord is not supported by MockDataOperationExecutor, ${tableName}, ${columnName}, ${id}`
+      },
+      data: new Uint8Array(0)
+    };
+  }
+  async deleteFileOrImageFromRecord(_tableName, _recordId, _columnName) {
+    return {
+      success: false,
+      error: {
+        message: "deleteFileOrImageFromRecord is not supported by MockDataOperationExecutor"
+      },
+      data: void 0
+    };
+  }
+  async downloadImageFromRecord(tableName, recordId, columnName, _fullSize) {
+    return {
+      success: false,
+      error: {
+        message: `downloadImageFromRecord is not supported by MockDataOperationExecutor, ${tableName}, ${columnName}, ${recordId}`
+      },
+      data: new Uint8Array(0)
+    };
+  }
+  async deleteRecordAsync(_tableName, _id) {
     return {
       success: false,
       error: { message: "deleteRecordAsync is not supported by MockDataOperationExecutor" },
       data: void 0
     };
   }
-  async retrieveRecordAsync(tableName, id, options) {
+  async retrieveRecordAsync(tableName, id, _options) {
     if (!this._dataStore[tableName]) {
       return {
         success: false,
@@ -2920,7 +3359,7 @@ var MockDataOperationExecutor = class {
       data: record
     };
   }
-  async retrieveMultipleRecordsAsync(tableName, options) {
+  async retrieveMultipleRecordsAsync(tableName, _options) {
     if (!this._dataStore[tableName]) {
       return {
         success: false,
@@ -2933,7 +3372,7 @@ var MockDataOperationExecutor = class {
       data: Object.values(this._dataStore[tableName])
     };
   }
-  async executeAsync(operation) {
+  async executeAsync(_operation) {
     return {
       success: false,
       error: { message: "executeAsync is not supported by MockDataOperationExecutor" },
@@ -2945,6 +3384,20 @@ function createMockDataExecutor(data) {
   return new MockDataOperationExecutor(data);
 }
 
+// node_modules/@microsoft/power-apps/dist/internal/data/core/data/executors/index.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
+// node_modules/@microsoft/power-apps/dist/data/executors/index.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
+// node_modules/@microsoft/power-apps/dist/internal/data/core/types/dataverseMetadata.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
 var entityClusterModeEnum = {
   0: "Partitioned",
   1: "Replicated",
@@ -3023,9 +3476,13 @@ function getRelationshipTypeName(value) {
 }
 var securityTypesEnum = {
   0: "None",
+  // No security privileges are checked during create or update operations.
   1: "Append",
+  // The Append and AppendTo privileges are checked for create or update operations.
   2: "ParentChild",
+  // Security for the referencing entity record is derived from the referenced entity record.
   8: "Pointer",
+  // Security for the referencing entity record is derived from a pointer record.
   16: "Inheritance"
   // The referencing entity record inherits security from the referenced security record.
 };
@@ -3051,25 +3508,249 @@ function getAssociatedMenuGroupName(value) {
 }
 var cascadeTypeEnum = {
   0: "NoCascade",
+  // Do nothing.
   1: "Cascade",
+  // Perform the action on all referencing entity records associated with the referenced entity record.
   2: "Active",
+  //	Perform the action on all active referencing entity records associated with the referenced entity record.
   3: "UserOwned",
+  // Perform the action on all referencing entity records owned by the same user as the referenced entity record.
   4: "RemoveLink",
+  // Remove the value of the referencing attribute for all referencing entity records associated with the referenced entity record.
   5: "Restrict"
   // Prevent the Referenced entity record from being deleted when referencing entities exist.
 };
 function getCascadeTypeName(value) {
   return cascadeTypeEnum[value];
 }
+
+// node_modules/@microsoft/power-apps/dist/data/metadata/dataverse/index.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
+// node_modules/@microsoft/power-apps/dist/internal/data/index.js
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+
+// power-apps-data-entry.js
+var BRIDGE_INIT_TIMEOUT_MS = 8e3;
+var PLUGIN_CALL_TIMEOUT_MS = 3e4;
+var CompatibilityPowerAppsBridge = class {
+  _antiCSRFToken;
+  _callbacks = {};
+  _currentCallbackId = 0;
+  _instanceId = Date.now().toString();
+  _messageChannel = new window.MessageChannel();
+  _postMessageQueue = [];
+  _postMessageSource;
+  _initializePromise;
+  _handleMessageEvent = (messageEvent) => {
+    const message = messageEvent.data;
+    if (message && typeof message.isPluginCall === "boolean") {
+      if (!message.isPluginCall) return;
+      const callback = this._callbacks[message.callbackId];
+      try {
+        if (message.keepCallback) {
+          callback?.onUpdate?.(message.args?.[0]);
+        } else {
+          if (message.status === 1) callback?.resolve(message.args?.[0]);
+          else if (message.status !== 0) callback?.reject(message.args);
+          delete this._callbacks[message.callbackId];
+        }
+      } catch (error) {
+        console.error(error);
+      }
+      return;
+    }
+    if (message?.messageType === "initCommunication") {
+      this._antiCSRFToken = message.antiCSRFToken;
+      this._postMessageSource = this._messageChannel.port1;
+      for (const queuedMessage of this._postMessageQueue) {
+        queuedMessage.antiCSRFToken = this._antiCSRFToken;
+        this._postMessageSource.postMessage(queuedMessage);
+      }
+      this._postMessageQueue = [];
+    }
+  };
+  async initialize() {
+    if (this._initializePromise) return this._initializePromise;
+    this._initializePromise = new Promise((resolve, reject) => {
+      if (window.parent === window) {
+        reject(new Error("Power Apps host was not detected. Open this app from the Power Apps Code Apps host instead of a standalone browser tab."));
+        return;
+      }
+      const timeoutId = window.setTimeout(() => {
+        reject(new Error("Timed out waiting for the Power Apps host to initialize the message bridge."));
+      }, BRIDGE_INIT_TIMEOUT_MS);
+      this._messageChannel.port1.onmessage = (messageEvent) => {
+        this._handleMessageEvent(messageEvent);
+        if (this._postMessageSource) {
+          clearTimeout(timeoutId);
+          resolve();
+        }
+      };
+      window.parent.postMessage(
+        { messageType: "initCommunicationWithPort", instanceId: this._instanceId },
+        "*",
+        [this._messageChannel.port2]
+      );
+    });
+    return this._initializePromise;
+  }
+  async executePluginAsync(pluginName, pluginAction, params = [], onUpdate) {
+    return new Promise((resolve, reject) => {
+      const callbackId = `instanceId=${this._instanceId}_${pluginName}${this._currentCallbackId++}`;
+      const timeoutId = window.setTimeout(() => {
+        delete this._callbacks[callbackId];
+        reject(new Error(`Timed out waiting for ${pluginName}.${pluginAction} to return from the Power Apps host.`));
+      }, PLUGIN_CALL_TIMEOUT_MS);
+      this._callbacks[callbackId] = {
+        resolve: (value) => {
+          clearTimeout(timeoutId);
+          resolve(value);
+        },
+        reject: (error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        },
+        onUpdate
+      };
+      const message = {
+        isPluginCall: true,
+        callbackId,
+        service: pluginName,
+        action: pluginAction,
+        actionArgs: params,
+        antiCSRFToken: this._antiCSRFToken
+      };
+      if (this._postMessageSource) this._postMessageSource.postMessage(message);
+      else this._postMessageQueue.push(message);
+    });
+  }
+};
+if (typeof window !== "undefined" && globalThis.powerAppsBridge == null) {
+  globalThis.powerAppsBridge = new CompatibilityPowerAppsBridge();
+}
+var combinedDataSourcesInfo = {};
+function mergeDataSourcesInfo(dataSourcesInfo) {
+  Object.assign(combinedDataSourcesInfo, dataSourcesInfo || {});
+  return combinedDataSourcesInfo;
+}
+async function prepareRuntime(dataSourcesInfo) {
+  const mergedDataSourcesInfo = mergeDataSourcesInfo(dataSourcesInfo);
+  const runtime = await getPowerSdkInstance(mergedDataSourcesInfo);
+  const service = runtime?._dataSourceService;
+  if (service) {
+    if (service._powerDataSourcesInfoProvider) {
+      service._powerDataSourcesInfoProvider.dataSourcesInfo = mergedDataSourcesInfo;
+    }
+    Object.assign(service._dataSourcesInfo, mergedDataSourcesInfo);
+  }
+  return { mergedDataSourcesInfo, runtime };
+}
+async function prepareClient(dataSourcesInfo) {
+  const { mergedDataSourcesInfo } = await prepareRuntime(dataSourcesInfo);
+  return getClient(mergedDataSourcesInfo);
+}
+function getClient2(dataSourcesInfo) {
+  return {
+    createRecordAsync: async (...args) => (await prepareClient(dataSourcesInfo)).createRecordAsync(...args),
+    deleteRecordAsync: async (...args) => (await prepareClient(dataSourcesInfo)).deleteRecordAsync(...args),
+    executeAsync: async (...args) => (await prepareClient(dataSourcesInfo)).executeAsync(...args),
+    retrieveMultipleRecordsAsync: async (...args) => (await prepareClient(dataSourcesInfo)).retrieveMultipleRecordsAsync(...args),
+    retrieveRecordAsync: async (...args) => (await prepareClient(dataSourcesInfo)).retrieveRecordAsync(...args),
+    updateRecordAsync: async (...args) => (await prepareClient(dataSourcesInfo)).updateRecordAsync(...args),
+    uploadFileToRecord: async (...args) => (await prepareClient(dataSourcesInfo)).uploadFileToRecord(...args),
+    downloadFileFromRecord: async (...args) => (await prepareClient(dataSourcesInfo)).downloadFileFromRecord(...args),
+    downloadImageFromRecord: async (...args) => (await prepareClient(dataSourcesInfo)).downloadImageFromRecord(...args),
+    deleteFileOrImageFromRecord: async (...args) => (await prepareClient(dataSourcesInfo)).deleteFileOrImageFromRecord(...args)
+  };
+}
+async function callActionAsync(dataSourcesInfo, actionName, params) {
+  const { runtime } = await prepareRuntime(dataSourcesInfo);
+  const dataverseExecutor = runtime.Data._dataverseOperation;
+  const dataClient = await dataverseExecutor._getDataClient();
+  const databaseReferences = await dataverseExecutor.getDatabaseReferences();
+  let instanceUrl;
+  let datasetName;
+  for (const databaseReference of Object.values(databaseReferences)) {
+    const linkedEnvironment = databaseReference.databaseDetails?.linkedEnvironmentMetadata;
+    if (linkedEnvironment) {
+      instanceUrl = linkedEnvironment.instanceUrl;
+      datasetName = databaseReference.databaseDetails.environmentName;
+      break;
+    }
+  }
+  if (!instanceUrl) {
+    throw new Error("Cannot call unbound action: no Dataverse instance URL found. Ensure at least one Dataverse table is registered.");
+  }
+  const requestUrl = `${instanceUrl.endsWith("/") ? instanceUrl : `${instanceUrl}/`}api/data/v9.0/${actionName}`;
+  const body = JSON.stringify(params || {});
+  const context2 = {
+    operationName: DataverseOperationName.CreateRecord,
+    datasetName,
+    isDataVerseOperation: true
+  };
+  const token = await dataClient._getAccessToken(DataSources.Dataverse, datasetName);
+  const headers = dataClient._createHeaders(token, {
+    url: requestUrl,
+    method: HttpMethod.POST,
+    apiId: DataSources.Dataverse,
+    tableName: actionName,
+    body
+  }, context2);
+  let rawResult;
+  try {
+    rawResult = await dataClient._powerOperationExecutor.execute(
+      "AppHttpClientPlugin",
+      "sendHttpAsync",
+      [{
+        url: requestUrl,
+        method: HttpMethod.POST,
+        requestSource: "PublishedApp",
+        allowSessionStorage: true,
+        returnDirectResponse: true,
+        headers
+      }, new Blob([body], { type: "application/json" }), "arraybuffer"]
+    );
+  } catch (error) {
+    return { success: false, data: null, error };
+  }
+  const responseData = rawResult.data;
+  const response = responseData?.[0] || {};
+  const responseBody = responseData?.[1];
+  const status = response.status || 0;
+  const contentType = response.headers?.["Content-Type"] || response.headers?.["content-type"] || "";
+  if (status >= 200 && status < 300 && (!contentType || !responseBody)) {
+    return { success: true, data: null, error: null };
+  }
+  if (contentType.includes("application/json") && responseBody) {
+    try {
+      const text = responseBody instanceof ArrayBuffer ? new TextDecoder().decode(responseBody) : typeof responseBody === "string" ? responseBody : "";
+      const parsed = JSON.parse(text || "{}");
+      if (status >= 200 && status < 300) return { success: true, data: parsed, error: null };
+      const message = parsed.error?.message || JSON.stringify(parsed.error || parsed);
+      return { success: false, data: null, error: { message } };
+    } catch {
+      if (status >= 200 && status < 300) return { success: true, data: null, error: null };
+      return { success: false, data: null, error: { message: "Failed to parse action response" } };
+    }
+  }
+  if (status >= 200 && status < 300) return { success: true, data: null, error: null };
+  return { success: false, data: null, error: { message: `Action failed with status ${status}` } };
+}
 export {
   callActionAsync,
   createMockDataExecutor,
+  deserializeMultiSelectPicklistFields,
   getAssociatedMenuBehaviorName,
   getAssociatedMenuGroupName,
   getAttributeRequiredLevelName,
   getAttributeTypeCodeName,
   getCascadeTypeName,
-  getClient,
+  getClient2 as getClient,
   getContext,
   getEntityClusterModeName,
   getOwnershipTypeName,
@@ -3077,6 +3758,7 @@ export {
   getRelationshipTypeName,
   getSecurityTypesName,
   initializeLogger,
+  serializeMultiSelectPicklistFields,
   setConfig,
   setDataOperationExecutor
 };

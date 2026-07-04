@@ -1,6 +1,6 @@
 {
   "name": "codeapp-js",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "private": false,
   "description": "JavaScript library with samples and starter app for Power Apps Code Apps.",
   "scripts": {
