@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enterprise Skill Spec: Tech-Blue Corporate</title>
+  <style>
+    :root {
+      --color-primary: #0078d4;
+      --color-primary-light: #e1dfdd;
+      --color-text-dark: #201f1e;
+      --color-text-muted: #605e5c;
+      --color-bg-light: #faf9f8;
+      --color-bg-white: #ffffff;
+      --color-border: #edebe9;
+      --color-success: #107c41;
+      --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-family);
+      color: var(--color-text-dark);
+      background-color: var(--color-bg-light);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: var(--color-bg-white);
+      border-radius: 8px;
+      border: 1px solid var(--color-border);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+      overflow: hidden;
+    }
+
+    /* Header Section */
+    header {
+      background-color: var(--color-bg-white);
+      border-bottom: 2px solid var(--color-primary);
+      padding: 32px 40px;
+    }
+
+    .meta-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--color-primary);
+      background-color: #eff6fc;
+      padding: 4px 10px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--color-text-dark);
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--color-text-muted);
+    }
+
+    /* Content Layout */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      border-top: 1px solid var(--color-border);
+    }
+
+    @media (max-width: 900px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    main {
+      padding: 40px;
+      border-right: 1px solid var(--color-border);
+    }
+
+    @media (max-width: 900px) {
+      main {
+        border-right: none;
+      }
+    }
+
+    aside {
+      padding: 40px 30px;
+      background-color: #fdfdfd;
+    }
+
+    /* Standard Section styling */
+    section {
+      margin-bottom: 40px;
+    }
+
+    section:last-child {
+      margin-bottom: 0;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--color-text-dark);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      letter-spacing: -0.2px;
+    }
+
+    h2::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background-color: var(--color-border);
+      margin-left: 16px;
+    }
+
+    p {
+      font-size: 14px;
+      color: #323130;
+      margin-bottom: 16px;
+    }
+
+    /* Connections Pill Styling */
+    .connection-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .connection-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background-color: var(--color-bg-light);
+      border: 1px solid var(--color-border);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-text-dark);
+    }
+
+    .connection-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    /* Sidebar Headings without inline styling */
+    .sidebar-heading {
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+
+    /* Connector specific colors instead of inline styling */
+    .connection-icon-sharepoint {
+      background-color: #0072c6;
+    }
+
+    .connection-icon-user {
+      background-color: #ea3e23;
+    }
+
+    /* Aside tables overrides instead of inline styles */
+    aside table {
+      margin-bottom: 16px;
+    }
+
+    aside th {
+      padding: 4px 6px;
+    }
+
+    aside td {
+      padding: 6px;
+      font-size: 12px;
+    }
+
+    aside td.muted {
+      color: var(--color-text-muted);
+    }
+
+    /* Static palette box styles instead of inline styles */
+    .pb-primary {
+      background-color: #0078d4;
+    }
+
+    .pb-secondary {
+      background-color: #107c41;
+    }
+
+    .pb-dark-neutral {
+      background-color: #201f1e;
+    }
+
+    .pb-light-neutral {
+      background-color: #faf9f8;
+    }
+
+    /* Actions List Template */
+    .action-group {
+      margin-bottom: 16px;
+      padding: 16px;
+      background-color: var(--color-bg-light);
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+    }
+
+    .action-group-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+
+    .actions-list {
+      list-style-type: none;
+    }
+
+    .actions-list li {
+      position: relative;
+      font-size: 13px;
+      padding-left: 18px;
+      margin-bottom: 8px;
+      color: var(--color-text-dark);
+      font-family: Consolas, Monaco, monospace;
+    }
+
+    .actions-list li::before {
+      content: "•";
+      position: absolute;
+      left: 6px;
+      color: var(--color-primary);
+      font-weight: bold;
+    }
+
+    /* Table styles for variables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+
+    th {
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--color-border);
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 13px;
+    }
+
+    td code {
+      font-family: Consolas, Monaco, monospace;
+      background-color: #f3f2f1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #a80000;
+    }
+
+    /* Colour Palette Selector */
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 12px;
+    }
+
+    .palette-item {
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .palette-box {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 6px;
+      border: 1px solid var(--color-border);
+      margin-bottom: 6px;
+      transition: transform 0.15s ease;
+    }
+
+    .palette-box:hover {
+      transform: translateY(-2px);
+    }
+
+    .palette-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #323130;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .palette-hex {
+      font-size: 10px;
+      color: var(--color-text-muted);
+      font-family: monospace;
+    }
+
+    /* Data Tables & Lists styles */
+    .data-source-list {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .data-source-card {
+      padding: 14px 20px;
+      background-color: var(--color-bg-white);
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-dark);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .data-source-card:hover {
+      border-color: var(--color-primary);
+      background-color: #eff6fc;
+    }
+
+    .data-source-card.active {
+      border-color: var(--color-primary);
+      background-color: #eff6fc;
+      box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.15);
+    }
+
+    .data-detail-panel {
+      display: none;
+      background-color: var(--color-bg-white);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 32px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .data-detail-panel.active {
+      display: block;
+    }
+
+    .data-detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--color-border);
+      padding-bottom: 12px;
+    }
+
+    .data-detail-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text-dark);
+    }
+
+    .data-tag {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: 1px solid var(--color-border);
+      background-color: var(--color-bg-light);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Site Map Diagram */
+    .sitemap-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 24px;
+      background-color: var(--color-bg-light);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+    }
+
+    .sitemap-node {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--color-bg-white);
+      border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-primary);
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .sitemap-node .node-type {
+      font-size: 10px;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: 1px solid var(--color-border);
+      padding: 1px 6px;
+      border-radius: 3px;
+      background-color: var(--color-bg-light);
+    }
+
+    .sitemap-children {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-left: 24px;
+      padding-left: 16px;
+      border-left: 1px dashed var(--color-border);
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background-color: #323130;
+      color: #f3f2f1;
+      font-size: 12px;
+      padding: 8px 16px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.25s ease-in-out;
+      pointer-events: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="meta-badge">Enterprise Skill Specification</div>
+      <h1 id="appName">App Name Placeholder</h1>
+      <div class="subtitle">Technical architecture, integration mapping, and code blueprinting.</div>
+    </header>
+
+    <div class="content-grid">
+      <main>
+        <!-- Description -->
+        <section id="sectionDescription">
+          <h2>Application Description</h2>
+          <p>
+            This operational spec details the data workflows, connectors, system schemas, and UI layout 
+            for the application. Designed to centralize enterprise operations, it offers deterministic state handling, 
+            resilient variable configurations, and fully mapped navigation patterns.
+          </p>
+        </section>
+
+        <!-- Actions Used -->
+        <section id="sectionActions">
+          <h2>Connector Actions Layer</h2>
+          <p>The core business layer invokes specific backend service primitives mapped out below:</p>
+          
+          <div class="action-group">
+            <div class="action-group-title">SharePoint Connector</div>
+            <ul class="actions-list">
+              <li>GetItems(sListId, oQueryOptions)</li>
+              <li>CreateItem(sListId, oItemBody)</li>
+              <li>DeleteItem(sListId, sItemId)</li>
+            </ul>
+          </div>
+
+          <div class="action-group">
+            <div class="action-group-title">Office 365 Users Connector</div>
+            <ul class="actions-list">
+              <li>MyProfile()</li>
+              <li>UserProfileV2(sUserPrincipalName)</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Site Map -->
+        <section id="sectionSitemap">
+          <h2>Site Navigation & View Map</h2>
+          <p>Logical structure mapping client-side screens and routing dependencies:</p>
+          
+          <div class="sitemap-flow">
+            <div>
+              <div class="sitemap-node">
+                <strong>Splash Screen</strong>
+                <span class="node-type">Welcome</span>
+              </div>
+              <div class="sitemap-children">
+                <div>
+                  <div class="sitemap-node">
+                    <strong>Main Workspace Dashboard</strong>
+                    <span class="node-type">Landing Grid</span>
+                  </div>
+                  <div class="sitemap-children">
+                    <div class="sitemap-node">
+                      <strong>Item Detail View</strong>
+                      <span class="node-type">Modal Screen</span>
+                    </div>
+                    <div class="sitemap-node">
+                      <strong>Executive Report Creator</strong>
+                      <span class="node-type">Form Engine</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="sitemap-node">
+                  <strong>System Settings Page</strong>
+                  <span class="node-type">Control Panel</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Data Tables & Lists -->
+        <section id="sectionData">
+          <h2>Data Tables & Lists</h2>
+          <p>
+            The backend layer integrates with the following data sources. Click on a table or list to review its fields, columns, and data type specifications:
+          </p>
+
+          <div class="data-source-list">
+            <button class="data-source-card" data-target="panelTasks">
+              <span class="connection-icon connection-icon-sharepoint"></span>
+              <span>Tasks (SharePoint List)</span>
+            </button>
+            <button class="data-source-card" data-target="panelEmployees">
+              <span class="connection-icon connection-icon-user"></span>
+              <span>Employees (Dataverse Table)</span>
+            </button>
+          </div>
+
+          <!-- Tasks Data Detail Panel -->
+          <div id="panelTasks" class="data-detail-panel">
+            <div class="data-detail-header">
+              <div class="data-detail-title">Tasks Schemas / Fields</div>
+              <span class="data-tag">Internal ID: Tasks_List</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Field Name</th>
+                  <th>Design Value / Identifier</th>
+                  <th>Field Type</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Title</td>
+                  <td><code>Title</code></td>
+                  <td>Single Line of Text</td>
+                  <td>The operational name or task description.</td>
+                </tr>
+                <tr>
+                  <td>Assigned To</td>
+                  <td><code>AssignedTo</code></td>
+                  <td>Person / Group</td>
+                  <td>User object mapping back to Office 365 Users.</td>
+                </tr>
+                <tr>
+                  <td>Due Date</td>
+                  <td><code>DueDate</code></td>
+                  <td>Date and Time</td>
+                  <td>Required deadline date for completion.</td>
+                </tr>
+                <tr>
+                  <td>Task Status</td>
+                  <td><code>TaskStatus</code></td>
+                  <td>Choice</td>
+                  <td>Values: 'Not Started', 'In Progress', 'Completed'.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Employees Data Detail Panel -->
+          <div id="panelEmployees" class="data-detail-panel">
+            <div class="data-detail-header">
+              <div class="data-detail-title">Employees Schemas / Fields</div>
+              <span class="data-tag">Internal Name: cr_employee</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Field Name</th>
+                  <th>Logical Name</th>
+                  <th>Data Type</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Full Name</td>
+                  <td><code>cr_fullname</code></td>
+                  <td>Single Line of Text</td>
+                  <td>Combines given and surnames of the resource.</td>
+                </tr>
+                <tr>
+                  <td>Email Address</td>
+                  <td><code>cr_emailaddress</code></td>
+                  <td>Email</td>
+                  <td>Active enterprise electronic mail identifier.</td>
+                </tr>
+                <tr>
+                  <td>Department</td>
+                  <td><code>cr_departmentid</code></td>
+                  <td>Lookup (cr_Department)</td>
+                  <td>Reference link pointing to Contoso Departments list.</td>
+                </tr>
+                <tr>
+                  <td>Active Status</td>
+                  <td><code>cr_activestatus</code></td>
+                  <td>Two Choices (Boolean)</td>
+                  <td>Flags whether employee is currently on payroll.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      <aside>
+        <!-- Connections Used -->
+        <section id="sectionConnections">
+          <h2 class="sidebar-heading">Active Connections</h2>
+          <div class="connection-list">
+            <div class="connection-badge">
+              <span class="connection-icon connection-icon-sharepoint"></span>
+              SharePoint
+            </div>
+            <div class="connection-badge">
+              <span class="connection-icon connection-icon-user"></span>
+              O365 Users
+            </div>
+          </div>
+        </section>
+
+        <!-- Environment Variables -->
+        <section id="sectionEnvVars">
+          <h2 class="sidebar-heading">Environment Variables</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>ENV_SITE_URL</code></td>
+                <td class="muted">SharePoint root</td>
+              </tr>
+              <tr>
+                <td><code>ENV_TENANT_ID</code></td>
+                <td class="muted">Tenant Guid</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Configurable Variables -->
+        <section id="sectionConfigVars">
+          <h2 class="sidebar-heading">Config Variables</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Default</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>sAppTitle</code></td>
+                <td class="muted">'Dashboard'</td>
+              </tr>
+              <tr>
+                <td><code>iMaxRows</code></td>
+                <td class="muted">100</td>
+              </tr>
+              <tr>
+                <td><code>bDebugLogs</code></td>
+                <td class="muted">false</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- Colour Palette -->
+        <section id="sectionPalette">
+          <h2 class="sidebar-heading">Colour Palette</h2>
+          <div class="palette-grid">
+            <div class="palette-item" onclick="handleColorClick(this)" data-hex="#0078d4">
+              <div class="palette-box pb-primary"></div>
+              <div class="palette-name">Primary</div>
+              <div class="palette-hex">#0078D4</div>
+            </div>
+            <div class="palette-item" onclick="handleColorClick(this)" data-hex="#107c41">
+              <div class="palette-box pb-secondary"></div>
+              <div class="palette-name">Secondary</div>
+              <div class="palette-hex">#107C41</div>
+            </div>
+            <div class="palette-item" onclick="handleColorClick(this)" data-hex="#201f1e">
+              <div class="palette-box pb-dark-neutral"></div>
+              <div class="palette-name">Dark Neutral</div>
+              <div class="palette-hex">#201F1E</div>
+            </div>
+            <div class="palette-item" onclick="handleColorClick(this)" data-hex="#faf9f8">
+              <div class="palette-box pb-light-neutral"></div>
+              <div class="palette-name">Light Neutral</div>
+              <div class="palette-hex">#FAF9F8</div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <div id="toast">Copied hex value to clipboard!</div>
+
+  <script>
+    // Set dynamic info
+    const sDefaultAppName = "Enterprise Operations Hub";
+    const eAppNameHeader = document.getElementById("appName");
+    if (eAppNameHeader) {
+      eAppNameHeader.innerText = sDefaultAppName;
+    }
+
+    // Interactive custom color copier following wyattdave naming standards
+    function handleColorClick(ePaletteElement) {
+      const sHexColorValue = ePaletteElement.getAttribute("data-hex");
+      if (sHexColorValue) {
+        navigator.clipboard.writeText(sHexColorValue).then(() => {
+          showNotificationTip();
+        });
+      }
+    }
+
+    function showNotificationTip() {
+      const eToastElement = document.getElementById("toast");
+      if (eToastElement) {
+        eToastElement.style.opacity = "1";
+        setTimeout(() => {
+          eToastElement.style.opacity = "0";
+        }, 2000);
+      }
+    }
+
+    // Programmatic interaction for data detail panels adhering to wyattdave naming standards
+    const aDataSourceCards = document.querySelectorAll(".data-source-card");
+    const aDataDetailPanels = document.querySelectorAll(".data-detail-panel");
+
+    aDataSourceCards.forEach((eCard) => {
+      eCard.addEventListener("click", () => {
+        const sTargetPanelId = eCard.getAttribute("data-target");
+        
+        // Toggle card active state
+        const bIsAlreadyActive = eCard.classList.contains("active");
+
+        aDataSourceCards.forEach((eOtherCard) => {
+          eOtherCard.classList.remove("active");
+        });
+        
+        aDataDetailPanels.forEach((ePanel) => {
+          ePanel.classList.remove("active");
+        });
+
+        if (!bIsAlreadyActive) {
+          eCard.classList.add("active");
+          const eTargetPanel = document.getElementById(sTargetPanelId);
+          if (eTargetPanel) {
+            eTargetPanel.classList.add("active");
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
