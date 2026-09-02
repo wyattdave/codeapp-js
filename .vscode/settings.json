@@ -3,5 +3,11 @@
         "Test-Path": true,
         "ForEach-Object": true
     },
-    "liveServer.settings.port": 5501
+    "liveServer.settings.port": 5501,
+    "workbench.colorCustomizations": {
+        "titleBar.activeBackground": "#4B004C",
+        "titleBar.activeForeground": "#ffffff",
+        "titleBar.inactiveBackground": "#4B004Caa",
+        "titleBar.inactiveForeground": "#ffffffaa"
+    }
 }
