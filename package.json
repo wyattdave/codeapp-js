@@ -1,10 +1,15 @@
 {
   "name": "codeapp-js",
-  "version": "2.1.1",
+  "version": "2.2.1",
   "private": false,
   "description": "JavaScript library with samples and starter app for Power Apps Code Apps.",
   "scripts": {
     "start": "node scripts/dev-server.js --root . --port 4173",
     "start:codeapp": "node scripts/dev-server.js --root codeApp/dist --port 4173 --open /"
+  },
+  "dependencies": {
+    "@microsoft/power-apps": "^1.3.1",
+    "@microsoft/power-apps-actions": "^1.10.1",
+    "@microsoft/power-apps-common": "^1.3.0"
   }
 }

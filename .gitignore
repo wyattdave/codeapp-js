@@ -3,7 +3,8 @@ node_modules/
 *.tgz
 npm-debug.log*
 .github/
-
+.codex/
+.agents/
 .vscode/
 agent/
 sdk/

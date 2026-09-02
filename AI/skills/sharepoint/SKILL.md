@@ -15,23 +15,16 @@ Do not use CLI setup flows from chat. Use the built-in Auth, Sync Connections, a
 
 Ask only the minimum needed to choose the right setup and write working code:
 
-1. Is this app working with a SharePoint list, list item attachments, or files in a document library?
-2. What is the exact SharePoint site URL?
-3. Check the agent folder for the list schema, the list id is often part of it.
-4. Do you already have the SharePoint list ID, do not accept list or library names as the primary identifier.
-5. Should config come from hardcoded app config or Dataverse environment variables?
-6. Does the current `power.config.json` already contain `connectionReferences.sharepointonline`?
-7. Are there complex SharePoint fields involved such as person, lookup, or multi-value choice columns?
+1. Is there a schema file in the `dist/config/` folder? If so, read it and extract the list ID from it.
+2. Is this app working with a SharePoint list, list item attachments, or files in a document library?
+3. What is the exact SharePoint site URL?
+4. Check the agent folder for the list schema, the list id is often part of it.
+5. Do you already have the SharePoint list ID, do not accept list or library names as the primary identifier.
+6. Should config come from hardcoded app config or Dataverse environment variables?
+7. Does the current `power.config.json` already contain `connectionReferences.sharepointonline`?
+8. Are there complex SharePoint fields involved such as person, lookup, or multi-value choice columns?
 
-Preferred configuration order:
-
-- A: site URL + list ID
-- B: environment variables that resolve site URL + list ID
-
-Do not ask for a list name as the primary CRUD identifier. If the user only knows the list name, use it only as a lookup hint.
-
-Schemas are often stored in the 'agent' folder.
-
+top
 ## power.config.json
 
 Always read the current `power.config.json` before editing it.
@@ -77,6 +70,21 @@ When generating or fixing a local `dist/connectors/sharepoint.js` wrapper:
 
 For list-backed apps, resolve the list once during startup and keep the returned access object in app state.
 
+dist/config/app-config.js Example:
+```js
+export const SP_CONFIG = {
+  siteUrl: 'https://sharepoint.com/subsite',
+  lists: {
+    courses: 'a7f3213b-4444-4444-b4c3-a4c1498150b5',
+    log:     'f6223efa-4444-4444-aac6-6bddda1024aa',
+    admins:  '32c4e6bf-4444-4444-8fe5-7fe3f5f13b7d',
+    certs:   '78f0a7c6-4444-4444-9c16-46928a66c1a5',
+  },
+  libraries: { modules: '5a59bc99-4444-4444-be08-51a1a85ce486' },
+};
+```
+
+
 ```js
 import {
   createSpItemByList,
@@ -86,15 +94,10 @@ import {
   updateSpItemByList,
 } from './connectors/sharepoint.js';
 
-const oAppConfig = {
-  sSiteUrl: 'https://tenant.sharepoint.com/sites/example',
-  sListId: '00000000-0000-0000-0000-000000000000',
-  sListName: 'Tasks',
-};
 
-const oListAccess = await resolveSharePointList(oAppConfig.sSiteUrl, {
-  listId: oAppConfig.sListId,
-  listName: oAppConfig.sListName,
+const oListAccess = await resolveSharePointList(SP_CONFIG.sSiteUrl, {
+  listId: SP_CONFIG.lists.courses,
+
 });
 
 const aItems = await getItemsByList(oListAccess.sSiteUrl, oListAccess, { top: 200 });
@@ -102,12 +105,6 @@ await createSpItemByList(oListAccess.sSiteUrl, oListAccess, { Title: 'New item' 
 await updateSpItemByList(oListAccess.sSiteUrl, oListAccess, 1, { Title: 'Updated item' });
 await deleteSpItemByList(oListAccess.sSiteUrl, oListAccess, 1);
 ```
-
-Why this is the preferred pattern:
-
-- it keeps list lookup and fallback logic inside the wrapper
-- it works whether the connector resolves a table token or falls back to the configured list ID
-- it matches the working SharePoint demo app in this repo
 
 ## Function Surface And Correct Usage
 

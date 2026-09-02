@@ -13,9 +13,13 @@ export function initDataSources(oSources) {
   });
 }
 
+function getAllDataSources(oAdditionalSources) {
+  return Object.assign({}, oInitialDataSources, oDataSources, oAdditionalSources || {});
+}
+
 function getSharedClient() {
   if (!oSharedClient) {
-    oSharedClient = getClient(Object.assign({}, oInitialDataSources, oDataSources));
+    oSharedClient = getClient(getAllDataSources());
   }
   return oSharedClient;
 }
@@ -327,8 +331,7 @@ export async function deleteItem(tableName, primaryKey, id) {
 // not entities and will cause deploy errors.
 export async function callUnboundAction(tableName, primaryKey, actionName, params) {
   return _dbgWrap('callUnboundAction', [tableName, primaryKey, actionName, params], async function() {
-    let oAllSources = Object.assign({}, oInitialDataSources, oDataSources);
-    let result = await callActionAsync(oAllSources, actionName, params || {});
+    let result = await callActionAsync(getAllDataSources(), actionName, params || {});
     return unwrapResult(result);
   });
 }
@@ -349,10 +352,10 @@ export async function whoAmI() {
 // ────────────────────────────────────────────────────────────────────────────
 
 function initConnectorClientWithCandidates(aDataSourceCandidates, oApis) {
-  const dataSourcesInfo = {};
+  const oConnectorDataSources = {};
 
   aDataSourceCandidates.forEach(function(sDataSourceName) {
-    dataSourcesInfo[sDataSourceName] = {
+    oConnectorDataSources[sDataSourceName] = {
       tableId: '',
       version: '',
       primaryKey: '',
@@ -361,7 +364,7 @@ function initConnectorClientWithCandidates(aDataSourceCandidates, oApis) {
     };
   });
 
-  return getClient(dataSourcesInfo);
+  return getClient(getAllDataSources(oConnectorDataSources));
 }
 
 export async function execConnectorOpWithCandidates(aDataSourceCandidates, oApis, sConnectorName, operationName, parameters) {

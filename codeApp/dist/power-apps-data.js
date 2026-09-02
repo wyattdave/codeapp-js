@@ -1,5 +1,5 @@
 /* power-apps-data.js - Standalone Power Apps SDK for Code Apps
-   Bundled from @microsoft/power-apps v1.2.5
+   Bundled from @microsoft/power-apps v1.3.1
    Zero runtime dependencies; backward-compatible helpers retained. */
 
 // node_modules/@microsoft/power-apps/dist/internal/plugins/DefaultPowerAppsBridge.js
@@ -531,6 +531,7 @@ var ErrorCodes;
   ErrorCodes2["DataClientNotAvailable"] = "DATA_CLIENT_NOT_AVAILABLE";
   ErrorCodes2["DataSourceServiceNotAvailable"] = "DATA_SOURCE_SERVICE_NOT_AVAILABLE";
   ErrorCodes2["MetadataClientNotAvailable"] = "METADATA_CLIENT_NOT_AVAILABLE";
+  ErrorCodes2["InvalidParameterValue"] = "INVALID_PARAMETER_VALUE";
   ErrorCodes2["ConnectionConfigFetchFailed"] = "CONNECTION_CONFIG_FETCH_FAILED";
   ErrorCodes2["DataSourceConfigFetchFailed"] = "DATA_SOURCE_CONFIG_FETCH_FAILED";
   ErrorCodes2["InvalidMetadataResponse"] = "INVALID_METADATA_RESPONSE";
@@ -565,6 +566,7 @@ var ErrorMessages = {
   [ErrorCodes.DataClientNotAvailable]: "PowerDataClient is not available",
   [ErrorCodes.DataSourceServiceNotAvailable]: "Data source service is not available",
   [ErrorCodes.MetadataClientNotAvailable]: "PowerMetadataClient is not available",
+  [ErrorCodes.InvalidParameterValue]: "Invalid parameter value",
   // MetadataClient specific errors
   [ErrorCodes.ConnectionConfigFetchFailed]: "Failed to fetch connection configurations",
   [ErrorCodes.DataSourceConfigFetchFailed]: "Failed to fetch data source configurations",
@@ -1048,6 +1050,16 @@ function convertOptionsToQueryString(options) {
 /*!
  * Copyright (C) Microsoft Corporation. All rights reserved.
  */
+function normalizeSqlDatasetOverride(datasetNameOverride) {
+  try {
+    return decodeURIComponent(datasetNameOverride);
+  } catch (error) {
+    if (error instanceof URIError) {
+      return datasetNameOverride;
+    }
+    throw error;
+  }
+}
 var ConnectorDataOperationExecutor = class {
   // =====================================
   // Private Members
@@ -1188,7 +1200,7 @@ var ConnectorDataOperationExecutor = class {
       const bodyParam = await this._buildOperationBody(operation, tableName);
       const headers = await this._buildOperationHeader(operation, tableName);
       const resolvedHeaders = bodyParam instanceof Uint8Array ? { ...headers ?? {}, "Content-Type": "application/octet-stream" } : headers;
-      const httpMethod = this._getHttpMethod(requestUrl, dataSourceInfo, operation.connectorOperation.operationName);
+      const httpMethod = this._getHttpMethod(dataSourceInfo, operation.connectorOperation.operationName);
       const responseInfo = dataSourceInfo.apis[operation.connectorOperation.operationName]?.responseInfo;
       const result = await dataClient.retrieveDataAsync(requestUrl, config.apiId, tableName, httpMethod, resolvedHeaders, bodyParam, {
         isExecuteAsync: true,
@@ -1206,17 +1218,17 @@ var ConnectorDataOperationExecutor = class {
   // Private Methods
   // =====================================
   /**
-   * Determines the appropriate HTTP method for a request
-   * @param requestUrl - The URL for the request
+   * Determines the appropriate HTTP method for a request.
+   *
+   * The declared method is authoritative and must never be inferred from the runtime URL, which
+   * identifies the connector rather than the operation. Codegen declares POST for stored
+   * procedures, so they need no special case here.
+   *
    * @param dataSourceInfo - The data source information
    * @param operation - The operation name
    * @returns The HTTP method to use
    */
-  _getHttpMethod(requestUrl, dataSourceInfo, operation) {
-    const isSqlStoredProcedure = requestUrl.indexOf("apim/sql") > -1;
-    if (isSqlStoredProcedure) {
-      return HttpMethod.POST;
-    }
+  _getHttpMethod(dataSourceInfo, operation) {
     const method = dataSourceInfo.apis[operation]?.method;
     if (method) {
       return method;
@@ -1338,12 +1350,14 @@ var ConnectorDataOperationExecutor = class {
     const dataSourceInfo = await this._connectionsService.getDataSource(tableName);
     const isSharedSql = (connectionReference.apiId ?? "").indexOf("shared_sql") > -1;
     const isSharePoint = (connectionReference.apiId ?? "").indexOf("shared_sharepointonline") > -1;
-    const datasetName = connectionReference.datasetNameOverride?.trim() || connectionReference.datasetName || "";
+    const datasetNameOverride = connectionReference.datasetNameOverride?.trim();
+    const datasetName = datasetNameOverride || connectionReference.datasetName || "";
+    const normalizedDatasetName = isSharedSql && datasetNameOverride ? normalizeSqlDatasetOverride(datasetNameOverride) : datasetName;
     const rawTableId = connectionReference.tableNameOverride?.trim() || dataSourceInfo.tableId;
     const urlBuilder = {
       runtimeUrl: connectionReference.runtimeUrl ?? "",
       connectionName: connectionReference.connectionName ?? "",
-      datasetName: isSharePoint ? encodeURIComponent(encodeURIComponent(datasetName)) : encodeURIComponent(datasetName),
+      datasetName: isSharePoint ? encodeURIComponent(encodeURIComponent(datasetName)) : encodeURIComponent(normalizedDatasetName),
       tableId: encodeURIComponent(rawTableId),
       version: dataSourceInfo.version,
       isSharedSql
@@ -1360,8 +1374,10 @@ var ConnectorDataOperationExecutor = class {
     }
     const dataSourceInfo = await this._connectionsService.getDataSource(config.tableName);
     const isSharedSql = (config.apiId ?? "").indexOf("shared_sql") > -1;
-    const path = dataSourceInfo.apis[operationName].path;
-    if (isSharedSql) {
+    const api = dataSourceInfo.apis[operationName];
+    const path = api.path;
+    const hasPathParameters = api.parameters.some((parameter) => parameter.in === "path");
+    if (isSharedSql && !hasPathParameters) {
       return this._buildSharedSqlOperationUrl(config, path);
     }
     return this._buildStandardOperationUrl(operation, config, operationName, path);
@@ -1423,6 +1439,17 @@ var ConnectorDataOperationExecutor = class {
     return { dataClient, connectionReference };
   }
   /**
+   * Joins a runtimeUrl with a following path segment using a single `/` separator,
+   * tolerating either a trailing `/` on the URL or a leading `/` on the segment.
+   * The RP returns some runtimeUrls with a trailing slash; without normalization
+   * we emit `…/connections//<id>/…`.
+   */
+  _joinRuntimeUrl(runtimeUrl, segment) {
+    const trimmedRuntime = runtimeUrl.endsWith("/") ? runtimeUrl.slice(0, -1) : runtimeUrl;
+    const trimmedSegment = segment.startsWith("/") ? segment.slice(1) : segment;
+    return `${trimmedRuntime}/${trimmedSegment}`;
+  }
+  /**
    * Builds the URL for shared SQL operations
    */
   _buildSharedSqlOperationUrl(config, path) {
@@ -1457,7 +1484,7 @@ var ConnectorDataOperationExecutor = class {
         // CRUD operations already handle this, so we need to do the same here
         config.apiId.indexOf("shared_sharepointonline") !== -1 && config.datasetName ? encodeURIComponent(config.datasetName) : config.datasetName
       ),
-      tableName: config.tableName
+      tableName: config.tableId
     };
     if (operationParams !== void 0) {
       if (typeof operationParams === "string") {
@@ -1495,7 +1522,7 @@ var ConnectorDataOperationExecutor = class {
       path
     );
     const separator = queryParams ? processedPath.includes("?") ? "&" : "?" : "";
-    return `${config.runtimeUrl}${processedPath}${separator}${queryParams}`;
+    return `${this._joinRuntimeUrl(config.runtimeUrl, processedPath)}${separator}${queryParams}`;
   }
   /**
    * Normalizes the parameter name by replacing hyphens with underscores and performs case-insensitive matching
@@ -1550,7 +1577,7 @@ var ConnectorDataOperationExecutor = class {
       apiId: connectionReference.apiId ?? "",
       runtimeUrl: connectionReference.runtimeUrl ?? "",
       connectionName: connectionReference.connectionName ?? "",
-      datasetName: connectionReference.datasetName ?? "",
+      datasetName: connectionReference.datasetNameOverride?.trim() || connectionReference.datasetName || "",
       tableId: connectionReference.tableNameOverride?.trim() || dataSourceInfo.tableId,
       version: dataSourceInfo.version
     };
@@ -1591,7 +1618,9 @@ var ConnectorDataOperationExecutor = class {
 /*!
  * Copyright (C) Microsoft Corporation. All rights reserved.
  */
+var ODATA_COUNT = "@odata.count";
 var ODATA_NEXT_LINK = "@odata.nextLink";
+var CRM_TOTAL_RECORD_COUNT = "@Microsoft.Dynamics.CRM.totalrecordcount";
 var DataverseDataOperationExecutor = class {
   // Static identifiers for services and actions
   // Used to identify specific services and actions within the PowerApps environment
@@ -1831,6 +1860,9 @@ var DataverseDataOperationExecutor = class {
         success: dataverseResponse.success,
         data: dataverseResponse?.data?.value || [],
         skipToken: extractSkipToken(dataverseResponse?.data?.[ODATA_NEXT_LINK]),
+        // Only surface the total count when it was explicitly requested via
+        // options.count, matching the IOperationResult.count contract.
+        count: options?.count ? dataverseResponse?.data?.[ODATA_COUNT] ?? dataverseResponse?.data?.[CRM_TOTAL_RECORD_COUNT] : void 0,
         error: dataverseResponse.error
       };
       return returnValue;
@@ -1883,23 +1915,43 @@ var DataverseDataOperationExecutor = class {
         let resolvedPath = apiDef.path;
         const requestBody = {};
         const functionParams = [];
+        const aliasParams = [];
         for (const param of apiDef.parameters) {
           if (param.in === "path") {
-            resolvedPath = resolvedPath.replace(`{${param.name}}`, encodeURIComponent(String(bodyRecord[param.name] ?? "")));
+            const pathValue = String(bodyRecord[param.name] ?? "");
+            if (param.format === "dataverse-entity-set-name" && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(pathValue)) {
+              return {
+                success: false,
+                data: null,
+                error: {
+                  message: `Invalid Dataverse entity set name: "${pathValue}".`
+                }
+              };
+            }
+            resolvedPath = resolvedPath.replace(`{${param.name}}`, encodeURIComponent(pathValue));
           } else if (param.in === "body") {
             if (param.name in bodyRecord) {
               requestBody[param.name] = bodyRecord[param.name];
             }
           } else if (param.in === "query") {
             if (param.name in bodyRecord) {
-              functionParams.push(`${param.name}=${toODataLiteral(bodyRecord[param.name], param.type)}`);
+              const literal = toODataLiteral(bodyRecord[param.name], param.type, param.format);
+              const alias = `@p${aliasParams.length + 1}`;
+              functionParams.push(`${param.name}=${alias}`);
+              aliasParams.push(`${alias}=${encodeURIComponent(literal)}`);
             }
           }
         }
         if (functionParams.length > 0) {
-          resolvedPath += `(${functionParams.join(",")})`;
+          const queryIndex = resolvedPath.indexOf("?");
+          const callSegment = `(${functionParams.join(",")})`;
+          resolvedPath = queryIndex === -1 ? resolvedPath + callSegment : resolvedPath.slice(0, queryIndex) + callSegment + resolvedPath.slice(queryIndex);
         }
-        const requestUrl = `${instanceUrl}${resolvedPath.startsWith("/") ? resolvedPath.slice(1) : resolvedPath}`;
+        let requestUrl = `${instanceUrl}${resolvedPath.startsWith("/") ? resolvedPath.slice(1) : resolvedPath}`;
+        if (aliasParams.length > 0) {
+          const separator = requestUrl.includes("?") ? "&" : "?";
+          requestUrl += `${separator}${aliasParams.join("&")}`;
+        }
         const dataClient = await this._getDataClient();
         const isGet = apiDef.method.toUpperCase() === HttpMethod.GET;
         const response = isGet ? await dataClient.retrieveDataAsync(requestUrl, DataSources.Dataverse, operationName, HttpMethod.GET, void 0, void 0, {
@@ -2199,9 +2251,68 @@ function deriveImageFileName(columnName, data) {
   const ext = data ? sniffImageExtension(data) : "png";
   return `${columnName}.${ext}`;
 }
-function toODataLiteral(value, type) {
+var GUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+var ODATA_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+var ODATA_DATETIMEOFFSET_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,7})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+var BASE64_REGEX = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+var ODATA_DURATION_REGEX = /^[+-]?P(?=.*\d)(?:\d+(?:\.\d+)?D)?(?:T(?=\d)(?:\d+(?:\.\d+)?H)?(?:\d+(?:\.\d+)?M)?(?:\d+(?:\.\d+)?S)?)?$/;
+function toBase64Payload(value) {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value instanceof ArrayBuffer) {
+    return arrayBufferToBase64(value);
+  }
+  if (ArrayBuffer.isView(value)) {
+    const view = value;
+    const bytes = new Uint8Array(view.byteLength);
+    bytes.set(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
+    return arrayBufferToBase64(bytes.buffer);
+  }
+  return String(value);
+}
+function toODataLiteral(value, type, format) {
   if (value === null || value === void 0) {
     return "null";
+  }
+  if (type === "guid" || format === "guid" || format === "uuid") {
+    const guid = String(value);
+    if (!GUID_REGEX.test(guid)) {
+      throw new PowerDataRuntimeError(ErrorCodes.InvalidParameterValue, `Expected a GUID but received '${guid}'.`);
+    }
+    return guid;
+  }
+  if (format === "binary") {
+    const base64 = toBase64Payload(value);
+    if (!BASE64_REGEX.test(base64)) {
+      throw new PowerDataRuntimeError(ErrorCodes.InvalidParameterValue, "Expected a base64-encoded value for a binary parameter.");
+    }
+    return `binary'${base64}'`;
+  }
+  if (format === "duration") {
+    const duration = String(value);
+    if (!ODATA_DURATION_REGEX.test(duration)) {
+      throw new PowerDataRuntimeError(ErrorCodes.InvalidParameterValue, `Expected an ISO-8601 duration but received '${duration}'.`);
+    }
+    return `duration'${duration}'`;
+  }
+  if (format === "date") {
+    const iso = value instanceof Date ? value.toISOString().slice(0, 10) : String(value);
+    if (!ODATA_DATE_REGEX.test(iso)) {
+      throw new PowerDataRuntimeError(ErrorCodes.InvalidParameterValue, `Expected an ISO-8601 date (YYYY-MM-DD) but received '${iso}'.`);
+    }
+    return iso;
+  }
+  if (format === "datetimeoffset") {
+    const iso = value instanceof Date ? value.toISOString() : String(value);
+    if (!ODATA_DATETIMEOFFSET_REGEX.test(iso)) {
+      throw new PowerDataRuntimeError(ErrorCodes.InvalidParameterValue, `Expected an ISO-8601 date-time with a zone offset but received '${iso}'.`);
+    }
+    return iso;
+  }
+  if (type === "array" || Array.isArray(value)) {
+    const items = Array.isArray(value) ? value : [value];
+    return JSON.stringify(items);
   }
   if (type === "string") {
     return `'${String(value).replace(/'/g, "''")}'`;

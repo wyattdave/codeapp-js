@@ -88,12 +88,17 @@ Notes:
 - Add `environmentvariabledefinitions` and `environmentvariablevalues` to `databaseReferences.default.cds.dataSources`.
 - Include those tables in `initDataSources(...)` or register them before the first read.
 
-## Relationship Tips
+## Learnings
+
+- The runtime SDK keys data sources by `entitySetName`, so always use the `entitySetName` (not the friendly config key) as the table name in `initDataSources`, `listItems`, and all other CRUD calls.
+- Be careful of page limits, if required use a loop to fetch all pages of results. The helper does not automatically page through results.
+
+### Relationship Tips
 
 - Write lookups with `'<navProperty>@odata.bind': '/<entitySet>(<guid>)'`.
 - Read lookup IDs with the `_<name>_value` pattern.
 
-## Common Failures
+### Common Failures
 
 - `DataSourceNotFound`: the table is missing from `power.config.json`, `initDataSources(...)`, or runtime registration.
 - `Invalid property 'xyz'`: the column name is wrong.
